@@ -9,6 +9,7 @@ internal static class BuildPipeline
         [
             new AcquisitionStage(),
             new DiscoveryStage(),
+            new ApiModelStage(),
         ];
     }
 }

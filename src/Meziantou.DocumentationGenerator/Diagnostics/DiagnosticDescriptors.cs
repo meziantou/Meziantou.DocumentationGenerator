@@ -31,6 +31,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor NoDocumentableAssembly = new("DG2007", "The package contains no compile-time managed assembly", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor InvalidManagedAssembly = new("DG2008", "Invalid managed assembly or unrecognized framework folder", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor DependencyNotConfigured = new("DG2010", "A package dependency is not configured as a reference", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor UnsupportedMetadata = new("DG2012", "Unsupported or unreadable metadata", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor AssetSelected = new("DG2011", "Selected API asset", DiagnosticSeverity.Info);
 
     // DG3xxx: missing optional content

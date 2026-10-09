@@ -1,5 +1,6 @@
 using Meziantou.DocumentationGenerator.Configuration;
 using System.Collections.Immutable;
+using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Packages;
@@ -31,6 +32,9 @@ internal sealed class BuildContext
     public ImmutableArray<DiscoveredPackage> DiscoveredPackages { get; set; } = [];
 
     public ImmutableArray<DiscoveredPackage> DiscoveredReferences { get; set; } = [];
+
+    /// <summary>One model per API asset of the packages and references, in package then asset order.</summary>
+    public ImmutableArray<ApiAssemblyModel> ApiAssemblies { get; set; } = [];
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }
