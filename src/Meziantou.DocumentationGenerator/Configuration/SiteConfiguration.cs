@@ -13,6 +13,9 @@ internal sealed class SiteConfiguration
     public required FullPath CacheDirectory { get; init; }
     public required ImmutableArray<PackageConfiguration> Packages { get; init; }
     public required ImmutableArray<ProductConfiguration> Products { get; init; }
+
+    /// <summary>Packages used for inherited documentation and cross-references only.</summary>
+    public required ImmutableArray<PackageConfiguration> References { get; init; }
     public ContentConfiguration? Content { get; init; }
     public required ApiFilter ApiFilter { get; init; }
     public required ImmutableArray<ExternalReferenceMapping> ExternalReferences { get; init; }

@@ -28,6 +28,9 @@ internal sealed class ConfigurationFile
     [Description("NuGet packages whose APIs are documented.")]
     public List<PackageSection>? Packages { get; set; }
 
+    [Description("Packages whose metadata and XML documentation are used for inherited documentation and cross-references, without publishing their APIs.")]
+    public List<PackageSection>? References { get; set; }
+
     [Description("Products group packages under a landing page and an API reference. Default: one product per package.")]
     public List<ProductSection>? Products { get; set; }
 

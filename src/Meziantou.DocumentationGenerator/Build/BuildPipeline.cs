@@ -8,6 +8,7 @@ internal static class BuildPipeline
         return
         [
             new AcquisitionStage(),
+            new DiscoveryStage(),
         ];
     }
 }

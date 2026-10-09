@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="Meziantou.Framework.TemporaryDirectory" Version="3.0.10" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
   </ItemGroup>
 </Project>

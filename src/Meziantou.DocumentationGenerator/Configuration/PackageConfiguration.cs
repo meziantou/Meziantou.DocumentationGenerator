@@ -20,6 +20,11 @@ internal sealed class PackageConfiguration
     /// <summary>Index of the package in the configuration, used to locate diagnostics.</summary>
     public required int Index { get; init; }
 
+    /// <summary><see langword="true"/> for packages declared in <c>references</c>: their APIs are not published.</summary>
+    public bool IsReference { get; init; }
+
+    public string JsonPath => (IsReference ? "$.references[" : "$.packages[") + Index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]";
+
     public string Identity => Id + "@" + Version.ToNormalizedString();
 
     public override string ToString() => Identity;

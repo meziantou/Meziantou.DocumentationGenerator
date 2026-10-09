@@ -42,9 +42,16 @@ input and cannot be lowered.
 | `DG2001` | error | Package not found in the configured sources (the exact version is required) |
 | `DG2002` | error | Package source or authentication failure |
 | `DG2003` | error | Invalid or corrupt package |
+| `DG2004` | error | A target framework or assembly filter matches no asset of the package |
 | `DG2005` | error (safety) | The package contains unsafe entries (rooted paths, `..`, links, duplicates, excessive sizes) |
 | `DG2006` | error | Package not available in the cache in offline mode |
+| `DG2007` | warning | The package contains no compile-time managed assembly (dependency-only, native or tool package) |
+| `DG2008` | warning | Invalid managed assembly or unrecognized target framework folder, ignored |
 | `DG2009` | error | The package identity does not match the configuration |
+| `DG2010` | info | A package dependency is not configured in `references`, so documentation inherited from it is unavailable |
+| `DG2011` | info | Explains which asset is documented for each target framework |
+| `DG3001` | warning | The package has no README; a generated page is used |
+| `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
 | `DG7001` | error | A build stage failed unexpectedly |
 | `DG7002` | error | The build was cancelled |
 | `DG7003` | error | Invalid command-line value |

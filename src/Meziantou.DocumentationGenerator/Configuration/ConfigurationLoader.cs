@@ -132,7 +132,9 @@ internal static partial class ConfigurationLoader
             var site = ValidateSite(file.Site);
             var output = ValidateOutput(file.Output);
             var cache = ValidateCacheDirectory(file.CacheDirectory);
-            var packages = ValidatePackages(file.Packages);
+            var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var packages = ValidatePackages(file.Packages, "packages", isReference: false, packageIds);
+            var references = ValidatePackages(file.References, "references", isReference: true, packageIds);
             var products = ValidateProducts(file.Products, packages);
             var content = ValidateContent(file.Content);
             var apiFilter = ValidateApi(file.Api);
@@ -151,7 +153,7 @@ internal static partial class ConfigurationLoader
 
             if (output is { } outputPath)
             {
-                ValidateOutputOverlap(outputPath, cache, content, packages, products);
+                ValidateOutputOverlap(outputPath, cache, content, packages, references, products);
             }
 
             if (_errorCount > 0 || site is null || output is null || cache is null || apiFilter is null)
@@ -165,6 +167,7 @@ internal static partial class ConfigurationLoader
                 CacheDirectory = cache.Value,
                 Packages = packages,
                 Products = products,
+                References = references,
                 Content = content,
                 ApiFilter = apiFilter,
                 ExternalReferences = xrefs,
@@ -304,19 +307,18 @@ internal static partial class ConfigurationLoader
             return FullPath.FromPath(localData) / "Meziantou.DocumentationGenerator" / "cache";
         }
 
-        private ImmutableArray<PackageConfiguration> ValidatePackages(List<ConfigurationFile.PackageSection>? sections)
+        private ImmutableArray<PackageConfiguration> ValidatePackages(List<ConfigurationFile.PackageSection>? sections, string propertyName, bool isReference, HashSet<string> ids)
         {
             if (sections is null)
             {
-                _defaultedValues.Add("$.packages");
+                _defaultedValues.Add("$." + propertyName);
                 return [];
             }
 
             var result = ImmutableArray.CreateBuilder<PackageConfiguration>();
-            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < sections.Count; i++)
             {
-                var path = $"$.packages[{i.ToString(CultureInfo.InvariantCulture)}]";
+                var path = $"$.{propertyName}[{i.ToString(CultureInfo.InvariantCulture)}]";
                 var section = sections[i];
                 if (section is null)
                 {
@@ -332,7 +334,7 @@ internal static partial class ConfigurationLoader
                 }
                 else if (!ids.Add(section.Id))
                 {
-                    Error(DiagnosticDescriptors.DuplicateIdentity, $"Package '{section.Id}' is configured more than once", path + ".id");
+                    Error(DiagnosticDescriptors.DuplicateIdentity, $"Package '{section.Id}' is configured more than once in 'packages' and 'references'", path + ".id");
                     isValid = false;
                 }
 
@@ -419,6 +421,12 @@ internal static partial class ConfigurationLoader
                 }
 
                 var readme = ResolveExistingFile(section.Readme, path + ".readme");
+                if (isReference && section.Readme is not null)
+                {
+                    Error(DiagnosticDescriptors.InvalidConfigurationValue, "A reference package is not published, so it cannot have a README", path + ".readme");
+                    isValid = false;
+                }
+
                 if (isValid && version is not null)
                 {
                     result.Add(new PackageConfiguration
@@ -431,6 +439,7 @@ internal static partial class ConfigurationLoader
                         Assemblies = assemblies.ToImmutable(),
                         ReadmeOverride = readme,
                         Index = i,
+                        IsReference = isReference,
                     });
                 }
             }
@@ -738,7 +747,7 @@ internal static partial class ConfigurationLoader
             };
         }
 
-        private void ValidateOutputOverlap(FullPath output, FullPath? cache, ContentConfiguration? content, ImmutableArray<PackageConfiguration> packages, ImmutableArray<ProductConfiguration> products)
+        private void ValidateOutputOverlap(FullPath output, FullPath? cache, ContentConfiguration? content, ImmutableArray<PackageConfiguration> packages, ImmutableArray<PackageConfiguration> references, ImmutableArray<ProductConfiguration> products)
         {
             // The publisher deletes stale generated files from the output directory, so inputs must never be inside it
             void Check(FullPath input, string description, string jsonPath)
@@ -776,16 +785,16 @@ internal static partial class ConfigurationLoader
                 Check(cachePath, "package cache", "$.cacheDirectory");
             }
 
-            foreach (var package in packages)
+            foreach (var package in packages.Concat(references))
             {
                 if (package.LocalPath is { } localPath)
                 {
-                    Check(localPath, $"package '{package.Id}'", $"$.packages[{package.Index.ToString(CultureInfo.InvariantCulture)}].path");
+                    Check(localPath, $"package '{package.Id}'", package.JsonPath + ".path");
                 }
 
                 if (package.ReadmeOverride is { } readme)
                 {
-                    Check(readme, $"README of package '{package.Id}'", $"$.packages[{package.Index.ToString(CultureInfo.InvariantCulture)}].readme");
+                    Check(readme, $"README of package '{package.Id}'", package.JsonPath + ".readme");
                 }
             }
 

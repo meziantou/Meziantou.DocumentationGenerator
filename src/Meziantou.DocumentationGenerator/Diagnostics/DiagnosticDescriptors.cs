@@ -27,6 +27,15 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnsafePackageEntry = new("DG2005", "The package contains unsafe entries", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor OfflineCacheMiss = new("DG2006", "Package not available in offline mode", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor PackageIdentityMismatch = new("DG2009", "The package identity does not match the configuration", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor FilterMatchesNothing = new("DG2004", "A target framework or assembly filter matches no asset", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor NoDocumentableAssembly = new("DG2007", "The package contains no compile-time managed assembly", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor InvalidManagedAssembly = new("DG2008", "Invalid managed assembly or unrecognized framework folder", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor DependencyNotConfigured = new("DG2010", "A package dependency is not configured as a reference", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor AssetSelected = new("DG2011", "Selected API asset", DiagnosticSeverity.Info);
+
+    // DG3xxx: missing optional content
+    public static readonly DiagnosticDescriptor MissingReadme = new("DG3001", "The package has no README", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);
 
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);

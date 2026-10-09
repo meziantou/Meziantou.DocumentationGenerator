@@ -32,6 +32,7 @@ configuration model, so it cannot drift from what the tool accepts.
 | `output` | path | `_site` | Output directory. It must be a dedicated directory: it cannot contain the configuration file, the content directory, the cache or packages. |
 | `cacheDirectory` | path | `DOCGEN_CACHE`, or a per-user directory | Package cache. |
 | `packages` | array | `[]` | Packages whose APIs are documented. |
+| `references` | array | `[]` | Packages used for inherited documentation and cross-references only; their APIs are not published. Same properties as `packages`, except `readme`. |
 | `products` | array | one product per package | Groups of packages sharing a landing page and an API reference. |
 | `content` | object | | Authored Markdown pages. |
 | `api` | object | all visible APIs | API selection rules. |
@@ -67,6 +68,10 @@ At least one package or a content directory is required.
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
 | `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
 | `readme` | package README | Local Markdown file used instead of the README embedded in the package. |
+
+Dependencies of the documented packages are never downloaded implicitly. To inherit documentation from a
+dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the
+dependencies that are not configured).
 
 ## `products[]`
 

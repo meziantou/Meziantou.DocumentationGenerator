@@ -280,7 +280,7 @@ internal sealed class PackageAcquirer
         _diagnostics.Report(descriptor, message, new DiagnosticLocation
         {
             Package = package.Identity,
-            JsonPath = $"$.packages[{package.Index.ToString(CultureInfo.InvariantCulture)}]",
+            JsonPath = package.JsonPath,
         });
     }
 

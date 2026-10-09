@@ -1,6 +1,7 @@
 using Meziantou.DocumentationGenerator.Configuration;
 using System.Collections.Immutable;
 using Meziantou.DocumentationGenerator.Diagnostics;
+using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Packages;
 
 namespace Meziantou.DocumentationGenerator.Build;
@@ -23,6 +24,13 @@ internal sealed class BuildContext
 
     /// <summary>Packages acquired by <see cref="AcquisitionStage"/>, in configuration order.</summary>
     public ImmutableArray<AcquiredPackage> Packages { get; set; } = [];
+
+    /// <summary>Reference packages acquired by <see cref="AcquisitionStage"/>; their APIs are not published.</summary>
+    public ImmutableArray<AcquiredPackage> References { get; set; } = [];
+
+    public ImmutableArray<DiscoveredPackage> DiscoveredPackages { get; set; } = [];
+
+    public ImmutableArray<DiscoveredPackage> DiscoveredReferences { get; set; } = [];
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }

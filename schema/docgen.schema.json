@@ -118,6 +118,13 @@
         "additionalProperties": false
       }
     },
+    "references": {
+      "description": "Packages whose metadata and XML documentation are used for inherited documentation and cross-references, without publishing their APIs.",
+      "type": "array",
+      "items": {
+        "$ref": "#/properties/packages/items"
+      }
+    },
     "products": {
       "description": "Products group packages under a landing page and an API reference. Default: one product per package.",
       "type": "array",
