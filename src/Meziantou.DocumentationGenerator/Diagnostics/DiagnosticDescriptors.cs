@@ -38,6 +38,7 @@ internal static class DiagnosticDescriptors
     // DG3xxx: missing optional content
     public static readonly DiagnosticDescriptor MissingReadme = new("DG3001", "The package has no README", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor MissingRepositoryMetadata = new("DG3004", "A README link cannot be resolved without repository metadata", DiagnosticSeverity.Warning);
 
     // DG4xxx: links and routes
     public static readonly DiagnosticDescriptor UnresolvedReference = new("DG4001", "Unresolved reference", DiagnosticSeverity.Warning);
@@ -47,6 +48,15 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor PageCollision = new("DG4005", "Several files map to the same output path", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor DuplicateAnchor = new("DG4006", "Duplicate anchor in a page", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor UnsafeOutputPath = new("DG4007", "Unsafe output path", DiagnosticSeverity.Error, IsSafetyCritical: true);
+
+    public static readonly DiagnosticDescriptor UnsafeUrl = new("DG4008", "Unsafe URL removed", DiagnosticSeverity.Warning);
+
+    // DG5xxx: authored content and navigation
+    public static readonly DiagnosticDescriptor ContentFileNotFound = new("DG5001", "Referenced Markdown page not found", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor InvalidFrontMatter = new("DG5002", "Invalid front matter", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor AssetNotFound = new("DG5008", "Referenced file not found", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor PathEscapesRoot = new("DG5009", "Path outside the allowed root", DiagnosticSeverity.Error, IsSafetyCritical: true);
+    public static readonly DiagnosticDescriptor UnknownCodeLanguage = new("DG5010", "Unknown code language", DiagnosticSeverity.Info);
 
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);

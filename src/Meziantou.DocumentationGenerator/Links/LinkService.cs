@@ -106,6 +106,13 @@ internal sealed partial class LinkService
 
         if (_routesByPath.TryGetValue(route.FilePath, out var existing))
         {
+            // An authored index.md at the root of the content directory is the home page of the site
+            if (existing.Kind is PageKind.Home && route.Kind is PageKind.Article && string.Equals(existing.FilePath, route.FilePath, StringComparison.Ordinal))
+            {
+                _routesByPath[route.FilePath] = route;
+                return true;
+            }
+
             _diagnostics.Report(DiagnosticDescriptors.PageCollision, $"'{route.FilePath}' ({route.Owner}) collides with '{existing.FilePath}' ({existing.Owner}); paths are compared case-insensitively", location);
             return false;
         }

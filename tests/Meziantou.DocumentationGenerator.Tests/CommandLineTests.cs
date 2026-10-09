@@ -209,10 +209,8 @@ public sealed class CommandLineTests
     {
         var path = FullPath.FromPath(RepositoryPaths.Root) / "docs" / "diagnostics.md";
         var actual = File.Exists(path) ? (await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken)).ReplaceLineEndings("\n") : "";
-        foreach (var descriptor in DiagnosticDescriptors.GetAll())
-        {
-            Assert.Contains($"| `{descriptor.Code}` |", actual);
-        }
+        var missing = DiagnosticDescriptors.GetAll().Where(d => !actual.Contains($"| `{d.Code}` |", StringComparison.Ordinal)).Select(d => d.Code).ToList();
+        Assert.Empty(missing);
     }
 
     private static TemporaryDirectory CreateSite(string configuration)

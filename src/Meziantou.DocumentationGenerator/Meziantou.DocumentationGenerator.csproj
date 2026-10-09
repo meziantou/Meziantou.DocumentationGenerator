@@ -23,7 +23,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Meziantou.Framework.FullPath" />
+    <PackageReference Include="Meziantou.Framework.HtmlSanitizer" />
+    <PackageReference Include="Meziantou.Framework.Markdown" />
     <PackageReference Include="Meziantou.Framework.PublicApiGenerator" />
+    <PackageReference Include="Meziantou.Framework.SyntaxHighlighting" />
+    <PackageReference Include="Meziantou.Framework.Yaml" />
     <PackageReference Include="NuGet.Credentials" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="NuGet.Protocol" />

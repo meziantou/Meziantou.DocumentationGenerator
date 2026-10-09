@@ -1,6 +1,7 @@
 using Meziantou.DocumentationGenerator.Configuration;
 using System.Collections.Immutable;
 using Meziantou.DocumentationGenerator.Api;
+using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Links;
@@ -42,6 +43,12 @@ internal sealed class BuildContext
 
     /// <summary>Routes, URLs and cross-reference resolution, created by <see cref="LinkIndexStage"/>.</summary>
     public LinkService? Links { get; set; }
+
+    /// <summary>Authored pages and product landing pages, created by <see cref="ContentStage"/>.</summary>
+    public ContentModel Content { get; set; } = ContentModel.Empty;
+
+    /// <summary>Files copied to the output, registered by the content and rendering stages.</summary>
+    public SiteAssetRegistry? Assets { get; set; }
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }
