@@ -39,6 +39,15 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor MissingReadme = new("DG3001", "The package has no README", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);
 
+    // DG4xxx: links and routes
+    public static readonly DiagnosticDescriptor UnresolvedReference = new("DG4001", "Unresolved reference", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor AmbiguousReference = new("DG4002", "Ambiguous reference", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor BrokenLink = new("DG4003", "Broken link in the generated site", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor RouteCollision = new("DG4004", "Several types map to the same page", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor PageCollision = new("DG4005", "Several files map to the same output path", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor DuplicateAnchor = new("DG4006", "Duplicate anchor in a page", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor UnsafeOutputPath = new("DG4007", "Unsafe output path", DiagnosticSeverity.Error, IsSafetyCritical: true);
+
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor BuildCancelled = new("DG7002", "The build was cancelled", DiagnosticSeverity.Error);

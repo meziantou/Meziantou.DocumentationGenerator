@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Discovery;
+using Meziantou.DocumentationGenerator.Links;
 using Meziantou.DocumentationGenerator.Packages;
 
 namespace Meziantou.DocumentationGenerator.Build;
@@ -38,6 +39,9 @@ internal sealed class BuildContext
 
     /// <summary>API models aggregated across target frameworks.</summary>
     public ApiCatalog ApiCatalog { get; set; } = ApiCatalog.Empty;
+
+    /// <summary>Routes, URLs and cross-reference resolution, created by <see cref="LinkIndexStage"/>.</summary>
+    public LinkService? Links { get; set; }
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }

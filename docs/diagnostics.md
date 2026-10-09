@@ -54,6 +54,13 @@ input and cannot be lowered.
 | `DG2013` | error | The builds of an assembly cannot be aggregated across target frameworks (duplicate inputs) |
 | `DG3001` | warning | The package has no README; a generated page is used |
 | `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
+| `DG4001` | warning | Unresolved reference: no page and no `xrefs` mapping; the name is displayed without a link |
+| `DG4002` | warning | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!` |
+| `DG4003` | error | Broken link in the generated site (missing page or anchor) |
+| `DG4004` | warning | Several types map to the same page; URLs are disambiguated with the assembly name or a hash |
+| `DG4005` | error | Several files map to the same output path (compared case-insensitively) |
+| `DG4006` | error | Duplicate anchor in a page |
+| `DG4007` | error (safety) | Unsafe output path |
 | `DG7001` | error | A build stage failed unexpectedly |
 | `DG7002` | error | The build was cancelled |
 | `DG7003` | error | Invalid command-line value |
