@@ -140,3 +140,115 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
 | --- | --- | --- |
 | `enabled` | `true` | Generate links to source files using PDBs and Source Link. |
 | `symbolServers` | `[]` | Symbol servers (SSQP protocol, such as `https://symbols.nuget.org/download/symbols`) queried for PDBs that are neither embedded nor next to the assembly in the package. Only these servers are contacted, without credentials, and downloaded PDBs are cached. |
+
+## Examples
+
+### Single package
+
+```json
+{
+  "version": 1,
+  "site": { "title": "Contoso.Json" },
+  "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ]
+}
+```
+
+### Grouped product with a local landing page
+
+```json
+{
+  "version": 1,
+  "site": { "title": "Contoso" },
+  "packages": [
+    { "id": "Contoso.Data", "version": "3.0.0" },
+    { "id": "Contoso.Data.Sqlite", "version": "3.0.0" }
+  ],
+  "products": [
+    {
+      "id": "data",
+      "name": "Contoso Data",
+      "description": "Data access libraries.",
+      "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ],
+      "landingPage": "docs/data/overview.md"
+    }
+  ],
+  "content": { "root": "docs" }
+}
+```
+
+### Multiple target frameworks and a local README
+
+```json
+{
+  "version": 1,
+  "packages": [
+    {
+      "id": "Contoso.Json",
+      "version": "2.1.0",
+      "targetFrameworks": [ "net8.0", "netstandard2.0" ],
+      "readme": "README.md"
+    }
+  ]
+}
+```
+
+All target frameworks of a package are documented by default; `targetFrameworks` restricts them. Each API page shows
+the frameworks of each member.
+
+### Private feed
+
+Feeds and credentials are configured in `NuGet.Config`, next to `docgen.json` or in any parent directory, as for
+`dotnet restore`:
+
+```xml
+<configuration>
+  <packageSources>
+    <add key="contoso" value="https://pkgs.example.com/contoso/v3/index.json" />
+  </packageSources>
+  <packageSourceCredentials>
+    <contoso>
+      <add key="Username" value="build" />
+      <add key="ClearTextPassword" value="%CONTOSO_FEED_TOKEN%" />
+    </contoso>
+  </packageSourceCredentials>
+</configuration>
+```
+
+```json
+{
+  "version": 1,
+  "packages": [ { "id": "Contoso.Internal", "version": "1.4.0", "source": "contoso" } ]
+}
+```
+
+Credential providers (such as the Azure Artifacts credential provider) are used non-interactively. Package source mapping
+is honored.
+
+### Deployment under `/docs/`
+
+```json
+{
+  "version": 1,
+  "site": {
+    "title": "Contoso",
+    "url": "https://www.example.com",
+    "basePath": "/docs/"
+  },
+  "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ]
+}
+```
+
+Pages are linked as `/docs/...` and canonical URLs are `https://www.example.com/docs/...`. See
+[deployment.md](deployment.md).
+
+### Local packages and offline builds
+
+```json
+{
+  "version": 1,
+  "packages": [ { "id": "Contoso.Json", "version": "2.1.0", "path": "artifacts/Contoso.Json.2.1.0.nupkg" } ]
+}
+```
+
+Local packages are used in place and their identity is verified. Remote packages are cached; `--offline` uses only the
+cache and fails when a package is missing (`DG2006`).

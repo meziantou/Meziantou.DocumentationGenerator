@@ -21,3 +21,6 @@ _site/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Sample outputs
+samples/**/artifacts/
