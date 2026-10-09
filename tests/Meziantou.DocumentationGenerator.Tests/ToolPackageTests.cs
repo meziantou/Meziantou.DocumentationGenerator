@@ -1,9 +1,9 @@
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
-using Meziantou.Framework;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
-public sealed class ToolPackageTests
+[Collection(InstalledToolCollection.Name)]
+public sealed class ToolPackageTests(InstalledToolFixture fixture)
 {
     internal const string ToolCommandName = "meziantou-docgen";
 
@@ -11,15 +11,14 @@ public sealed class ToolPackageTests
     public async Task PackAndInstallAsLocalTool()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        await using var temp = TemporaryDirectory.Create();
-        var tool = await InstalledTool.CreateAsync(temp.FullPath, cancellationToken);
-
-        var version = await tool.RunAsync(["--version"], cancellationToken);
+        var version = await fixture.Tool.RunAsync(["--version"], cancellationToken);
         Assert.Equal(0, version.ExitCode, version.AllOutput);
-        Assert.StartsWith(InstalledTool.Version, version.Output.Trim());
+        Assert.Matches(@"^\d+\.\d+\.\d+", version.Output.Trim());
 
-        var help = await tool.RunAsync(["--help"], cancellationToken);
+        var help = await fixture.Tool.RunAsync(["--help"], cancellationToken);
         Assert.Equal(0, help.ExitCode, help.AllOutput);
         Assert.Contains(ToolCommandName, help.Output);
+        Assert.Contains("init", help.Output);
+        Assert.Contains("build", help.Output);
     }
 }

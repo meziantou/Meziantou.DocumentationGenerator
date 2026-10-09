@@ -65,10 +65,21 @@ internal sealed class InstalledTool
         return new InstalledTool(toolDirectory, environment);
     }
 
+    public string RootDirectory => _rootDirectory;
+
     /// <summary>Runs the installed tool. 'dotnet tool run' finds the manifest from the working directory, so paths in arguments must be absolute.</summary>
-    public Task<ProcessResult> RunAsync(IEnumerable<string> arguments, CancellationToken cancellationToken)
+    public Task<ProcessResult> RunAsync(IEnumerable<string> arguments, CancellationToken cancellationToken) => RunAsync(arguments, workingDirectory: null, environment: null, cancellationToken);
+
+    /// <param name="workingDirectory">A directory inside <see cref="RootDirectory"/>, so that the tool manifest is found.</param>
+    public Task<ProcessResult> RunAsync(IEnumerable<string> arguments, string? workingDirectory, IReadOnlyDictionary<string, string?>? environment, CancellationToken cancellationToken)
     {
-        return ProcessRunner.RunAsync(ProcessRunner.DotnetPath, ["tool", "run", "meziantou-docgen", "--", .. arguments], _rootDirectory, _environment, cancellationToken);
+        var variables = new Dictionary<string, string?>(_environment, StringComparer.Ordinal);
+        foreach (var (key, value) in environment ?? new Dictionary<string, string?>())
+        {
+            variables[key] = value;
+        }
+
+        return ProcessRunner.RunAsync(ProcessRunner.DotnetPath, ["tool", "run", "meziantou-docgen", "--", .. arguments], workingDirectory ?? _rootDirectory, variables, cancellationToken);
     }
 
     private static async Task RunCheckedAsync(IEnumerable<string> arguments, string workingDirectory, Dictionary<string, string?> environment, CancellationToken cancellationToken)

@@ -207,14 +207,17 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         return target;
     }
 
-    private static string RewriteRawHtml(string html, MarkdownSource source, int line)
+    private string RewriteRawHtml(string html, MarkdownSource source, int line)
     {
         return RawHtmlUrlAttributeRegex().Replace(html, match =>
         {
             var value = WebUtility.HtmlDecode(match.Groups["value"].Value);
             var attribute = match.Groups["name"].Value;
             if (!ContentSanitizer.IsAllowedUrl(value))
-                return match.Value;
+            {
+                diagnostics.Report(DiagnosticDescriptors.UnsafeUrl, $"The URL '{Truncate(value)}' uses a scheme that is not allowed and was removed", new DiagnosticLocation { FilePath = source.DisplayPath, Line = line });
+                return "";
+            }
 
             var resolved = ResolveUrl(value, attribute.Equals("src", StringComparison.OrdinalIgnoreCase), source, line);
             return resolved is null ? "" : $"{attribute}=\"{HtmlEncoding.Encode(resolved)}\"";
@@ -304,7 +307,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
 
     private static string Truncate(string value) => value.Length <= 50 ? value : value[..50] + "...";
 
-    [GeneratedRegex("""(?<name>\b(?:href|src))\s*=\s*(?:"(?<value>[^"]*)"|'(?<value>[^']*)')""", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex("""(?<name>\b(?:href|src))\s*=\s*(?:"(?<value>[^"]*)"|'(?<value>[^']*)'|(?<value>[^\s"'=<>`]+))""", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex RawHtmlUrlAttributeRegex();
 
     [GeneratedRegex(@"\s+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]

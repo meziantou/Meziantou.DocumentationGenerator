@@ -9,6 +9,7 @@ internal sealed class TestPackageBuilder(string id, string version)
 {
     private readonly List<(string Name, byte[] Content, int? UnixMode)> _entries = [];
     private string? _nuspecMetadata;
+    private bool _reverseEntries;
 
     public string Id { get; } = id;
     public string Version { get; } = version;
@@ -16,6 +17,13 @@ internal sealed class TestPackageBuilder(string id, string version)
     public TestPackageBuilder WithNuspecMetadata(string xml)
     {
         _nuspecMetadata = xml;
+        return this;
+    }
+
+    /// <summary>Writes the archive entries in reverse order, to check that the output does not depend on it.</summary>
+    public TestPackageBuilder WithReversedEntries()
+    {
+        _reverseEntries = true;
         return this;
     }
 
@@ -60,8 +68,14 @@ internal sealed class TestPackageBuilder(string id, string version)
                   </metadata>
                 </package>
                 """;
-            Write(archive, Id + ".nuspec", Encoding.UTF8.GetBytes(nuspec), unixMode: null);
-            foreach (var (name, content, unixMode) in _entries)
+            var entries = new List<(string Name, byte[] Content, int? UnixMode)> { (Id + ".nuspec", Encoding.UTF8.GetBytes(nuspec), null) };
+            entries.AddRange(_entries);
+            if (_reverseEntries)
+            {
+                entries.Reverse();
+            }
+
+            foreach (var (name, content, unixMode) in entries)
             {
                 Write(archive, name, content, unixMode);
             }

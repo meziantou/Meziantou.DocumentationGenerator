@@ -206,7 +206,8 @@
     private RenderFragment RenderTree(System.Collections.Immutable.ImmutableArray<NavigationNode> nodes) => @<ul>
         @foreach (var node in nodes)
         {
-            @if (node.Children.IsEmpty)
+            @* Only the types of the current namespace are listed, so pages of large APIs stay small *@
+            @if (node.Children.IsEmpty || (node.Kind == "namespace" && !Navigation.IsInTrail(node)))
             {
                 <li>@RenderLink(node)</li>
             }
