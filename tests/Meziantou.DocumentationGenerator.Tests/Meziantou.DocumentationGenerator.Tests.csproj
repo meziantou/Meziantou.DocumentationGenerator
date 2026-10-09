@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Jint" />
     <PackageReference Include="Meziantou.Framework.TemporaryDirectory" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>

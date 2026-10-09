@@ -16,6 +16,14 @@
     <a class="skip-link" href="#main">Skip to main content</a>
     <header class="site-header">
         <a class="site-title" href="@Site.Links.HomeUrl">@Site.SiteTitle</a>
+        <div class="search" data-search hidden data-base-path="@Site.Links.Urls.BasePath.Value" data-index="@Site.Links.GetAssetUrl(Search.SearchIndexBuilder.FileName)">
+            <form role="search" class="search-form">
+                <label for="search-input" class="visually-hidden">Search the documentation</label>
+                <input id="search-input" type="search" placeholder="Search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" aria-describedby="search-status">
+            </form>
+            <ul id="search-results" class="search-results" role="listbox" aria-label="Search results" hidden></ul>
+            <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
+        </div>
         @if (!Site.Navigation.Header.IsEmpty)
         {
             <nav class="site-nav" aria-label="Products">
@@ -88,6 +96,7 @@
         }
     </footer>
     <script src="@Site.Links.GetAssetUrl("site.js")" defer></script>
+    <script src="@Site.Links.GetAssetUrl("search.js")" defer></script>
 </body>
 </html>
 

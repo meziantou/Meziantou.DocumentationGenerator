@@ -59,6 +59,15 @@ internal sealed class RenderStage : IBuildStage
             validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html));
         }
 
+        // The search index lists URLs relative to the base path; they are validated like links
+        var indexPath = LinkService.AssetsDirectory + "/" + Search.SearchIndexBuilder.FileName;
+        if (links.TryRegister(new SiteRoute(indexPath, PageKind.Asset, "search index")))
+        {
+            var index = Search.SearchIndexBuilder.Build(site);
+            staging.WriteText(indexPath, index);
+            validator.AddFile(indexPath, [], Search.SearchIndexReader.GetUrls(index).Select(url => links.Urls.BasePath.Value + url));
+        }
+
         context.GeneratedFileCount = staging.Files.Count;
     }
 
