@@ -1,0 +1,137 @@
+# Configuration reference
+
+The generator reads a JSON file, `docgen.json` by default. Comments and trailing commas are allowed. Add
+`"$schema"` to get completion and validation in editors:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/meziantou/Meziantou.DocumentationGenerator/main/schema/docgen.schema.json",
+  "version": 1
+}
+```
+
+The schema is also included in the tool package (`schema/docgen.schema.json`) and is generated from the
+configuration model, so it cannot drift from what the tool accepts.
+
+## Rules
+
+- Every relative path is resolved against the directory containing the configuration file, never the current
+  working directory.
+- Unknown properties are errors (`DG1002`).
+- Errors report the file, line, column and JSON path of the invalid value.
+- Loading the configuration never downloads packages and never writes to the output directory.
+- Credentials are never stored in the configuration. Configure feeds and credentials in `NuGet.Config` or with
+  a credential provider.
+
+## Top-level properties
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `version` | integer | required | Configuration format version. Must be `1`. |
+| `site` | object | | Site identity and deployment settings. |
+| `output` | path | `_site` | Output directory. It must be a dedicated directory: it cannot contain the configuration file, the content directory, the cache or packages. |
+| `cacheDirectory` | path | `DOCGEN_CACHE`, or a per-user directory | Package cache. |
+| `packages` | array | `[]` | Packages whose APIs are documented. |
+| `products` | array | one product per package | Groups of packages sharing a landing page and an API reference. |
+| `content` | object | | Authored Markdown pages. |
+| `api` | object | all visible APIs | API selection rules. |
+| `xrefs` | array | `[]` | Links to documentation of symbols outside the configured packages. |
+| `diagnostics` | object | | Diagnostic severity settings. |
+| `sourceLinks` | object | enabled | Source link settings. |
+
+At least one package or a content directory is required.
+
+## `site`
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `title` | `Documentation` | Site title, used in the header and page titles. |
+| `description` | | Default page description. |
+| `language` | `en` | Language of the content (`<html lang>`). |
+| `basePath` | `/` | URL path where the site is deployed. `docs`, `/docs` and `/docs/` are equivalent. |
+| `url` | | Absolute origin (`https://example.com`) used for canonical URLs, the sitemap and social previews. It must not contain a path: canonical URLs are `url` + `basePath` + page path. Without `url`, no canonical URL and no sitemap are generated. |
+| `logo` | | Logo image file. |
+| `favicon` | | Favicon file. |
+| `socialImage` | | Image used by social previews. Requires `url`. |
+| `robots` | `none` | `none`: no `robots.txt` and no robots meta tag. `allow`: `robots.txt` allowing crawlers and referencing the sitemap. `disallow`: `robots.txt` disallowing crawlers and a `noindex` meta tag on every page. `robots.txt` is only generated when `basePath` is `/` because crawlers only read it at the origin root (`DG1010`). |
+| `footer` | | Text displayed in the footer. |
+
+## `packages[]`
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `id` | required | Package identifier. |
+| `version` | required | Exact version (`1.2.3`, `1.2.3-beta.1`). Ranges and floating versions are rejected. |
+| `source` | NuGet.Config sources | Source URL or the name of a source defined in `NuGet.Config`. |
+| `path` | | Local `.nupkg` file. No feed is queried. Cannot be combined with `source`. |
+| `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
+| `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
+| `readme` | package README | Local Markdown file used instead of the README embedded in the package. |
+
+## `products[]`
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `id` | required | Identifier used in URLs: lowercase letters, digits, `-` and `.`. |
+| `name` | first package ID | Display name. |
+| `description` | package description | Text shown in the product catalogue. |
+| `packages` | required | Package identifiers. A package belongs to exactly one product. |
+| `landingPage` | | Local Markdown file used as the landing page. |
+| `readmePackage` | first package | Package whose README is the landing page when `landingPage` is not set. |
+
+When `products` is omitted, each package is a product whose `id` is the lowercase package ID.
+
+## `content`
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `root` | required | Directory containing Markdown pages. Every `.md` file is a page. |
+| `toc` | `toc.yml` when it exists | Root table of contents, relative to `root`. |
+| `assets` | `[]` | Files or directories, relative to `root`, copied as-is (for example `CNAME`). Files referenced by Markdown links and images are copied automatically. |
+| `exclude` | `[]` | Glob patterns of Markdown files to ignore. |
+
+## `api`
+
+```json
+"api": {
+  "include": [ "Contoso.*" ],
+  "exclude": [ "N:Contoso.Internal", "T:Contoso.Legacy*", "M:Contoso.Client.Dispose" ]
+}
+```
+
+A pattern is an optional documentation ID prefix (`N:`, `T:`, `M:`, `P:`, `F:`, `E:`) followed by a qualified
+name in which `*` matches any characters. A pattern matches a symbol when it matches the symbol or one of its
+containers, so excluding a namespace excludes its types and their members. `include` patterns select namespaces
+and types. `exclude` patterns win over `include` patterns.
+
+## `xrefs[]`
+
+```json
+"xrefs": [
+  { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }
+]
+```
+
+References to symbols that are not part of the configured packages are linked only when a mapping matches
+their namespace. `{uid}` is replaced by the lowercase documentation ID without its prefix, with generic arity
+markers replaced by `-N` (`T:System.Collections.Generic.List`1` → `system.collections.generic.list-1`). The
+longest matching namespace wins.
+
+## `diagnostics`
+
+```json
+"diagnostics": {
+  "warningsAsErrors": true,
+  "severity": { "DG3003": "none", "DG5005": "error" }
+}
+```
+
+Severity values are `error`, `warning`, `info` and `none`. Diagnostics that report unsafe input (for instance
+`DG1009`) cannot be lowered. See [diagnostics.md](diagnostics.md) for the list of codes.
+
+## `sourceLinks`
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `enabled` | `true` | Generate links to source files using PDBs and Source Link. |
+| `symbolPackages` | `false` | Download the symbol package (`.snupkg`) from the package source when the package contains no PDB. |

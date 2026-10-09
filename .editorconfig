@@ -13,3 +13,11 @@ indent_size = 2
 [*.cs]
 # Internal types are exercised by the test project through InternalsVisibleTo
 dotnet_diagnostic.MA0182.severity = none
+
+# URLs, slugs and identifiers are normalized to lowercase on purpose
+dotnet_diagnostic.CA1308.severity = none
+
+# Site URLs are relative paths with fragments that System.Uri cannot represent
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA1056.severity = none
