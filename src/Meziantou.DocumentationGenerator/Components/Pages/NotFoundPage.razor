@@ -1,0 +1,13 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="Page not found" Description="The requested page does not exist." PagePath="@LinkService.NotFoundPath" IsNotFound="true">
+    <h1>Page not found</h1>
+    <p>The page you requested does not exist. It may have been moved or removed.</p>
+    <ul>
+        <li><a href="@Site.Links.HomeUrl">Go to the home page</a></li>
+        @foreach (var product in Site.Configuration.Products)
+        {
+            <li><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></li>
+        }
+    </ul>
+    <p>You can also use the search box at the top of the page.</p>
+</SiteLayout>

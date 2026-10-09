@@ -32,9 +32,9 @@ internal sealed class SiteBuilder : IAsyncDisposable
         directory.CreateTextFile("docgen.json", $$"""
             {
               "version": 1,
-              "site": { "title": "Test site" },
               "cacheDirectory": "cache",
               {{contentConfiguration}}
+              {{(extraConfiguration.Contains("\"site\"", StringComparison.Ordinal) ? "" : "\"site\": { \"title\": \"Test site\" },")}}
               {{extraConfiguration}}
               "packages": [ {{string.Join(", ", packages.Select(p => TestBuild.PackageReference(p)))}} ]
             }

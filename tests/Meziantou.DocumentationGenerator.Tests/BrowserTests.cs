@@ -265,5 +265,18 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.DoesNotContain(requests, url => url.Contains("_framework", StringComparison.Ordinal) || url.EndsWith(".wasm", StringComparison.Ordinal) || url.EndsWith(".dll", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task NotFound_AtADeeplyNestedUrl()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(fixture.DocsServer.BaseUrl + "a/b/c/missing-page.html");
+
+        Assert.Equal(404, response!.Status);
+        Assert.Equal("Page not found", await page.TextContentAsync("h1"));
+        await page.ClickAsync("main >> text=Go to the home page");
+        Assert.Equal(fixture.DocsServer.BaseUrl, page.Url);
+    }
+
     private static Task<string> GetBackgroundAsync(IPage page) => page.EvaluateAsync<string>("getComputedStyle(document.body).backgroundColor");
 }

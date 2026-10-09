@@ -11,6 +11,38 @@
     {
         <meta name="description" content="@Description">
     }
+    @if (Metadata.RobotsNoIndex)
+    {
+        <meta name="robots" content="noindex">
+    }
+    @if (Metadata.CanonicalUrl is not null)
+    {
+        <link rel="canonical" href="@Metadata.CanonicalUrl">
+    }
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="@Site.SiteTitle">
+    <meta property="og:title" content="@Title">
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <meta property="og:description" content="@Description">
+    }
+    @if (Metadata.CanonicalUrl is not null)
+    {
+        <meta property="og:url" content="@Metadata.CanonicalUrl">
+    }
+    @if (Metadata.SocialImageUrl is not null)
+    {
+        <meta property="og:image" content="@Metadata.SocialImageUrl">
+        <meta name="twitter:card" content="summary_large_image">
+    }
+    else
+    {
+        <meta name="twitter:card" content="summary">
+    }
+    @if (Site.FaviconUrl is not null)
+    {
+        <link rel="icon" href="@Site.FaviconUrl">
+    }
     <link rel="stylesheet" href="@Site.Links.GetAssetUrl("site.css")">
     @HeadContent
 </head>
@@ -21,7 +53,13 @@
         {
             <button type="button" class="menu-button" aria-controls="sidebar" aria-expanded="false" hidden>Menu</button>
         }
-        <a class="site-title" href="@Site.Links.HomeUrl">@Site.SiteTitle</a>
+        <a class="site-title" href="@Site.Links.HomeUrl">
+            @if (Site.LogoUrl is not null)
+            {
+                <img class="site-logo" src="@Site.LogoUrl" alt="" width="28" height="28">
+            }
+            @Site.SiteTitle
+        </a>
         <div class="search" data-search hidden data-base-path="@Site.Links.Urls.BasePath.Value" data-index="@Site.Links.GetAssetUrl(Search.SearchIndexBuilder.FileName)">
             <form role="search" class="search-form">
                 <label for="search-input" class="visually-hidden">Search the documentation</label>
@@ -137,6 +175,10 @@
     [Parameter]
     public IReadOnlyList<PageHeading>? Headings { get; set; }
 
+    /// <summary>The 404 page is not indexed and has no canonical URL, because it is served for any missing URL.</summary>
+    [Parameter]
+    public bool IsNotFound { get; set; }
+
     /// <summary>Target frameworks of the page, used by the optional client-side filter. Every variant is visible without JavaScript.</summary>
     [Parameter]
     public IReadOnlyList<string>? TargetFrameworks { get; set; }
@@ -149,9 +191,16 @@
 
     private PageNavigation Navigation { get; set; } = PageNavigation.Empty;
 
+    private (string? CanonicalUrl, string? SocialImageUrl, bool RobotsNoIndex) Metadata { get; set; }
+
     protected override void OnParametersSet()
     {
         Navigation = Site.Navigation.GetPageNavigation(PagePath, ProductId);
+        var siteUrl = Site.Configuration.Site.SiteUrl;
+        Metadata = (
+            IsNotFound ? null : UrlBuilder.GetAbsoluteUrl(siteUrl, Site.Links.Urls.GetUrl(PagePath)),
+            Site.SocialImageUrl is null ? null : UrlBuilder.GetAbsoluteUrl(siteUrl, Site.SocialImageUrl),
+            IsNotFound || Site.Configuration.Site.Robots is RobotsPolicy.Disallow);
     }
 
     private RenderFragment RenderTree(System.Collections.Immutable.ImmutableArray<NavigationNode> nodes) => @<ul>

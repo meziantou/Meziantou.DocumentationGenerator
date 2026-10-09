@@ -16,6 +16,9 @@ internal sealed class RazorRenderer : IAsyncDisposable
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+
+        // Only characters that are significant in HTML are encoded, so that Unicode text stays readable
+        services.AddSingleton(System.Text.Encodings.Web.HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All));
         configureServices?.Invoke(services);
         _services = services.BuildServiceProvider();
         _renderer = new HtmlRenderer(_services, NullLoggerFactory.Instance);

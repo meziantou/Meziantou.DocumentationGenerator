@@ -14,6 +14,8 @@ internal static class SitePageCatalog
             yield return PageRequest.Create<HomePage>(LinkService.HomePath, new Dictionary<string, object?>(StringComparer.Ordinal));
         }
 
+        yield return PageRequest.Create<NotFoundPage>(LinkService.NotFoundPath, new Dictionary<string, object?>(StringComparer.Ordinal));
+
         foreach (var page in site.Content.Pages)
         {
             yield return PageRequest.Create<ArticlePage>(page.Route.FilePath, new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(ArticlePage.PagePath)] = page.Route.FilePath });

@@ -25,6 +25,11 @@ internal sealed class SiteRenderContext
 
     private Dictionary<string, ApiTypeModel>? _typesByPath;
 
+    /// <summary>URLs of the branding assets copied from the configuration, or <see langword="null"/> when not configured.</summary>
+    public string? FaviconUrl { get; init; }
+    public string? LogoUrl { get; init; }
+    public string? SocialImageUrl { get; init; }
+
     public string SiteTitle => Configuration.Site.Title;
 
     public ApiTypeModel GetTypeByPagePath(string pagePath)
