@@ -4,6 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @* Applies the stored theme before the first paint to avoid a flash of the wrong theme *@
+    @((MarkupString)ThemeBootstrapScript)
     <title>@Site.GetDocumentTitle(Title)</title>
     @if (!string.IsNullOrEmpty(Description))
     {
@@ -15,6 +17,10 @@
 <body>
     <a class="skip-link" href="#main">Skip to main content</a>
     <header class="site-header">
+        @if (!Navigation.Sidebar.IsEmpty)
+        {
+            <button type="button" class="menu-button" aria-controls="sidebar" aria-expanded="false" hidden>Menu</button>
+        }
         <a class="site-title" href="@Site.Links.HomeUrl">@Site.SiteTitle</a>
         <div class="search" data-search hidden data-base-path="@Site.Links.Urls.BasePath.Value" data-index="@Site.Links.GetAssetUrl(Search.SearchIndexBuilder.FileName)">
             <form role="search" class="search-form">
@@ -23,6 +29,16 @@
             </form>
             <ul id="search-results" class="search-results" role="listbox" aria-label="Search results" hidden></ul>
             <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="header-tools">
+            <div class="theme-picker" data-theme-picker hidden>
+                <label for="theme-select">Theme</label>
+                <select id="theme-select">
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
         </div>
         @if (!Site.Navigation.Header.IsEmpty)
         {
@@ -95,12 +111,15 @@
             <p>@Site.Configuration.Site.Footer</p>
         }
     </footer>
+    <div id="live-status" class="visually-hidden" role="status" aria-live="polite"></div>
     <script src="@Site.Links.GetAssetUrl("site.js")" defer></script>
     <script src="@Site.Links.GetAssetUrl("search.js")" defer></script>
 </body>
 </html>
 
 @code {
+    private const string ThemeBootstrapScript = "<script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('docgen-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>";
+
     [Parameter, EditorRequired]
     public required string Title { get; set; }
 
@@ -138,19 +157,21 @@
     private RenderFragment RenderTree(System.Collections.Immutable.ImmutableArray<NavigationNode> nodes) => @<ul>
         @foreach (var node in nodes)
         {
-            <li>
-                @if (node.Children.IsEmpty)
-                {
+            @if (node.Children.IsEmpty)
+            {
+                <li>@RenderLink(node)</li>
+            }
+            else
+            {
+                @* The disclosure toggle is separate from the link, so that interactive elements are not nested *@
+                <li class="nav-node">
                     @RenderLink(node)
-                }
-                else
-                {
                     <details open="@(node.IsExpanded || Navigation.IsInTrail(node))">
-                        <summary>@RenderLink(node)</summary>
+                        <summary class="nav-toggle" aria-label="@($"{node.Title} section")"></summary>
                         @RenderTree(node.Children)
                     </details>
-                }
-            </li>
+                </li>
+            }
         }
     </ul>;
 

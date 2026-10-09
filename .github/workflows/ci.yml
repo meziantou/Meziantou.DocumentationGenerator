@@ -37,6 +37,9 @@ jobs:
     - name: Pack
       run: dotnet pack src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj --configuration Release --no-build --output ${{ github.workspace }}/artifacts/package
 
+    - name: Install Chromium for browser tests
+      run: pwsh tests/Meziantou.DocumentationGenerator.Tests/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
+
     # The installed-tool tests use the package produced by the previous step
     - name: Test
       run: dotnet test --solution Meziantou.DocumentationGenerator.slnx --configuration Release --no-build
