@@ -51,6 +51,7 @@ input and cannot be lowered.
 | `DG2010` | info | A package dependency is not configured in `references`, so documentation inherited from it is unavailable |
 | `DG2011` | info | Explains which asset is documented for each target framework |
 | `DG2012` | warning | Unsupported or unreadable metadata (the assembly or attribute is skipped or displayed partially) |
+| `DG2013` | error | The builds of an assembly cannot be aggregated across target frameworks (duplicate inputs) |
 | `DG3001` | warning | The package has no README; a generated page is used |
 | `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
 | `DG7001` | error | A build stage failed unexpectedly |

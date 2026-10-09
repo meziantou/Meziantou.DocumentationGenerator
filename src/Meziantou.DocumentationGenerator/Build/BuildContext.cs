@@ -36,6 +36,9 @@ internal sealed class BuildContext
     /// <summary>One model per API asset of the packages and references, in package then asset order.</summary>
     public ImmutableArray<ApiAssemblyModel> ApiAssemblies { get; set; } = [];
 
+    /// <summary>API models aggregated across target frameworks.</summary>
+    public ApiCatalog ApiCatalog { get; set; } = ApiCatalog.Empty;
+
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }
 
