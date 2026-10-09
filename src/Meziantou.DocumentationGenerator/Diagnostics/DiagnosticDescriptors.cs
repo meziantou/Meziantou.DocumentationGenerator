@@ -83,6 +83,7 @@ internal static class DiagnosticDescriptors
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor BuildCancelled = new("DG7002", "The build was cancelled", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor PublicationFailed = new("DG7004", "The site cannot be published", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidCommandLine = new("DG7003", "Invalid command-line value", DiagnosticSeverity.Error);
 
     public static IEnumerable<DiagnosticDescriptor> GetAll()

@@ -24,10 +24,16 @@ internal sealed class RazorRenderer : IAsyncDisposable
     public Task<string> RenderAsync<TComponent>(IReadOnlyDictionary<string, object?> parameters)
         where TComponent : IComponent
     {
-        // HtmlRenderer has thread affinity: every call must go through its dispatcher.
+        return RenderAsync(typeof(TComponent), parameters);
+    }
+
+    public Task<string> RenderAsync(Type componentType, IReadOnlyDictionary<string, object?> parameters)
+    {
+        // HtmlRenderer has thread affinity: every call must go through its dispatcher, and asynchronous component work
+        // must complete before the HTML is read
         return _renderer.Dispatcher.InvokeAsync(async () =>
         {
-            var root = await _renderer.RenderComponentAsync<TComponent>(ParameterView.FromDictionary(parameters.ToDictionary(StringComparer.Ordinal)));
+            var root = await _renderer.RenderComponentAsync(componentType, ParameterView.FromDictionary(parameters.ToDictionary(StringComparer.Ordinal)));
             await root.QuiescenceTask;
             return root.ToHtmlString();
         });

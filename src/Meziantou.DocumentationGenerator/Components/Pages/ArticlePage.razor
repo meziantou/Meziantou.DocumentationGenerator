@@ -1,0 +1,14 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@Page.Title" Description="@Page.Rendered?.Description" PagePath="@PagePath">
+    <article class="article">
+        <h1>@Page.Title</h1>
+        @((MarkupString)(Page.Rendered?.Html ?? ""))
+    </article>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string PagePath { get; set; }
+
+    private AuthoredPage Page => Site.Content.Pages.Single(p => p.Route.FilePath == PagePath);
+}

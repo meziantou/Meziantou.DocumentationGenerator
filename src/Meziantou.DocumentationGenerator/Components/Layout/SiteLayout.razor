@@ -1,0 +1,129 @@
+@inject SiteRenderContext Site
+<!DOCTYPE html>
+<html lang="@Site.Configuration.Site.Language">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@Site.GetDocumentTitle(Title)</title>
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <meta name="description" content="@Description">
+    }
+    <link rel="stylesheet" href="@Site.Links.GetAssetUrl("site.css")">
+    @HeadContent
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+        <a class="site-title" href="@Site.Links.HomeUrl">@Site.SiteTitle</a>
+        @if (!Site.Navigation.Header.IsEmpty)
+        {
+            <nav class="site-nav" aria-label="Products">
+                <ul>
+                    @foreach (var node in Site.Navigation.Header)
+                    {
+                        <li><a href="@node.Url" aria-current="@(node.PagePath == PagePath ? "page" : null)">@node.Title</a></li>
+                    }
+                </ul>
+            </nav>
+        }
+    </header>
+    <div class="site-body">
+        @if (!Navigation.Sidebar.IsEmpty)
+        {
+            <nav class="sidebar" id="sidebar" aria-label="Table of contents">
+                @RenderTree(Navigation.Sidebar)
+            </nav>
+        }
+        <main id="main" class="content" tabindex="-1">
+            @if (!Navigation.Breadcrumbs.IsEmpty)
+            {
+                <nav class="breadcrumbs" aria-label="Breadcrumb">
+                    <ol>
+                        @foreach (var node in Navigation.Breadcrumbs)
+                        {
+                            <li>@if (node.Url is not null) { <a href="@node.Url">@node.Title</a> } else { <span>@node.Title</span> }</li>
+                        }
+                    </ol>
+                </nav>
+            }
+            @ChildContent
+            @if (Navigation.Previous is not null || Navigation.Next is not null)
+            {
+                <nav class="pager" aria-label="Previous and next articles">
+                    @if (Navigation.Previous is { } previous)
+                    {
+                        <a class="pager-previous" rel="prev" href="@previous.Url"><span class="pager-label">Previous</span> @previous.Title</a>
+                    }
+                    @if (Navigation.Next is { } next)
+                    {
+                        <a class="pager-next" rel="next" href="@next.Url"><span class="pager-label">Next</span> @next.Title</a>
+                    }
+                </nav>
+            }
+        </main>
+    </div>
+    <footer class="site-footer">
+        @if (!string.IsNullOrEmpty(Site.Configuration.Site.Footer))
+        {
+            <p>@Site.Configuration.Site.Footer</p>
+        }
+    </footer>
+    <script src="@Site.Links.GetAssetUrl("site.js")" defer></script>
+</body>
+</html>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>Output path of the page, used to mark the current page in navigation.</summary>
+    [Parameter, EditorRequired]
+    public required string PagePath { get; set; }
+
+    /// <summary>Product of the page, used to select the generated product navigation.</summary>
+    [Parameter]
+    public string? ProductId { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeadContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private PageNavigation Navigation { get; set; } = PageNavigation.Empty;
+
+    protected override void OnParametersSet()
+    {
+        Navigation = Site.Navigation.GetPageNavigation(PagePath, ProductId);
+    }
+
+    private RenderFragment RenderTree(System.Collections.Immutable.ImmutableArray<NavigationNode> nodes) => @<ul>
+        @foreach (var node in nodes)
+        {
+            <li>
+                @if (node.Children.IsEmpty)
+                {
+                    @RenderLink(node)
+                }
+                else
+                {
+                    <details open="@(node.IsExpanded || Navigation.IsInTrail(node))">
+                        <summary>@RenderLink(node)</summary>
+                        @RenderTree(node.Children)
+                    </details>
+                }
+            </li>
+        }
+    </ul>;
+
+    private RenderFragment RenderLink(NavigationNode node) => node switch
+    {
+        { Url: null } => @<span class="nav-group">@node.Title</span>,
+        { IsExternal: true } => @<a href="@node.Url" class="nav-external" rel="noopener">@node.Title</a>,
+        _ => @<a href="@node.Url" aria-current="@(Navigation.IsActive(node) ? "page" : null)">@node.Title</a>,
+    };
+}

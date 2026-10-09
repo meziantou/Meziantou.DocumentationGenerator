@@ -17,6 +17,9 @@ internal static class BuildPipeline
             new SourceLinkStage(),
             new ContentStage(),
             new NavigationStage(),
+            new RenderStage(),
+            new ValidationStage(),
+            new PublishStage(),
         ];
     }
 }

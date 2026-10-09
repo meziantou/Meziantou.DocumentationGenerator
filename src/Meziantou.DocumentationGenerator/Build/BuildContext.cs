@@ -8,6 +8,7 @@ using Meziantou.DocumentationGenerator.Links;
 using Meziantou.DocumentationGenerator.Navigation;
 using Meziantou.DocumentationGenerator.XmlDocs;
 using Meziantou.DocumentationGenerator.Packages;
+using Meziantou.DocumentationGenerator.Rendering;
 using Meziantou.DocumentationGenerator.SourceLinks;
 
 namespace Meziantou.DocumentationGenerator.Build;
@@ -62,8 +63,29 @@ internal sealed class BuildContext
     /// <summary>Navigation trees, created by <see cref="NavigationStage"/>.</summary>
     public SiteNavigation Navigation { get; set; } = SiteNavigation.Empty;
 
+    /// <summary>Staging directory created by <see cref="RenderStage"/>.</summary>
+    public OutputStaging? Staging { get; set; }
+
+    /// <summary>Collects generated files, anchors and links for validation.</summary>
+    public SiteLinkValidator? LinkValidator { get; set; }
+
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }
 
     public int GeneratedFileCount { get; set; }
+
+    private readonly List<Action> _cleanups = [];
+
+    /// <summary>Registers an action executed when the build ends, whatever its outcome, such as deleting the staging directory.</summary>
+    public void RegisterCleanup(Action cleanup) => _cleanups.Add(cleanup);
+
+    public void RunCleanups()
+    {
+        for (var i = _cleanups.Count - 1; i >= 0; i--)
+        {
+            _cleanups[i]();
+        }
+
+        _cleanups.Clear();
+    }
 }

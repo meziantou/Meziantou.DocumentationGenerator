@@ -30,7 +30,16 @@ internal sealed class BuildCoordinator(Func<BuildContext, IReadOnlyList<IBuildSt
             return new BuildResult(BuildStatus.Failed, diagnostics.GetDiagnostics(), configuration, IsPublished: false, GeneratedFileCount: 0);
 
         var context = new BuildContext(configuration, options, diagnostics, reporter);
-        var status = await RunStagesAsync(context, stageFactory(context), cancellationToken);
+        BuildStatus status;
+        try
+        {
+            status = await RunStagesAsync(context, stageFactory(context), cancellationToken);
+        }
+        finally
+        {
+            context.RunCleanups();
+        }
+
         return new BuildResult(status, diagnostics.GetDiagnostics(), configuration, context.IsPublished, context.GeneratedFileCount);
     }
 

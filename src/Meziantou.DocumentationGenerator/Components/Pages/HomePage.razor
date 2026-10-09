@@ -1,0 +1,17 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@Site.SiteTitle" Description="@Site.Configuration.Site.Description" PagePath="@LinkService.HomePath">
+    <h1>@Site.SiteTitle</h1>
+    @if (!string.IsNullOrEmpty(Site.Configuration.Site.Description))
+    {
+        <p class="lead">@Site.Configuration.Site.Description</p>
+    }
+    @if (!Site.Configuration.Products.IsEmpty)
+    {
+        <ul class="product-catalog">
+            @foreach (var product in Site.Configuration.Products)
+            {
+                <li><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></li>
+            }
+        </ul>
+    }
+</SiteLayout>
