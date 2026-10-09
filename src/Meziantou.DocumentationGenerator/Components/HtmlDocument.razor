@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="@Language">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@Title</title>
+</head>
+<body>
+    @ChildContent
+</body>
+</html>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string Title { get; set; }
+
+    [Parameter]
+    public string Language { get; set; } = "en";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

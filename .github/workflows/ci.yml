@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DiffEngine_Disabled: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        global-json-file: global.json
+
+    - name: Build
+      run: dotnet build Meziantou.DocumentationGenerator.slnx --configuration Release
+
+    - name: Pack
+      run: dotnet pack src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj --configuration Release --no-build --output ${{ github.workspace }}/artifacts/package
+
+    # The installed-tool tests use the package produced by the previous step
+    - name: Test
+      run: dotnet test --solution Meziantou.DocumentationGenerator.slnx --configuration Release --no-build
+      env:
+        DOCGEN_TOOL_PACKAGE_DIRECTORY: ${{ github.workspace }}/artifacts/package
+
+    - name: Upload package
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget
+        path: artifacts/package/*.nupkg
+        if-no-files-found: error
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.os }}
+        path: '**/TestResults/**'
+        if-no-files-found: ignore
