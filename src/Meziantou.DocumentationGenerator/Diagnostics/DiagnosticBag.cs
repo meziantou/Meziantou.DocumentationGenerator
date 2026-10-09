@@ -1,54 +1,31 @@
 namespace Meziantou.DocumentationGenerator.Diagnostics;
 
-/// <summary>Thread-safe collection of diagnostics. Diagnostics are returned in a deterministic order whatever the reporting order.</summary>
+/// <summary>
+/// Thread-safe collection of diagnostics. Severities are computed when diagnostics are read, so severity overrides loaded
+/// from the configuration also apply to diagnostics reported before the configuration was loaded.
+/// Diagnostics are returned in a deterministic order whatever the reporting order.
+/// </summary>
 internal sealed class DiagnosticBag
 {
     private readonly Lock _lock = new();
-    private readonly List<Diagnostic> _diagnostics = [];
-    private readonly Func<DiagnosticDescriptor, DiagnosticSeverity> _severityProvider;
+    private readonly List<(DiagnosticDescriptor Descriptor, string Message, DiagnosticLocation? Location)> _entries = [];
+    private Func<DiagnosticDescriptor, DiagnosticSeverity> _severityProvider = descriptor => descriptor.DefaultSeverity;
 
-    public DiagnosticBag()
-        : this(descriptor => descriptor.DefaultSeverity)
-    {
-    }
+    public bool HasErrors => GetDiagnostics().Any(d => d.Severity is DiagnosticSeverity.Error);
 
-    public DiagnosticBag(Func<DiagnosticDescriptor, DiagnosticSeverity> severityProvider)
+    public void SetSeverityProvider(Func<DiagnosticDescriptor, DiagnosticSeverity> severityProvider)
     {
-        _severityProvider = severityProvider;
-    }
-
-    public bool HasErrors
-    {
-        get
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                return _diagnostics.Exists(d => d.Severity is DiagnosticSeverity.Error);
-            }
-        }
-    }
-
-    public int Count
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _diagnostics.Count;
-            }
+            _severityProvider = severityProvider;
         }
     }
 
     public void Report(DiagnosticDescriptor descriptor, string message, DiagnosticLocation? location = null)
     {
-        var severity = _severityProvider(descriptor);
-        if (severity is DiagnosticSeverity.None)
-            return;
-
-        var diagnostic = new Diagnostic(descriptor, severity, Redaction.Redact(message), location);
         lock (_lock)
         {
-            _diagnostics.Add(diagnostic);
+            _entries.Add((descriptor, Redaction.Redact(message), location));
         }
     }
 
@@ -56,7 +33,11 @@ internal sealed class DiagnosticBag
     {
         lock (_lock)
         {
-            return [.. _diagnostics.Distinct().Order(DiagnosticComparer.Instance)];
+            return [.. _entries
+                .Select(entry => new Diagnostic(entry.Descriptor, _severityProvider(entry.Descriptor), entry.Message, entry.Location))
+                .Where(d => d.Severity is not DiagnosticSeverity.None)
+                .Distinct()
+                .Order(DiagnosticComparer.Instance)];
         }
     }
 

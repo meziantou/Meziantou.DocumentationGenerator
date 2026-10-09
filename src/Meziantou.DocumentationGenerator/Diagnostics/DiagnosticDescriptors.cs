@@ -20,6 +20,11 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor InvalidFilterPattern = new("DG1014", "Invalid API filter pattern", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidDiagnosticOverride = new("DG1015", "Invalid diagnostic severity override", DiagnosticSeverity.Error);
 
+    // DG7xxx: build, rendering and publication
+    public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor BuildCancelled = new("DG7002", "The build was cancelled", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor InvalidCommandLine = new("DG7003", "Invalid command-line value", DiagnosticSeverity.Error);
+
     public static IEnumerable<DiagnosticDescriptor> GetAll()
     {
         return typeof(DiagnosticDescriptors)

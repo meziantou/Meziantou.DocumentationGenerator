@@ -29,7 +29,7 @@ internal static partial class ConfigurationLoader
         RespectRequiredConstructorParameters = true,
     };
 
-    public static SiteConfiguration? Load(FullPath configurationFile, DiagnosticBag diagnostics)
+    public static SiteConfiguration? Load(FullPath configurationFile, DiagnosticBag diagnostics, ConfigurationOverrides? overrides = null)
     {
         if (!File.Exists(configurationFile))
         {
@@ -38,10 +38,10 @@ internal static partial class ConfigurationLoader
         }
 
         var bytes = File.ReadAllBytes(configurationFile);
-        return Load(bytes, configurationFile, diagnostics);
+        return Load(bytes, configurationFile, diagnostics, overrides);
     }
 
-    public static SiteConfiguration? Load(ReadOnlySpan<byte> utf8Json, FullPath configurationFile, DiagnosticBag diagnostics)
+    public static SiteConfiguration? Load(ReadOnlySpan<byte> utf8Json, FullPath configurationFile, DiagnosticBag diagnostics, ConfigurationOverrides? overrides = null)
     {
         if (utf8Json.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]))
         {
@@ -59,7 +59,18 @@ internal static partial class ConfigurationLoader
         {
             var line = ex.LineNumber is { } l ? (int)l + 1 : (int?)null;
             var column = ex.BytePositionInLine is { } c ? (int)c + 1 : (int?)null;
-            diagnostics.Report(DiagnosticDescriptors.InvalidConfigurationSyntax, CleanJsonExceptionMessage(ex.Message), new DiagnosticLocation { FilePath = fileName, Line = line, Column = column, JsonPath = ex.Path });
+            var message = CleanJsonExceptionMessage(ex.Message);
+            if (ex.Path is not null && message.Contains("could not be mapped", StringComparison.Ordinal))
+            {
+                // Report unknown properties on the property name rather than after its value
+                message = $"Unknown property '{ex.Path[(ex.Path.AsSpan().LastIndexOfAny('.', '[') + 1)..].Trim('[', ']', '\'')}'";
+                if (locations.Find(ex.Path) is { } location)
+                {
+                    (line, column) = (location.Line, location.Column);
+                }
+            }
+
+            diagnostics.Report(DiagnosticDescriptors.InvalidConfigurationSyntax, message, new DiagnosticLocation { FilePath = fileName, Line = line, Column = column, JsonPath = ex.Path });
             return null;
         }
 
@@ -69,8 +80,31 @@ internal static partial class ConfigurationLoader
             return null;
         }
 
+        ApplyOverrides(file, overrides ?? ConfigurationOverrides.None);
         var context = new ValidationContext(configurationFile, locations, diagnostics);
         return context.Validate(file);
+    }
+
+    private static void ApplyOverrides(ConfigurationFile file, ConfigurationOverrides overrides)
+    {
+        if (overrides.OutputDirectory is { } output)
+        {
+            // An absolute path is kept as-is when combined with the configuration directory
+            file.Output = output.Value;
+        }
+
+        if (overrides.BasePath is not null || overrides.SiteUrl is not null)
+        {
+            file.Site ??= new ConfigurationFile.SiteSection();
+            file.Site.BasePath = overrides.BasePath ?? file.Site.BasePath;
+            file.Site.Url = overrides.SiteUrl ?? file.Site.Url;
+        }
+
+        if (overrides.DisableSourceLinks)
+        {
+            file.SourceLinks ??= new ConfigurationFile.SourceLinksSection();
+            file.SourceLinks.Enabled = false;
+        }
     }
 
     private static string CleanJsonExceptionMessage(string message)
