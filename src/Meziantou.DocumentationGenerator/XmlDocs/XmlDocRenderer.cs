@@ -18,6 +18,7 @@ internal sealed partial class XmlDocRenderer(LinkService links, HighlightingServ
     /// <summary>Renders the content of a section, such as <c>summary</c>, as block HTML.</summary>
     public string RenderBlock(XElement section, XmlRenderContext context)
     {
+        context = GetSectionContext(section, context);
         var builder = new StringBuilder();
         var paragraph = new StringBuilder();
         void FlushParagraph()
@@ -51,6 +52,7 @@ internal sealed partial class XmlDocRenderer(LinkService links, HighlightingServ
     /// <summary>Renders the content of an element as inline HTML, such as a parameter description in a table.</summary>
     public string RenderInline(XElement element, XmlRenderContext context)
     {
+        context = GetSectionContext(element, context);
         var builder = new StringBuilder();
         foreach (var node in element.Nodes())
         {
@@ -331,6 +333,13 @@ internal sealed partial class XmlDocRenderer(LinkService links, HighlightingServ
     {
         var cells = row.Elements().Where(e => e.Name.LocalName is "term" or "description").ToList();
         return cells.Count > 0 ? cells : [row];
+    }
+
+    /// <summary>Inherited sections are resolved in the context of the assembly they come from.</summary>
+    private static XmlRenderContext GetSectionContext(XElement section, XmlRenderContext context)
+    {
+        var scope = section.Attribute(InheritanceResolver.ScopeAttributeName)?.Value;
+        return scope is null ? context : context with { Links = context.Links with { Scope = scope } };
     }
 
     /// <summary>A single-line <c>&lt;code&gt;</c> element without language, written in the middle of a sentence, is rendered inline.</summary>

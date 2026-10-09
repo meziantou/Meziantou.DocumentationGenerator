@@ -62,9 +62,14 @@ internal static class DiagnosticDescriptors
     // DG6xxx: XML documentation
     public static readonly DiagnosticDescriptor MalformedXmlDocumentation = new("DG6001", "Malformed XML documentation file", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor UnmatchedXmlDocumentation = new("DG6002", "XML documentation entries without public symbol", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor InheritDocUnresolved = new("DG6003", "Inherited documentation cannot be resolved", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor InheritDocCycle = new("DG6004", "Cycle in inherited documentation", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor IncludeUnresolved = new("DG6005", "Included documentation cannot be resolved", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor UnknownXmlTag = new("DG6006", "Unsupported XML documentation tag", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor InvalidParameterReference = new("DG6007", "Invalid parameter reference", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor DuplicateXmlDocumentation = new("DG6008", "Duplicate XML documentation section or entry", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor UnsupportedSelector = new("DG6009", "Unsupported documentation selector", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor SeveralInheritanceCandidates = new("DG6010", "Several interfaces provide inherited documentation", DiagnosticSeverity.Info);
 
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);

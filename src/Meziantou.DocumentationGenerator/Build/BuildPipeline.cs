@@ -13,6 +13,7 @@ internal static class BuildPipeline
             new ApiAggregationStage(),
             new LinkIndexStage(),
             new XmlDocumentationStage(),
+            new InheritanceStage(),
             new ContentStage(),
         ];
     }

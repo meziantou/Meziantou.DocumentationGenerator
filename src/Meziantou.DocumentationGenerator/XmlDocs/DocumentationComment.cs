@@ -26,6 +26,9 @@ internal sealed record DocumentationComment
     /// <summary><c>&lt;include/&gt;</c> directives, resolved by the inheritance stage.</summary>
     public ImmutableArray<XElement> Includes { get; init; } = [];
 
+    /// <summary>Explains why inherited documentation is missing, displayed instead of silently omitting it.</summary>
+    public string? InheritanceNote { get; init; }
+
     /// <summary>Assembly scope and XML file the documentation comes from, used to resolve references in the right context.</summary>
     public string? Scope { get; init; }
     public string? SourcePath { get; init; }

@@ -71,9 +71,14 @@ input and cannot be lowered.
 | `DG5010` | info | Unknown code language; the code is displayed without highlighting |
 | `DG6001` | warning | Malformed XML documentation file; API pages are generated without documentation |
 | `DG6002` | info | XML documentation entries that match no public symbol (usually internal members) |
+| `DG6003` | warning | `<inheritdoc>` cannot be resolved (missing or ambiguous target, or dependency not configured in `references`); a note is displayed |
+| `DG6004` | warning | Cycle in inherited documentation |
+| `DG6005` | warning | `<include>` cannot be resolved (missing file or no matching element) |
 | `DG6006` | info | Unsupported XML documentation tag; its text is displayed |
 | `DG6007` | warning | A `param`, `typeparam`, `paramref` or `typeparamref` names a parameter that does not exist |
 | `DG6008` | warning | A documentation section or entry is specified more than once; the first one is used |
+| `DG6009` | warning | Unsupported selector in `<include path>` or `<inheritdoc path>` |
+| `DG6010` | info | Several interfaces provide documentation for an implicitly inherited member; the first declared interface is used |
 | `DG7001` | error | A build stage failed unexpectedly |
 | `DG7002` | error | The build was cancelled |
 | `DG7003` | error | Invalid command-line value |

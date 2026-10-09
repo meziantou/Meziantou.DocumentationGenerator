@@ -21,3 +21,6 @@ dotnet_diagnostic.CA1308.severity = none
 dotnet_diagnostic.CA1054.severity = none
 dotnet_diagnostic.CA1055.severity = none
 dotnet_diagnostic.CA1056.severity = none
+
+# Interfaces are preferred in signatures for readability
+dotnet_diagnostic.CA1859.severity = none
