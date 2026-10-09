@@ -46,6 +46,22 @@ jobs:
       env:
         DOCGEN_TOOL_PACKAGE_DIRECTORY: ${{ github.workspace }}/artifacts/package
 
+    - name: Generate the example site with the installed package
+      if: matrix.os == 'ubuntu-latest'
+      shell: pwsh
+      run: |
+        $package = Get-ChildItem artifacts/package/Meziantou.DocumentationGenerator.*.nupkg | Select-Object -First 1
+        $version = $package.BaseName.Substring('Meziantou.DocumentationGenerator.'.Length)
+        ./eng/Test-ToolPackage.ps1 -PackagePath $package.FullName -ExpectedVersion $version
+        ./eng/New-SampleSite.ps1 -PackageDirectory artifacts/package -Version $version -OutputDirectory artifacts/site -BasePath "/${{ github.event.repository.name }}/"
+
+    - name: Upload example site
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: example-site
+        path: artifacts/site
+
     - name: Upload package
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4

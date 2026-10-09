@@ -89,6 +89,7 @@ Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid co
 - [Diagnostics](docs/diagnostics.md) and [troubleshooting](docs/troubleshooting.md).
 - [Architecture and contracts](docs/architecture.md), [performance budgets](docs/performance.md) and
   [contributing](CONTRIBUTING.md).
+- [Release process](docs/releasing.md).
 - A complete [sample](samples/basic) built from source.
 
 ## Limitations
