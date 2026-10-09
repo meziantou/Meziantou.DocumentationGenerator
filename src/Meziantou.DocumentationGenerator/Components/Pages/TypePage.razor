@@ -1,0 +1,377 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@($"{Type.DisplayName} {Kind}")" Description="@Description" PagePath="@PagePath" ProductId="@Type.Assembly.ProductId" Headings="@Headings" TargetFrameworks="@Type.Assembly.TargetFrameworks">
+    <article class="api-page" data-tfms="@Tfms(Type)">
+        <h1>@Type.DisplayName @Kind</h1>
+        <dl class="api-metadata">
+            <dt>Namespace</dt>
+            <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.ProductId!, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
+            <dt>Assembly</dt>
+            <dd>@(Type.Assembly.AssemblyName).dll</dd>
+            <dt>Package</dt>
+            <dd>@Type.Assembly.Package.Id @Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString()</dd>
+            <dt>Available in package assets</dt>
+            <dd>@RenderAvailability(Type)</dd>
+            @if (DeclaringTypeUrl is not null)
+            {
+                <dt>Declared in</dt>
+                <dd><a href="@DeclaringTypeUrl">@Type.DeclaringType!.DisplayName</a></dd>
+            }
+        </dl>
+        @RenderBadges(Type.PrimarySymbol)
+        @RenderSymbolDocumentation(Type, 2)
+        @RenderInheritance()
+
+        @if (!Type.NestedTypes.IsEmpty)
+        {
+            <section aria-labelledby="section-nested-types">
+                <h2 id="section-nested-types">Nested types</h2>
+                <table class="api-table">
+                    <thead><tr><th scope="col">Name</th><th scope="col">Description</th></tr></thead>
+                    <tbody>
+                        @foreach (var nested in Type.NestedTypes)
+                        {
+                            <tr data-tfms="@Tfms(nested)"><td><a href="@Site.Links.GetUrl(nested)">@nested.DisplayName</a></td><td>@Helper.Summary(nested)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @if (Type.PrimaryType.TypeKind is PublicApiTypeKind.Enum)
+        {
+            @RenderEnumValues()
+        }
+        else
+        {
+            @foreach (var category in Categories)
+            {
+                <section aria-labelledby="@ApiRenderHelper.GetCategoryId(category.Key)">
+                    <h2 id="@ApiRenderHelper.GetCategoryId(category.Key)">@ApiRenderHelper.GetCategoryTitle(category.Key)</h2>
+                    <table class="api-table">
+                        <thead><tr><th scope="col">Name</th><th scope="col">Description</th></tr></thead>
+                        <tbody>
+                            @foreach (var member in category)
+                            {
+                                <tr data-tfms="@Tfms(member)"><td><a href="#@UrlBuilder.EncodeFragment(RouteNames.GetMemberAnchor(member))">@ApiRenderHelper.GetMemberDisplayName(member)</a></td><td>@Helper.Summary(member)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                    @foreach (var group in category.GroupBy(m => m.OverloadName, StringComparer.Ordinal))
+                    {
+                        var members = group.ToList();
+                        if (members.Count > 1)
+                        {
+                            <div class="overload-group" id="@RouteNames.GetOverloadAnchor(group.Key)">
+                                <h3>@(category.Key is ApiMemberCategory.Constructor ? Type.PrimaryType.Name : group.Key) overloads</h3>
+                                @foreach (var member in members)
+                                {
+                                    @RenderMember(member, 4)
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            @RenderMember(members[0], 3)
+                        }
+                    }
+                </section>
+            }
+        }
+    </article>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string PagePath { get; set; }
+
+    private ApiTypeModel Type => Site.GetTypeByPagePath(PagePath);
+
+    private ApiRenderHelper? _helper;
+
+    private ApiRenderHelper Helper => _helper ??= new ApiRenderHelper(Site);
+
+    private string Kind => ApiRenderHelper.GetTypeKind(Type);
+
+    private string? DeclaringTypeUrl => Type.DeclaringType is { } declaringType ? Site.Links.GetUrl(declaringType) : null;
+
+    private string Description => Helper.SummaryText(Type) ?? $"{Type.DisplayName} {Kind.ToLowerInvariant()} of {Type.Assembly.Package.Id}.";
+
+    private IEnumerable<IGrouping<ApiMemberCategory, ApiMemberModel>> Categories => Type.Members.GroupBy(m => m.Category);
+
+    private IReadOnlyList<PageHeading> Headings
+    {
+        get
+        {
+            var headings = new List<PageHeading>();
+            if (!Type.NestedTypes.IsEmpty)
+            {
+                headings.Add(new PageHeading(2, "section-nested-types", "Nested types"));
+            }
+
+            if (Type.PrimaryType.TypeKind is PublicApiTypeKind.Enum)
+            {
+                headings.Add(new PageHeading(2, "section-fields", "Fields"));
+            }
+            else
+            {
+                headings.AddRange(Categories.Select(c => new PageHeading(2, ApiRenderHelper.GetCategoryId(c.Key), ApiRenderHelper.GetCategoryTitle(c.Key))));
+            }
+
+            return headings;
+        }
+    }
+
+    /// <summary>Enum values are listed in value order, like their declaration.</summary>
+    private static decimal GetEnumValue(ApiMemberModel member)
+    {
+        var value = ((PublicApiField)member.PrimarySymbol).ConstantValue;
+        return value is IConvertible convertible ? convertible.ToDecimal(System.Globalization.CultureInfo.InvariantCulture) : 0;
+    }
+
+    private static string Tfms(ApiSymbolModel symbol) => string.Join(' ', symbol.Availability.TargetFrameworks);
+
+    private RenderFragment RenderAvailability(ApiSymbolModel symbol) => @<span class="availability">
+        @foreach (var tfm in symbol.Availability.TargetFrameworks)
+        {
+            <span class="tfm-badge">@tfm</span>
+        }
+        @if (!symbol.Availability.IsAvailableInAllTargetFrameworks)
+        {
+            <span class="visually-hidden">(not available in the other target frameworks of the package)</span>
+        }
+    </span>;
+
+    private RenderFragment RenderBadges(PublicApiSymbol symbol) => @<text>
+        @{
+            var badges = ApiRenderHelper.GetBadges(symbol);
+        }
+        @if (!badges.IsEmpty)
+        {
+            <ul class="badges">
+                @foreach (var (kind, text) in badges)
+                {
+                    <li class="badge badge-@kind">@text</li>
+                }
+            </ul>
+        }
+    </text>;
+
+    private RenderFragment RenderMember(ApiMemberModel member, int level) => @<section class="api-member" id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
+        @if (level == 3)
+        {
+            <h3>@ApiRenderHelper.GetMemberDisplayName(member)</h3>
+        }
+        else
+        {
+            <h4>@ApiRenderHelper.GetMemberDisplayName(member)</h4>
+        }
+        @if (!member.Availability.IsAvailableInAllTargetFrameworks)
+        {
+            <p class="member-availability">Available in: @RenderAvailability(member)</p>
+        }
+        @RenderBadges(member.PrimarySymbol)
+        @RenderSymbolDocumentation(member, level + 1)
+    </section>;
+
+    private RenderFragment RenderSymbolDocumentation(ApiSymbolModel symbol, int sectionLevel) => @<div class="api-documentation">
+        @{
+            var documentation = Site.Documentation.GetVariants(symbol);
+            var showDocumentationVariants = documentation.Length > 1;
+        }
+        @if (documentation.Length > 0 && documentation[0].Comment.Summary is { } summary)
+        {
+            @if (!showDocumentationVariants)
+            {
+                <div class="summary">@Helper.Block(summary, documentation[0].Comment, symbol)</div>
+            }
+        }
+        @foreach (var variant in symbol.Variants)
+        {
+            <div class="declaration-variant" data-tfms="@string.Join(' ', variant.TargetFrameworks)">
+                @if (symbol.Variants.Length > 1)
+                {
+                    <p class="variant-label">@string.Join(", ", variant.TargetFrameworks)</p>
+                }
+                @Helper.Declaration(variant.Symbol, ApiRenderHelper.GetLinkContext(symbol))
+            </div>
+        }
+        @foreach (var variant in documentation)
+        {
+            <div class="documentation-variant" data-tfms="@string.Join(' ', variant.TargetFrameworks)">
+                @if (showDocumentationVariants)
+                {
+                    <p class="variant-label">Documentation for @string.Join(", ", variant.TargetFrameworks)</p>
+                    @if (variant.Comment.Summary is { } variantSummary)
+                    {
+                        <div class="summary">@Helper.Block(variantSummary, variant.Comment, symbol)</div>
+                    }
+                }
+                @RenderSections(symbol, variant.Comment, symbol.Aggregate.GetSymbol(variant.TargetFrameworks[0]) ?? symbol.PrimarySymbol, sectionLevel)
+            </div>
+        }
+        @if (documentation.Length == 0 || documentation.All(d => d.Comment.IsEmpty && d.Comment.InheritanceNote is null))
+        {
+            <p class="no-documentation">No documentation is available.</p>
+        }
+        @RenderSourceLinks(symbol)
+    </div>;
+
+    private static RenderFragment RenderHeading(int level, string text) => level switch
+    {
+        2 => @<h2>@text</h2>,
+        3 => @<h3>@text</h3>,
+        4 => @<h4>@text</h4>,
+        5 => @<h5>@text</h5>,
+        _ => @<h6>@text</h6>,
+    };
+
+    private RenderFragment RenderSections(ApiSymbolModel symbol, DocumentationComment comment, PublicApiSymbol variantSymbol, int level) => @<text>
+        @if (comment.InheritanceNote is { } note)
+        {
+            <p class="notice">@note</p>
+        }
+        @{
+            var typeParameters = variantSymbol switch
+            {
+                PublicApiMethod method => method.GenericParameters,
+                PublicApiType type => type.GenericParameters,
+                _ => [],
+            };
+            var parameters = variantSymbol switch
+            {
+                PublicApiMethod method => method.Parameters,
+                PublicApiProperty indexer => indexer.Parameters,
+                PublicApiType { DelegateInvokeMethod: { } invoke } => invoke.Parameters,
+                _ => [],
+            };
+        }
+        @if (!typeParameters.IsDefaultOrEmpty)
+        {
+            @RenderHeading(level, "Type parameters")
+            <dl class="parameters">
+                @foreach (var parameter in typeParameters)
+                {
+                    <dt><code>@parameter.Name</code></dt>
+                    <dd>@Helper.Inline(comment.TypeParameters.FirstOrDefault(p => p.Name == parameter.Name)?.Content, comment, symbol)</dd>
+                }
+            </dl>
+        }
+        @if (!parameters.IsDefaultOrEmpty)
+        {
+            @RenderHeading(level, "Parameters")
+            <dl class="parameters">
+                @foreach (var parameter in parameters)
+                {
+                    <dt><code>@parameter.Name</code> @Helper.TypeReference(parameter.Type, ApiRenderHelper.GetLinkContext(symbol))</dt>
+                    <dd>@Helper.Inline(comment.Parameters.FirstOrDefault(p => p.Name == parameter.Name)?.Content, comment, symbol)</dd>
+                }
+            </dl>
+        }
+        @if (variantSymbol is PublicApiMethod { ReturnsVoid: false, MethodKind: not PublicApiMethodKind.Constructor } returningMethod)
+        {
+            @RenderHeading(level, "Returns")
+            <p>@Helper.TypeReference(returningMethod.ReturnType, ApiRenderHelper.GetLinkContext(symbol)) @Helper.Inline(comment.Returns, comment, symbol)</p>
+        }
+        @if (variantSymbol is PublicApiProperty propertySymbol)
+        {
+            @RenderHeading(level, "Property value")
+            <p>@Helper.TypeReference(propertySymbol.Type, ApiRenderHelper.GetLinkContext(symbol)) @Helper.Inline(comment.Value, comment, symbol)</p>
+        }
+        @if (!comment.Exceptions.IsEmpty)
+        {
+            @RenderHeading(level, "Exceptions")
+            <dl class="exceptions">
+                @foreach (var exception in comment.Exceptions)
+                {
+                    <dt>@Helper.Reference(new System.Xml.Linq.XElement("see", new System.Xml.Linq.XAttribute("cref", exception.Name)), comment, symbol)</dt>
+                    <dd>@Helper.Inline(exception.Content, comment, symbol)</dd>
+                }
+            </dl>
+        }
+        @if (comment.Remarks is { } remarks)
+        {
+            @RenderHeading(level, "Remarks")
+            <div class="remarks">@Helper.Block(remarks, comment, symbol)</div>
+        }
+        @foreach (var example in comment.Examples)
+        {
+            @RenderHeading(level, "Example")
+            <div class="example">@Helper.Block(example, comment, symbol)</div>
+        }
+        @if (!comment.SeeAlso.IsEmpty)
+        {
+            @RenderHeading(level, "See also")
+            <ul class="see-also">
+                @foreach (var seeAlso in comment.SeeAlso)
+                {
+                    <li>@Helper.Reference(seeAlso, comment, symbol)</li>
+                }
+            </ul>
+        }
+    </text>;
+
+    private RenderFragment RenderSourceLinks(ApiSymbolModel symbol) => @<text>
+        @{
+            var locations = Site.SourceLinks.GetLocations(symbol);
+        }
+        @if (!locations.IsEmpty)
+        {
+            <p class="source-links">
+                @foreach (var location in locations)
+                {
+                    <a class="source-link" href="@location.Location.Url" data-precision="@(location.Location.Precision is SourcePrecision.Line ? "line" : "file")" title="@(location.Location.Precision is SourcePrecision.Line ? "First line of the implementation; the declaration may be a few lines above" : "File containing the implementation")">
+                        @(location.Location.Precision is SourcePrecision.Line ? "Source" : "Source file")@(locations.Length > 1 ? " (" + string.Join(", ", location.TargetFrameworks) + ")" : "")
+                    </a>
+                }
+            </p>
+        }
+    </text>;
+
+    private RenderFragment RenderInheritance() => @<text>
+        @{
+            var baseTypes = ApiRenderHelper.GetBaseTypes(Type.PrimaryType);
+            var interfaces = Type.PrimaryType.Interfaces;
+            var context = ApiRenderHelper.GetLinkContext(Type);
+        }
+        @if (baseTypes.Count > 0 || !interfaces.IsDefaultOrEmpty)
+        {
+            <dl class="api-relations">
+                @if (baseTypes.Count > 0)
+                {
+                    <dt>Inheritance</dt>
+                    <dd>@foreach (var baseType in baseTypes) { @Helper.TypeReference(baseType, context) <span aria-hidden="true"> → </span> }<code>@Type.DisplayName</code></dd>
+                }
+                @if (!interfaces.IsDefaultOrEmpty)
+                {
+                    <dt>Implements</dt>
+                    <dd>
+                        <ul class="inline-list">
+                            @foreach (var implemented in interfaces)
+                            {
+                                <li>@Helper.TypeReference(implemented, context)</li>
+                            }
+                        </ul>
+                    </dd>
+                }
+            </dl>
+        }
+    </text>;
+
+    private RenderFragment RenderEnumValues() => @<section aria-labelledby="section-fields">
+        <h2 id="section-fields">Fields</h2>
+        <table class="api-table">
+            <thead><tr><th scope="col">Name</th><th scope="col">Value</th><th scope="col">Description</th></tr></thead>
+            <tbody>
+                @foreach (var member in Type.Members.Where(m => m.Category is ApiMemberCategory.EnumValue).OrderBy(GetEnumValue).ThenBy(m => m.Name, StringComparer.Ordinal))
+                {
+                    var field = (PublicApiField)member.PrimarySymbol;
+                    <tr id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
+                        <td><code>@member.Name</code></td>
+                        <td><code>@(Convert.ToString(field.ConstantValue, System.Globalization.CultureInfo.InvariantCulture))</code></td>
+                        <td>@Helper.Summary(member)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>;
+}

@@ -36,6 +36,12 @@
             </nav>
         }
         <main id="main" class="content" tabindex="-1">
+            @if (TargetFrameworks is { Count: > 1 })
+            {
+                <div class="tfm-filter" hidden data-tfm-filter>
+                    <label>Target framework <select data-tfm-options="@string.Join(' ', TargetFrameworks)"></select></label>
+                </div>
+            }
             @if (!Navigation.Breadcrumbs.IsEmpty)
             {
                 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -62,6 +68,18 @@
                 </nav>
             }
         </main>
+        @if (Headings is { Count: > 0 })
+        {
+            <aside class="page-toc" aria-labelledby="page-toc-title">
+                <h2 id="page-toc-title">On this page</h2>
+                <ul>
+                    @foreach (var heading in Headings)
+                    {
+                        <li class="level-@heading.Level"><a href="#@UrlBuilder.EncodeFragment(heading.Id)">@heading.Text</a></li>
+                    }
+                </ul>
+            </aside>
+        }
     </div>
     <footer class="site-footer">
         @if (!string.IsNullOrEmpty(Site.Configuration.Site.Footer))
@@ -87,6 +105,13 @@
     /// <summary>Product of the page, used to select the generated product navigation.</summary>
     [Parameter]
     public string? ProductId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<PageHeading>? Headings { get; set; }
+
+    /// <summary>Target frameworks of the page, used by the optional client-side filter. Every variant is visible without JavaScript.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? TargetFrameworks { get; set; }
 
     [Parameter]
     public RenderFragment? HeadContent { get; set; }

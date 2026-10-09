@@ -1,0 +1,47 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@Title" Description="@($"Types of the {DisplayName} namespace.")" PagePath="@RouteNames.GetNamespacePath(ProductId, Namespace)" ProductId="@ProductId" Headings="@Headings">
+    <h1>@Title</h1>
+    @if (Model.Types.IsEmpty)
+    {
+        <p>This namespace has no documented type.</p>
+    }
+    @foreach (var group in Groups)
+    {
+        <h2 id="@group.Id">@group.Title</h2>
+        <table class="api-table">
+            <thead><tr><th scope="col">Name</th><th scope="col">Description</th></tr></thead>
+            <tbody>
+                @foreach (var type in group.Types)
+                {
+                    <tr data-tfms="@string.Join(' ', type.Availability.TargetFrameworks)">
+                        <td><a href="@Site.Links.GetUrl(type)">@type.DisplayName</a></td>
+                        <td>@Helper.Summary(type)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string ProductId { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string Namespace { get; set; }
+
+    private ApiRenderHelper Helper => new(Site);
+
+    private string DisplayName => Namespace.Length == 0 ? "global" : Namespace;
+
+    private string Title => Namespace.Length == 0 ? "Global namespace" : Namespace + " namespace";
+
+    private ApiNamespaceModel Model => Site.GetProductModel(ProductId)!.Namespaces.Single(n => n.Name == Namespace);
+
+    private IEnumerable<(string Id, string Title, IReadOnlyList<ApiTypeModel> Types)> Groups => Model.Types
+        .GroupBy(ApiRenderHelper.GetTypeKind)
+        .OrderBy(g => Array.IndexOf(["Class", "Struct", "Interface", "Enum", "Delegate"], g.Key))
+        .Select(g => (g.Key.ToLowerInvariant() + "-types", ApiRenderHelper.GetTypeKindPlural(g.Key), (IReadOnlyList<ApiTypeModel>)[.. g]));
+
+    private IReadOnlyList<PageHeading> Headings => [.. Groups.Select(g => new PageHeading(2, g.Id, g.Title))];
+}

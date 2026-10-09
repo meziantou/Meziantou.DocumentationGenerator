@@ -45,6 +45,7 @@ internal sealed class RenderStage : IBuildStage
             SourceLinks = context.SourceLinks,
             Highlighting = new HighlightingService(context.Diagnostics),
             Diagnostics = context.Diagnostics,
+            Packages = context.DiscoveredPackages,
         };
 
         // A single renderer is used sequentially: HtmlRenderer has dispatcher affinity, and sequential rendering keeps the output deterministic

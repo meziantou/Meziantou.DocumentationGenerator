@@ -5,12 +5,22 @@
     {
         <p class="lead">@Site.Configuration.Site.Description</p>
     }
-    @if (!Site.Configuration.Products.IsEmpty)
+    @if (Site.Configuration.Products.IsEmpty)
+    {
+        <p>This site has no product.</p>
+    }
+    else
     {
         <ul class="product-catalog">
             @foreach (var product in Site.Configuration.Products)
             {
-                <li><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></li>
+                <li class="product-card">
+                    <h2><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></h2>
+                    @if (Site.GetProductDescription(product) is { } description)
+                    {
+                        <p>@description</p>
+                    }
+                </li>
             }
         </ul>
     }

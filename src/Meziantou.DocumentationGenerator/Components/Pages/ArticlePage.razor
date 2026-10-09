@@ -1,5 +1,5 @@
 @inject SiteRenderContext Site
-<SiteLayout Title="@Page.Title" Description="@Page.Rendered?.Description" PagePath="@PagePath">
+<SiteLayout Title="@Page.Title" Description="@Page.Rendered?.Description" PagePath="@PagePath" Headings="@Headings">
     <article class="article">
         <h1>@Page.Title</h1>
         @((MarkupString)(Page.Rendered?.Html ?? ""))
@@ -11,4 +11,6 @@
     public required string PagePath { get; set; }
 
     private AuthoredPage Page => Site.Content.Pages.Single(p => p.Route.FilePath == PagePath);
+
+    private IReadOnlyList<PageHeading> Headings => Page.Rendered is { } rendered ? [.. rendered.Headings.Select(h => new PageHeading(h.Level, h.Id, h.Text))] : [];
 }
