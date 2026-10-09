@@ -32,7 +32,7 @@ internal static class YamlDocumentLoader
         }
         catch (YamlException ex)
         {
-            diagnostics.Report(descriptor, $"Invalid YAML: {ex.Message}", new DiagnosticLocation { FilePath = displayPath, Line = ex.Start.Line + lineOffset, Column = ex.Start.Column });
+            diagnostics.Report(descriptor, $"Invalid YAML: {ex.Message}", new DiagnosticLocation { FilePath = displayPath, Line = ex.Start.Line + 1 + lineOffset, Column = ex.Start.Column + 1 });
             return null;
         }
     }
@@ -47,7 +47,8 @@ internal static class YamlDocumentLoader
             _ => null,
         };
 
-        return mark is { } m && m.Line > 0 ? (m.Line, m.Column) : null;
+        // Marks are zero-based
+        return mark is { } m && m.Line >= 0 ? (m.Line + 1, m.Column + 1) : null;
     }
 
     public static string? GetString(YamlMapping mapping, string key)

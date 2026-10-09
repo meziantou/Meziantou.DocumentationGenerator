@@ -5,6 +5,7 @@ using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Links;
+using Meziantou.DocumentationGenerator.Navigation;
 using Meziantou.DocumentationGenerator.XmlDocs;
 using Meziantou.DocumentationGenerator.Packages;
 using Meziantou.DocumentationGenerator.SourceLinks;
@@ -57,6 +58,9 @@ internal sealed class BuildContext
 
     /// <summary>Links to source files, computed by <see cref="SourceLinkStage"/>.</summary>
     public SourceLinkProvider SourceLinks { get; set; } = SourceLinkProvider.Empty;
+
+    /// <summary>Navigation trees, created by <see cref="NavigationStage"/>.</summary>
+    public SiteNavigation Navigation { get; set; } = SiteNavigation.Empty;
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }

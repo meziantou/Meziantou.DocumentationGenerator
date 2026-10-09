@@ -285,11 +285,18 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 **Guaranteed** subset of [DocFX table of contents](https://dotnet.github.io/docfx/docs/table-of-contents.html):
 
 - root shapes: a top-level sequence or an object with an `items` sequence;
-- node keys: `name`, `href`, `uid`, `items`, `expanded`; other keys are ignored with info `DG5007`;
-- `href` to a Markdown file, an external `http(s)` URL, a nested `toc.yml` (its items are included in place)
+- node keys: `name`, `href`, `uid`, `items`, `expanded` (and the DocFX aliases `topicHref`, `topicUid`); other keys
+  are ignored with info `DG5007`;
+- `href` to a Markdown file (optionally with a `#fragment`), an external `http(s)` URL, a nested `toc.yml` (its items are included in place)
   or a directory (`guides/`, which includes `guides/toc.yml`); a group node without `href` is not clickable;
 - `uid` to an authored page `uid` or an API documentation ID (with or without prefix);
-- special `href` values `api:{productId}` insert the generated API navigation of a product.
+- special `href` values `api:{productId}` insert the generated API navigation of a product (namespaces, then their
+  types). With a `name`, the entry is a group linking to the API reference; without, the namespaces are inserted in place;
+- display names: explicit `name`, then the page title (front matter `title`, first level-1 heading, file name), or the
+  symbol display name for API `uid` entries;
+- YAML anchors and aliases are rejected, nesting is bounded, and nested TOC cycles are errors (`DG5004`);
+- pages whose route is in the root TOC use it as sidebar; other product pages use the generated product tree
+  (overview, API reference, namespaces, types).
 - TOC order is preserved. Generated API navigation is sorted by namespace then type name using ordinal
   comparison.
 - When a page appears in several TOCs, the first occurrence in a depth-first traversal of the root TOC is its

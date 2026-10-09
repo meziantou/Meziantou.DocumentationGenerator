@@ -70,6 +70,11 @@ input and cannot be lowered.
 | `DG4009` | info | A documentation reference targets a symbol outside the configured packages and no `xrefs` mapping matches; it is displayed as code |
 | `DG5001` | warning | A link targets a Markdown file that is not a page of the content directory |
 | `DG5002` | warning | Invalid front matter or Markdown file |
+| `DG5003` | error | Invalid table of contents (YAML error, malformed node, unsafe link) |
+| `DG5004` | error | Cycle in nested tables of contents |
+| `DG5005` | warning | A page is not referenced by the table of contents; it is generated and searchable |
+| `DG5006` | error | A table of contents entry targets a missing page, product or symbol |
+| `DG5007` | info | Unsupported table of contents key, ignored |
 | `DG5008` | warning | A link or image targets a file that does not exist |
 | `DG5009` | error (safety) | A link or include targets a path outside the allowed directory |
 | `DG5010` | info | Unknown code language; the code is displayed without highlighting |

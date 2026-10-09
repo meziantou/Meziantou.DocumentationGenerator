@@ -59,6 +59,11 @@ internal static class DiagnosticDescriptors
     // DG5xxx: authored content and navigation
     public static readonly DiagnosticDescriptor ContentFileNotFound = new("DG5001", "Referenced Markdown page not found", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor InvalidFrontMatter = new("DG5002", "Invalid front matter", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor InvalidToc = new("DG5003", "Invalid table of contents", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor TocCycle = new("DG5004", "Cycle in nested tables of contents", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor PageNotInToc = new("DG5005", "Page not referenced by the table of contents", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor TocTargetNotFound = new("DG5006", "Table of contents target not found", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor UnsupportedTocKey = new("DG5007", "Unsupported table of contents key", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor AssetNotFound = new("DG5008", "Referenced file not found", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor PathEscapesRoot = new("DG5009", "Path outside the allowed root", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor UnknownCodeLanguage = new("DG5010", "Unknown code language", DiagnosticSeverity.Info);

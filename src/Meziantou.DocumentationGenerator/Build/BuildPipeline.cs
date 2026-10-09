@@ -16,6 +16,7 @@ internal static class BuildPipeline
             new InheritanceStage(),
             new SourceLinkStage(),
             new ContentStage(),
+            new NavigationStage(),
         ];
     }
 }
