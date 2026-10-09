@@ -14,6 +14,7 @@ internal static class BuildPipeline
             new LinkIndexStage(),
             new XmlDocumentationStage(),
             new InheritanceStage(),
+            new SourceLinkStage(),
             new ContentStage(),
         ];
     }

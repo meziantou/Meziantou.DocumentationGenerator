@@ -139,4 +139,4 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
 | Property | Default | Description |
 | --- | --- | --- |
 | `enabled` | `true` | Generate links to source files using PDBs and Source Link. |
-| `symbolPackages` | `false` | Download the symbol package (`.snupkg`) from the package source when the package contains no PDB. |
+| `symbolServers` | `[]` | Symbol servers (SSQP protocol, such as `https://symbols.nuget.org/download/symbols`) queried for PDBs that are neither embedded nor next to the assembly in the package. Only these servers are contacted, without credentials, and downloaded PDBs are cached. |

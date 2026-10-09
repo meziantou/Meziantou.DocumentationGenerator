@@ -143,7 +143,7 @@ internal static partial class ConfigurationLoader
             var sourceLinks = new SourceLinkOptions
             {
                 Enabled = file.SourceLinks?.Enabled ?? Default("$.sourceLinks.enabled", value: true),
-                SymbolPackages = file.SourceLinks?.SymbolPackages ?? Default("$.sourceLinks.symbolPackages", value: false),
+                SymbolServers = ValidateSymbolServers(file.SourceLinks?.SymbolServers),
             };
 
             if ((file.Packages is null || file.Packages.Count == 0) && file.Content is null)
@@ -697,6 +697,32 @@ internal static partial class ConfigurationLoader
 
             // Longest prefix first, so that a specific mapping wins over a general one
             return [.. result.OrderByDescending(x => x.Namespace.Length).ThenBy(x => x.Namespace, StringComparer.Ordinal)];
+        }
+
+        private ImmutableArray<Uri> ValidateSymbolServers(List<string>? servers)
+        {
+            if (servers is null)
+                return [];
+
+            var result = ImmutableArray.CreateBuilder<Uri>();
+            for (var i = 0; i < servers.Count; i++)
+            {
+                var path = $"$.sourceLinks.symbolServers[{i.ToString(CultureInfo.InvariantCulture)}]";
+                if (!Uri.TryCreate(servers[i], UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
+                {
+                    Error(DiagnosticDescriptors.InvalidConfigurationValue, $"Invalid symbol server '{servers[i]}': an absolute http or https URL is required", path);
+                }
+                else if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    Error(DiagnosticDescriptors.CredentialsInConfiguration, "Symbol server URLs must not contain credentials", path);
+                }
+                else
+                {
+                    result.Add(uri);
+                }
+            }
+
+            return result.ToImmutable();
         }
 
         private DiagnosticOptions ValidateDiagnostics(ConfigurationFile.DiagnosticsSection? section)

@@ -38,6 +38,10 @@ internal static class DiagnosticDescriptors
     // DG3xxx: missing optional content
     public static readonly DiagnosticDescriptor MissingReadme = new("DG3001", "The package has no README", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor MissingDebugInformation = new("DG3003", "No usable PDB or Source Link information", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor MismatchedDebugInformation = new("DG3005", "The PDB does not match the assembly", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor UnsupportedSourceHost = new("DG3006", "Unsupported source host", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor AmbiguousImplementation = new("DG3007", "Ambiguous implementation for a reference assembly", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor MissingRepositoryMetadata = new("DG3004", "A README link cannot be resolved without repository metadata", DiagnosticSeverity.Warning);
 
     // DG4xxx: links and routes

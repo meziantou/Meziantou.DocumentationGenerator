@@ -174,7 +174,7 @@ internal sealed class ConfigurationFile
         [Description("Generate links to source files using PDBs and Source Link. Default: true.")]
         public bool? Enabled { get; set; }
 
-        [Description("Download symbol packages (.snupkg) from the package source when the package has no PDB. Default: false.")]
-        public bool? SymbolPackages { get; set; }
+        [Description("Symbol servers (SSQP, such as https://symbols.nuget.org/download/symbols) queried for PDBs that are not in the package. Default: none.")]
+        public List<string>? SymbolServers { get; set; }
     }
 }

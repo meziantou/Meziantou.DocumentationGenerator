@@ -256,9 +256,12 @@
           "description": "Generate links to source files using PDBs and Source Link. Default: true.",
           "type": "boolean"
         },
-        "symbolPackages": {
-          "description": "Download symbol packages (.snupkg) from the package source when the package has no PDB. Default: false.",
-          "type": "boolean"
+        "symbolServers": {
+          "description": "Symbol servers (SSQP, such as https://symbols.nuget.org/download/symbols) queried for PDBs that are not in the package. Default: none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

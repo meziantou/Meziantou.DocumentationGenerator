@@ -54,7 +54,11 @@ input and cannot be lowered.
 | `DG2013` | error | The builds of an assembly cannot be aggregated across target frameworks (duplicate inputs) |
 | `DG3001` | warning | The package has no README; a generated page is used |
 | `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
+| `DG3003` | info | No usable PDB or Source Link information for an assembly; no source links are generated |
 | `DG3004` | warning | A README link targets a file that is not in the package and the package has no GitHub repository commit; the link is removed instead of being guessed |
+| `DG3005` | warning | A PDB does not match its assembly (PDB identifier and timestamp); it is not used |
+| `DG3006` | info | Source Link points to a host other than GitHub; no source link is generated |
+| `DG3007` | info | Several implementation assemblies give different locations for a reference assembly symbol; no source link is generated |
 | `DG4001` | warning | Unresolved reference: no page and no `xrefs` mapping; the name is displayed without a link |
 | `DG4002` | warning | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!` |
 | `DG4003` | error | Broken link in the generated site (missing page or anchor) |
