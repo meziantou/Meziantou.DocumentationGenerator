@@ -5,6 +5,9 @@ internal static class BuildPipeline
 {
     public static IReadOnlyList<IBuildStage> CreateStages()
     {
-        return [];
+        return
+        [
+            new AcquisitionStage(),
+        ];
     }
 }

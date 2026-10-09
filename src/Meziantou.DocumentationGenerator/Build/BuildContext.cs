@@ -1,5 +1,7 @@
 using Meziantou.DocumentationGenerator.Configuration;
+using System.Collections.Immutable;
 using Meziantou.DocumentationGenerator.Diagnostics;
+using Meziantou.DocumentationGenerator.Packages;
 
 namespace Meziantou.DocumentationGenerator.Build;
 
@@ -18,6 +20,9 @@ internal sealed class BuildContext
     public BuildOptions Options { get; }
     public DiagnosticBag Diagnostics { get; }
     public IBuildReporter Reporter { get; }
+
+    /// <summary>Packages acquired by <see cref="AcquisitionStage"/>, in configuration order.</summary>
+    public ImmutableArray<AcquiredPackage> Packages { get; set; } = [];
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }

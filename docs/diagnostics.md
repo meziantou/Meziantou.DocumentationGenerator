@@ -39,6 +39,12 @@ input and cannot be lowered.
 | `DG1013` | error | Invalid configuration value |
 | `DG1014` | error | Invalid API filter pattern |
 | `DG1015` | error | Invalid diagnostic severity override |
+| `DG2001` | error | Package not found in the configured sources (the exact version is required) |
+| `DG2002` | error | Package source or authentication failure |
+| `DG2003` | error | Invalid or corrupt package |
+| `DG2005` | error (safety) | The package contains unsafe entries (rooted paths, `..`, links, duplicates, excessive sizes) |
+| `DG2006` | error | Package not available in the cache in offline mode |
+| `DG2009` | error | The package identity does not match the configuration |
 | `DG7001` | error | A build stage failed unexpectedly |
 | `DG7002` | error | The build was cancelled |
 | `DG7003` | error | Invalid command-line value |
