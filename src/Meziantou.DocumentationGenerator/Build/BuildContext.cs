@@ -5,6 +5,7 @@ using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Links;
+using Meziantou.DocumentationGenerator.XmlDocs;
 using Meziantou.DocumentationGenerator.Packages;
 
 namespace Meziantou.DocumentationGenerator.Build;
@@ -49,6 +50,9 @@ internal sealed class BuildContext
 
     /// <summary>Files copied to the output, registered by the content and rendering stages.</summary>
     public SiteAssetRegistry? Assets { get; set; }
+
+    /// <summary>XML documentation of every API asset, loaded by <see cref="XmlDocumentationStage"/>.</summary>
+    public DocumentationProvider Documentation { get; set; } = DocumentationProvider.Empty;
 
     /// <summary>Set by the publication stage once the output directory contains the new site.</summary>
     public bool IsPublished { get; set; }

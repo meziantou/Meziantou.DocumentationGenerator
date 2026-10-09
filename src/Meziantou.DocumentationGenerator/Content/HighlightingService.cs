@@ -1,4 +1,3 @@
-using System.Net;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.Framework.SyntaxHighlighting;
 
@@ -60,14 +59,14 @@ internal sealed class HighlightingService(DiagnosticBag diagnostics)
     {
         var normalized = NormalizeLanguage(language);
         if (normalized is null)
-            return WebUtility.HtmlEncode(code);
+            return HtmlEncoding.Encode(code);
 
         if (!SyntaxHighlighter.IsSupported(normalized))
         {
             diagnostics.Report(DiagnosticDescriptors.UnknownCodeLanguage, $"The code language '{language}' is not supported; the code is displayed without highlighting", location);
-            return WebUtility.HtmlEncode(code);
+            return HtmlEncoding.Encode(code);
         }
 
-        return SyntaxHighlighter.TryHighlight(code, normalized, out var html, Options) ? html : WebUtility.HtmlEncode(code);
+        return SyntaxHighlighter.TryHighlight(code, normalized, out var html, Options) ? html : HtmlEncoding.Encode(code);
     }
 }

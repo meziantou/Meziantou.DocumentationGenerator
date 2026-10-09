@@ -258,8 +258,9 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 - Symbols outside the configured packages are resolved only through `xrefs` configuration entries, a list of
   `{ "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }` where `{uid}` is the
   lowercase documentation ID without its prefix and generic arity markers replaced by `-N`. Without a matching
-  mapping the reference is displayed as code without a link and diagnosed with `DG4001` (info level for
-  references discovered in signatures, warning level for explicit `cref` links). The generator never guesses
+  mapping the reference is displayed as code without a link. Markdown `cref:` links and XML references the compiler
+  could not resolve (`!:`) are reported with warning `DG4001`; compiler-resolved XML references and signature types
+  outside the configured packages are reported with info `DG4009`. The generator never guesses
   that every unresolved type is a valid Microsoft Learn URL.
 
 ## Authored content

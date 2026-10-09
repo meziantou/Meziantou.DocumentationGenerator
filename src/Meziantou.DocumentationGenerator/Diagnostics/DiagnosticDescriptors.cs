@@ -50,6 +50,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnsafeOutputPath = new("DG4007", "Unsafe output path", DiagnosticSeverity.Error, IsSafetyCritical: true);
 
     public static readonly DiagnosticDescriptor UnsafeUrl = new("DG4008", "Unsafe URL removed", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor ExternalReferenceWithoutMapping = new("DG4009", "Reference to a symbol outside the configured packages without xrefs mapping", DiagnosticSeverity.Info);
 
     // DG5xxx: authored content and navigation
     public static readonly DiagnosticDescriptor ContentFileNotFound = new("DG5001", "Referenced Markdown page not found", DiagnosticSeverity.Warning);
@@ -57,6 +58,13 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor AssetNotFound = new("DG5008", "Referenced file not found", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor PathEscapesRoot = new("DG5009", "Path outside the allowed root", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor UnknownCodeLanguage = new("DG5010", "Unknown code language", DiagnosticSeverity.Info);
+
+    // DG6xxx: XML documentation
+    public static readonly DiagnosticDescriptor MalformedXmlDocumentation = new("DG6001", "Malformed XML documentation file", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor UnmatchedXmlDocumentation = new("DG6002", "XML documentation entries without public symbol", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor UnknownXmlTag = new("DG6006", "Unsupported XML documentation tag", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor InvalidParameterReference = new("DG6007", "Invalid parameter reference", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor DuplicateXmlDocumentation = new("DG6008", "Duplicate XML documentation section or entry", DiagnosticSeverity.Warning);
 
     // DG7xxx: build, rendering and publication
     public static readonly DiagnosticDescriptor StageFailed = new("DG7001", "A build stage failed unexpectedly", DiagnosticSeverity.Error);

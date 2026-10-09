@@ -217,7 +217,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
                 return match.Value;
 
             var resolved = ResolveUrl(value, attribute.Equals("src", StringComparison.OrdinalIgnoreCase), source, line);
-            return resolved is null ? "" : $"{attribute}=\"{WebUtility.HtmlEncode(resolved)}\"";
+            return resolved is null ? "" : $"{attribute}=\"{HtmlEncoding.Encode(resolved)}\"";
         });
     }
 
@@ -320,7 +320,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
             var html = highlighting.Highlight(code, language, new DiagnosticLocation { FilePath = displayPath, Line = obj.Line + 1 });
             renderer.EnsureLine();
             renderer.Write("<pre><code");
-            renderer.Write(normalized is null ? " class=\"hljs\"" : $" class=\"hljs language-{WebUtility.HtmlEncode(normalized)}\"");
+            renderer.Write(normalized is null ? " class=\"hljs\"" : $" class=\"hljs language-{HtmlEncoding.Encode(normalized)}\"");
             renderer.Write('>');
             renderer.Write(html);
             renderer.WriteLine("</code></pre>");

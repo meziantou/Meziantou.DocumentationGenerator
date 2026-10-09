@@ -63,11 +63,17 @@ input and cannot be lowered.
 | `DG4006` | error | Duplicate anchor in a page |
 | `DG4007` | error (safety) | Unsafe output path |
 | `DG4008` | warning | A URL with a scheme other than http, https or mailto was removed |
+| `DG4009` | info | A documentation reference targets a symbol outside the configured packages and no `xrefs` mapping matches; it is displayed as code |
 | `DG5001` | warning | A link targets a Markdown file that is not a page of the content directory |
 | `DG5002` | warning | Invalid front matter or Markdown file |
 | `DG5008` | warning | A link or image targets a file that does not exist |
 | `DG5009` | error (safety) | A link or include targets a path outside the allowed directory |
 | `DG5010` | info | Unknown code language; the code is displayed without highlighting |
+| `DG6001` | warning | Malformed XML documentation file; API pages are generated without documentation |
+| `DG6002` | info | XML documentation entries that match no public symbol (usually internal members) |
+| `DG6006` | info | Unsupported XML documentation tag; its text is displayed |
+| `DG6007` | warning | A `param`, `typeparam`, `paramref` or `typeparamref` names a parameter that does not exist |
+| `DG6008` | warning | A documentation section or entry is specified more than once; the first one is used |
 | `DG7001` | error | A build stage failed unexpectedly |
 | `DG7002` | error | The build was cancelled |
 | `DG7003` | error | Invalid command-line value |
