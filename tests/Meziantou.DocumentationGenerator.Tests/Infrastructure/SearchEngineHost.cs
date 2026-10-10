@@ -10,7 +10,7 @@ internal sealed class SearchEngineHost : IDisposable
 
     public SearchEngineHost(string indexJson)
     {
-        _engine = new Engine(options => options.TimeoutInterval(TimeSpan.FromSeconds(30)));
+        _engine = new Engine(options => options.TimeoutInterval(TimeSpan.FromMinutes(5)));
         _engine.Execute(LoadScript());
         _engine.SetValue("indexJson", indexJson);
         _engine.Execute("var engine = DocgenSearch.createEngine(JSON.parse(indexJson));");

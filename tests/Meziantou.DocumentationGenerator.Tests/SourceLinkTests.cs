@@ -140,7 +140,7 @@ public sealed class SourceLinkTests
     [Fact]
     public async Task MultipleFrameworks_KeepTheirOwnLocations()
     {
-        var net8 = Compile(widgetSource: WidgetSource.Replace("public class Widget\n    {", "public class Widget\n    {\n\n", StringComparison.Ordinal));
+        var net8 = Compile(widgetSource: WidgetSource.ReplaceLineEndings("\n").Replace("public class Widget\n    {", "public class Widget\n    {\n\n", StringComparison.Ordinal));
         var netstandard = Compile();
         var package = CreatePackage(p => p
             .AddFile("lib/net8.0/Contoso.Sources.dll", net8.Assembly)

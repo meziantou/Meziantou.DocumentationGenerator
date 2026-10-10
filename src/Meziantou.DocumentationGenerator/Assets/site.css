@@ -317,7 +317,12 @@ blockquote { margin-left: 0; padding: 0.25rem 1rem; color: var(--color-text-mute
 /* API pages */
 .api-metadata { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 1rem; font-size: 0.925rem; }
 .api-metadata dt, .api-relations dt { font-weight: 600; }
-.api-metadata dd, .api-relations dd { margin: 0; }
+.api-metadata dd, .api-relations dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.availability { display: inline-flex; flex-wrap: wrap; }
+@media (max-width: 56rem) {
+    .api-metadata { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .api-metadata dd { margin-bottom: 0.5rem; }
+}
 .api-relations dd { margin-bottom: 0.5rem; }
 .inline-list { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; list-style: none; margin: 0; padding: 0; }
 .tfm-badge, .badge { display: inline-block; margin: 0 0.25rem 0.25rem 0; padding: 0 0.5rem; border-radius: 1rem; font-size: 0.8rem; background: var(--color-badge-bg); color: var(--color-badge-text); }

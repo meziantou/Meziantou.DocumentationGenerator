@@ -106,6 +106,6 @@ public sealed partial class DocumentationTests(InstalledToolFixture fixture)
         }
     }
 
-    [GeneratedRegex("```json\\n(?<json>.*?)\\n```", RegexOptions.Singleline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex("```json\\r?\\n(?<json>.*?)\\r?\\n```", RegexOptions.Singleline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex JsonBlockRegex();
 }

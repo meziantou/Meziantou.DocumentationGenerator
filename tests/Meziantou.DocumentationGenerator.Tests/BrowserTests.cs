@@ -169,8 +169,17 @@ public sealed class BrowserTests(BrowserFixture fixture)
         foreach (var path in RepresentativePages)
         {
             await page.GotoAsync(fixture.RootServer.BaseUrl + path);
+
+            // Fonts differ between platforms: wider glyphs must not break the layout either
+            await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = "* { letter-spacing: 0.08em !important; }" });
             var overflow = await page.EvaluateAsync<int>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
-            Assert.True(overflow <= 0, $"'{path}' overflows horizontally by {overflow}px");
+            var offenders = await page.EvaluateAsync<string[]>("""
+                Array.from(document.querySelectorAll('body *'))
+                    .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1 && !e.closest('pre, table, .search-results'))
+                    .slice(0, 8)
+                    .map(e => e.tagName.toLowerCase() + '.' + e.className + ' "' + (e.textContent || '').trim().slice(0, 40) + '"')
+                """);
+            Assert.True(overflow <= 0, $"'{path}' overflows horizontally by {overflow}px: {string.Join("; ", offenders)}");
         }
 
         await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");

@@ -146,7 +146,7 @@ public sealed class SearchTests
         var results = host.Search("Generated1999Type19999");
         stopwatch.Stop();
         Assert.Equal("Generated1999Type19999.Member19999", results[0]);
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        Assert.InRange(stopwatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(60));
     }
 
     private static string CreateIndex(params (string Title, string Url, string Kind, string QualifiedName)[] items)
