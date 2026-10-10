@@ -1,0 +1,27 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-rc.1.26425.128" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-rc.1.26425.128" />
+    <PackageVersion Include="Meziantou.Framework.FullPath" Version="3.0.10" />
+    <PackageVersion Include="Meziantou.Framework.HtmlSanitizer" Version="3.1.3" />
+    <PackageVersion Include="Meziantou.Framework.Markdown" Version="1.0.1" />
+    <PackageVersion Include="Meziantou.Framework.PublicApiGenerator" Version="2.0.9" />
+    <PackageVersion Include="Meziantou.Framework.SyntaxHighlighting" Version="1.0.5" />
+    <PackageVersion Include="Meziantou.Framework.Yaml" Version="2.0.5" />
+    <PackageVersion Include="NuGet.Credentials" Version="7.9.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.9.0" />
+    <PackageVersion Include="NuGet.Protocol" Version="7.9.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageVersion Include="AngleSharp" Version="1.8.4" />
+    <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
+    <PackageVersion Include="Jint" Version="4.17.0" />
+    <PackageVersion Include="Meziantou.Framework.TemporaryDirectory" Version="3.0.10" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
+  </ItemGroup>
+</Project>

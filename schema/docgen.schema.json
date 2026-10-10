@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/meziantou/Meziantou.DocumentationGenerator/main/schema/docgen.schema.json",
+  "title": "Meziantou.DocumentationGenerator configuration",
+  "description": "Configuration of Meziantou.DocumentationGenerator.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON schema used by editors.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Version of the configuration format. Must be 1.",
+      "type": "integer",
+      "const": 1
+    },
+    "site": {
+      "description": "Site identity and deployment settings.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "Site title. Default: Documentation.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Site description used in metadata.",
+          "type": "string"
+        },
+        "language": {
+          "description": "Language of the content (BCP 47). Default: en.",
+          "type": "string"
+        },
+        "basePath": {
+          "description": "URL path where the site is deployed, such as / or /docs/. Default: /.",
+          "type": "string"
+        },
+        "url": {
+          "description": "Absolute origin of the site, such as https://example.com, used for canonical URLs and the sitemap. Must not contain a path; use basePath instead.",
+          "type": "string"
+        },
+        "logo": {
+          "description": "Logo image file, relative to the configuration file.",
+          "type": "string"
+        },
+        "favicon": {
+          "description": "Favicon file, relative to the configuration file.",
+          "type": "string"
+        },
+        "socialImage": {
+          "description": "Image used for social previews, relative to the configuration file. Requires url.",
+          "type": "string"
+        },
+        "robots": {
+          "description": "robots policy: none (no robots.txt), allow, or disallow. Default: none.",
+          "type": "string",
+          "enum": [
+            "none",
+            "allow",
+            "disallow"
+          ]
+        },
+        "footer": {
+          "description": "Footer text displayed on every page.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "description": "Output directory, relative to the configuration file. Default: _site.",
+      "type": "string"
+    },
+    "cacheDirectory": {
+      "description": "Package cache directory, relative to the configuration file. Default: a per-user cache directory, or the DOCGEN_CACHE environment variable.",
+      "type": "string"
+    },
+    "packages": {
+      "description": "NuGet packages whose APIs are documented.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "NuGet package identifier.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Exact package version. Version ranges are not supported.",
+            "type": "string"
+          },
+          "source": {
+            "description": "Package source URL or name from NuGet.Config. Default: the sources from NuGet.Config.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Local .nupkg file, relative to the configuration file. When set, no feed is queried.",
+            "type": "string"
+          },
+          "targetFrameworks": {
+            "description": "Target framework folders to document, such as net8.0. Default: all.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assemblies": {
+            "description": "Assembly file names to document, such as Contoso.dll. Default: all managed assemblies.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "readme": {
+            "description": "Local Markdown file used instead of the package README, relative to the configuration file.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "references": {
+      "description": "Packages whose metadata and XML documentation are used for inherited documentation and cross-references, without publishing their APIs.",
+      "type": "array",
+      "items": {
+        "$ref": "#/properties/packages/items"
+      }
+    },
+    "products": {
+      "description": "Products group packages under a landing page and an API reference. Default: one product per package.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Product identifier, used in URLs. Lowercase letters, digits, \u0027-\u0027 and \u0027.\u0027.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name. Default: the first package identifier.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Short description displayed in the product catalogue. Default: the package description.",
+            "type": "string"
+          },
+          "packages": {
+            "description": "Identifiers of the packages of the product.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "landingPage": {
+            "description": "Local Markdown file used as the product landing page, relative to the configuration file.",
+            "type": "string"
+          },
+          "readmePackage": {
+            "description": "Package whose README is used as landing page. Default: the first package.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "content": {
+      "description": "Authored Markdown content.",
+      "type": "object",
+      "properties": {
+        "root": {
+          "description": "Directory containing the Markdown pages, relative to the configuration file.",
+          "type": "string"
+        },
+        "toc": {
+          "description": "Root table of contents, relative to the content root. Default: toc.yml when it exists.",
+          "type": "string"
+        },
+        "assets": {
+          "description": "Additional files or directories copied as-is, relative to the content root.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "description": "Glob patterns of Markdown files to ignore, relative to the content root.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "api": {
+      "description": "API selection rules.",
+      "type": "object",
+      "properties": {
+        "include": {
+          "description": "Patterns of namespaces or types to document. Default: all visible APIs.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "description": "Patterns of namespaces, types or members to exclude.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "xrefs": {
+      "description": "Links to documentation of symbols that are not part of the configured packages.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "description": "Namespace prefix handled by this entry, such as System.",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL template. {uid} is replaced by the lowercase documentation ID without its prefix.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "diagnostics": {
+      "description": "Diagnostic settings.",
+      "type": "object",
+      "properties": {
+        "warningsAsErrors": {
+          "description": "Treat warnings as errors.",
+          "type": "boolean"
+        },
+        "severity": {
+          "description": "Severity overrides: code to error, warning, info or none.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceLinks": {
+      "description": "Source link settings.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Generate links to source files using PDBs and Source Link. Default: true.",
+          "type": "boolean"
+        },
+        "symbolServers": {
+          "description": "Symbol servers (SSQP, such as https://symbols.nuget.org/download/symbols) queried for PDBs that are not in the package. Default: none.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version"
+  ]
+}

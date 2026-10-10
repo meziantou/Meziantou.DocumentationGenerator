@@ -1,0 +1,9 @@
+# Source files, embedded assets and test fixtures use LF on every platform, so that generated sites are byte-identical
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.nupkg binary
+*.snupkg binary
+*.dll binary
+*.pdb binary

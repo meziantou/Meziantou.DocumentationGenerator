@@ -1,0 +1,27 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@Site.SiteTitle" Description="@Site.Configuration.Site.Description" PagePath="@LinkService.HomePath">
+    <h1>@Site.SiteTitle</h1>
+    @if (!string.IsNullOrEmpty(Site.Configuration.Site.Description))
+    {
+        <p class="lead">@Site.Configuration.Site.Description</p>
+    }
+    @if (Site.Configuration.Products.IsEmpty)
+    {
+        <p>This site has no product.</p>
+    }
+    else
+    {
+        <ul class="product-catalog">
+            @foreach (var product in Site.Configuration.Products)
+            {
+                <li class="product-card">
+                    <h2><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></h2>
+                    @if (Site.GetProductDescription(product) is { } description)
+                    {
+                        <p>@description</p>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</SiteLayout>

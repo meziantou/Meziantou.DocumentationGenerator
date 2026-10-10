@@ -1,0 +1,26 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Generated sites and caches
+.docgen/
+_site/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sample outputs
+samples/**/artifacts/

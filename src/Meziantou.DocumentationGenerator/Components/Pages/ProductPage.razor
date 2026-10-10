@@ -1,0 +1,87 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@Product.Name" Description="@Description" PagePath="@RouteNames.GetProductPath(ProductId)" ProductId="@ProductId" Headings="@Headings">
+    <article class="product">
+        @if (Landing is not null)
+        {
+            <h1>@(Landing.Title ?? Product.Name)</h1>
+            @((MarkupString)Landing.Html)
+        }
+        else
+        {
+            <h1>@Product.Name</h1>
+            @if (Description is not null)
+            {
+                <p class="lead">@Description</p>
+            }
+            <p class="notice">This package does not provide a README. The packages and namespaces of the product are listed below.</p>
+        }
+
+        <h2 id="packages">Packages</h2>
+        <table class="packages">
+            <thead><tr><th scope="col">Package</th><th scope="col">Version</th><th scope="col">Target frameworks</th><th scope="col">License</th></tr></thead>
+            <tbody>
+                @foreach (var package in Packages)
+                {
+                    var metadata = package.Package.Metadata;
+                    <tr>
+                        <td>@package.Id</td>
+                        <td>@metadata.Version.ToNormalizedString()</td>
+                        <td>@(package.Assets.IsEmpty ? "No compile-time assembly" : string.Join(", ", package.TargetFrameworks))</td>
+                        <td>@(metadata.LicenseExpression ?? (metadata.LicenseUrl is not null ? "See license" : "Not specified"))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @foreach (var package in Packages)
+        {
+            <pre><code class="hljs language-bash">dotnet add package @package.Id --version @package.Package.Metadata.Version.ToNormalizedString()</code></pre>
+        }
+
+        @if (Model is { Namespaces.IsEmpty: false })
+        {
+            <h2 id="namespaces">Namespaces</h2>
+            <ul class="namespace-list">
+                @foreach (var ns in Model.Namespaces)
+                {
+                    <li><a href="@Site.Links.GetNamespaceUrl(ProductId, ns.Name)">@(ns.IsGlobal ? "Global namespace" : ns.Name)</a></li>
+                }
+            </ul>
+            <p><a href="@Site.Links.GetApiReferenceUrl(ProductId)">Browse the API reference</a></p>
+        }
+    </article>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string ProductId { get; set; }
+
+    private ProductConfiguration Product => Site.GetProduct(ProductId);
+
+    private RenderedMarkdown? Landing => Site.Content.ProductLandingPages.GetValueOrDefault(ProductId);
+
+    private ApiProductModel? Model => Site.GetProductModel(ProductId);
+
+    private IReadOnlyList<Meziantou.DocumentationGenerator.Discovery.DiscoveredPackage> Packages => Site.GetPackages(Product);
+
+    private string? Description => Landing?.Description ?? Site.GetProductDescription(Product);
+
+    private IReadOnlyList<PageHeading> Headings
+    {
+        get
+        {
+            var headings = new List<PageHeading>();
+            if (Landing is not null)
+            {
+                headings.AddRange(Landing.Headings.Select(h => new PageHeading(h.Level, h.Id, h.Text)));
+            }
+
+            headings.Add(new PageHeading(2, "packages", "Packages"));
+            if (Model is { Namespaces.IsEmpty: false })
+            {
+                headings.Add(new PageHeading(2, "namespaces", "Namespaces"));
+            }
+
+            return headings;
+        }
+    }
+}
