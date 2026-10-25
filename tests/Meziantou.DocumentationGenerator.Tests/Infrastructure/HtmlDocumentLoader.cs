@@ -1,11 +1,9 @@
-using AngleSharp.Html.Dom;
-using AngleSharp.Html.Parser;
+using Meziantou.Framework.WebPlatform;
+using Meziantou.Framework.WebPlatform.Dom;
 
 namespace Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
 internal static class HtmlDocumentLoader
 {
-    private static readonly HtmlParser Parser = new();
-
-    public static IHtmlDocument Parse(string html) => Parser.ParseDocument(html);
+    public static Document Parse(string html) => HtmlDocumentParser.ParseDocument(html);
 }

@@ -62,7 +62,7 @@ jobs:
           dotnet-version: 11.0.x
           dotnet-quality: preview
       - run: dotnet tool restore
-      - run: dotnet meziantou-docgen build --base-path "/${{ github.event.repository.name }}/" --site-url "https://${{ github.repository_owner }}.github.io"
+      - run: dotnet Meziantou.DocumentationGenerator build --base-path "/${{ github.event.repository.name }}/" --site-url "https://${{ github.repository_owner }}.github.io"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

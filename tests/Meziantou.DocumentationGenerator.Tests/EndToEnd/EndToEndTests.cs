@@ -32,7 +32,7 @@ public sealed class EndToEndTests(InstalledToolFixture fixture)
 
         // Inherited documentation across packages, source links pinned to the commit, and README links
         var smartClient = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "contoso" / "api" / "Contoso.Extensions.SmartClient.html", TestContext.Current.CancellationToken));
-        Assert.Equal("Runs.", smartClient.GetElementById("Run")!.QuerySelector(".summary")!.TextContent.Trim());
+        Assert.Equal("Runs.", smartClient.GetElementById("Run")!.QuerySelector(".summary")!.TextContent!.Trim());
         var client = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "contoso" / "api" / "Contoso.Library.Client.html", TestContext.Current.CancellationToken));
         Assert.StartsWith($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Library.cs#L", client.GetElementById("Send(System.String)")!.QuerySelector(".source-link")!.GetAttribute("href"));
         var product = await File.ReadAllTextAsync(output / "contoso" / "index.html", TestContext.Current.CancellationToken);

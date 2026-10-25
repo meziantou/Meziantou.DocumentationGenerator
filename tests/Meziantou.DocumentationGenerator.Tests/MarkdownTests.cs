@@ -172,8 +172,8 @@ public sealed class MarkdownTests
         });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<img src="/docs/images/logo.png" alt="logo" title="Logo" />""", html);
-        Assert.Contains("""<img src="/docs/images/logo.png" alt="raw" />""", html);
+        Assert.Contains("""<img src="/docs/images/logo.png" alt="logo" title="Logo">""", html);
+        Assert.Contains("""<img src="/docs/images/logo.png" alt="raw">""", html);
         Assert.Contains("download</a> missing\n", html);
         Assert.Contains("""<a href="/docs/files/sample%20file.zip">download</a>""", html);
         Assert.Equal(["files/sample file.zip", "images/logo.png"], build.Context.Assets!.Assets.Select(a => a.OutputPath));
@@ -197,9 +197,9 @@ public sealed class MarkdownTests
 
         var landing = build.Context.Content.ProductLandingPages["contoso.readme"];
         Assert.Equal("Contoso.Readme", landing.Title);
-        Assert.Contains("""<img src="https://github.com/contoso/readme/actions/workflows/ci.yml/badge.svg" alt="Build" />""", landing.Html);
-        Assert.Contains("""<img src="/docs/contoso.readme/_readme/docs/images/logo.png" alt="logo" />""", landing.Html);
-        Assert.Contains("""<img src="https://raw.githubusercontent.com/contoso/readme/0123456789abcdef0123456789abcdef01234567/diagram.svg" alt="diagram" />""", landing.Html);
+        Assert.Contains("""<img src="https://github.com/contoso/readme/actions/workflows/ci.yml/badge.svg" alt="Build">""", landing.Html);
+        Assert.Contains("""<img src="/docs/contoso.readme/_readme/docs/images/logo.png" alt="logo">""", landing.Html);
+        Assert.Contains("""<img src="https://raw.githubusercontent.com/contoso/readme/0123456789abcdef0123456789abcdef01234567/diagram.svg" alt="diagram">""", landing.Html);
         Assert.Contains("""<a href="https://github.com/contoso/readme/blob/0123456789abcdef0123456789abcdef01234567/CONTRIBUTING.md">contributing</a>""", landing.Html);
         var asset = Assert.Single(build.Context.Assets!.Assets);
         Assert.Equal("docs/images/logo.png", asset.PackageEntry);

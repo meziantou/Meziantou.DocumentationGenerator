@@ -31,7 +31,7 @@ internal sealed class CommandLineApplication
                 _error.WriteLine(error.Message);
             }
 
-            _error.WriteLine("Run 'meziantou-docgen --help' for usage information.");
+            _error.WriteLine("Run 'Meziantou.DocumentationGenerator --help' for usage information.");
             return ExitCodes.InvalidArguments;
         }
 
@@ -96,7 +96,7 @@ internal sealed class CommandLineApplication
                   href: index.md
                 """, cancellationToken);
 
-            _output.WriteLine("Run 'meziantou-docgen build' to generate the site.");
+            _output.WriteLine("Run 'Meziantou.DocumentationGenerator build' to generate the site.");
             return ExitCodes.Success;
         });
 

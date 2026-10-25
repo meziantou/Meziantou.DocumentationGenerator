@@ -7,12 +7,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AngleSharp" />
     <PackageReference Include="Deque.AxeCore.Playwright" />
-    <PackageReference Include="Jint" />
     <PackageReference Include="Meziantou.Framework.TemporaryDirectory" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Meziantou.Framework.WebPlatform" />
+    <PackageReference Include="Meziantou.Framework.WebPlatform.JavaScript" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Meziantou.DocumentationGenerator\Meziantou.DocumentationGenerator.csproj" />

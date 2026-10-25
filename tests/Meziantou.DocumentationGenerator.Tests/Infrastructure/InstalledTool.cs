@@ -79,7 +79,7 @@ internal sealed class InstalledTool
             variables[key] = value;
         }
 
-        return ProcessRunner.RunAsync(ProcessRunner.DotnetPath, ["tool", "run", "meziantou-docgen", "--", .. arguments], workingDirectory ?? _rootDirectory, variables, cancellationToken);
+        return ProcessRunner.RunAsync(ProcessRunner.DotnetPath, ["tool", "run", "Meziantou.DocumentationGenerator", "--", .. arguments], workingDirectory ?? _rootDirectory, variables, cancellationToken);
     }
 
     private static async Task RunCheckedAsync(IEnumerable<string> arguments, string workingDirectory, Dictionary<string, string?> environment, CancellationToken cancellationToken)

@@ -1,6 +1,6 @@
 {
   "sdk": {
-    "version": "11.0.100-rc.1.26425.128",
+    "version": "11.0.100-rc.2.26504.105",
     "allowPrerelease": true,
     "rollForward": "latestFeature"
   },
@@ -8,8 +8,8 @@
     "runner": "Microsoft.Testing.Platform"
   },
   "msbuild-sdks": {
-    "Meziantou.NET.Sdk": "1.0.179",
-    "Meziantou.NET.Sdk.Razor": "1.0.179",
-    "Meziantou.NET.Sdk.Test": "1.0.179"
+    "Meziantou.NET.Sdk": "1.0.193",
+    "Meziantou.NET.Sdk.Razor": "1.0.193",
+    "Meziantou.NET.Sdk.Test": "1.0.193"
   }
 }

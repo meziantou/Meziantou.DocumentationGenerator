@@ -57,7 +57,7 @@ try {
     $env:NUGET_PACKAGES = Join-Path $work 'nuget-packages'
     Push-Location $toolDirectory
     try {
-        dotnet tool run meziantou-docgen -- @arguments
+        dotnet tool run Meziantou.DocumentationGenerator -- @arguments
     }
     finally {
         Pop-Location

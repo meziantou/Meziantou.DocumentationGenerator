@@ -1,7 +1,8 @@
 using System.Text.Json;
 using System.Xml.Linq;
-using AngleSharp.Html.Parser;
+using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.Framework;
+using Element = Meziantou.Framework.WebPlatform.Dom.Element;
 
 namespace Meziantou.DocumentationGenerator.Tests.EndToEnd;
 
@@ -11,8 +12,6 @@ namespace Meziantou.DocumentationGenerator.Tests.EndToEnd;
 /// </summary>
 internal static class SiteCrawler
 {
-    private static readonly HtmlParser Parser = new();
-
     public static IReadOnlyList<string> Crawl(FullPath root, string basePath, string? siteUrl)
     {
         var errors = new List<string>();
@@ -24,9 +23,9 @@ internal static class SiteCrawler
 
         foreach (var file in files.Where(f => f.EndsWith(".html", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
         {
-            var document = Parser.ParseDocument(File.ReadAllText(root / file));
+            var document = HtmlDocumentLoader.Parse(File.ReadAllText(root / file));
             var pageIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var element in document.QuerySelectorAll("[id]"))
+            foreach (var element in document.QuerySelectorAll<Element>("[id]"))
             {
                 if (!pageIds.Add(element.Id!))
                 {
@@ -35,7 +34,7 @@ internal static class SiteCrawler
             }
 
             ids[file] = pageIds;
-            foreach (var element in document.QuerySelectorAll("a[href], link[href], img[src], script[src]"))
+            foreach (var element in document.QuerySelectorAll<Element>("a[href], link[href], img[src], script[src]"))
             {
                 var url = element.GetAttribute("href") ?? element.GetAttribute("src")!;
                 if (element.LocalName == "link" && element.GetAttribute("rel") is "canonical")

@@ -4,10 +4,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <Version>0.1.0</Version>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>meziantou-docgen</ToolCommandName>
     <PackageId>Meziantou.DocumentationGenerator</PackageId>
-    <!-- The assembly name is used as the command name in the help output -->
-    <AssemblyName>meziantou-docgen</AssemblyName>
     <RootNamespace>Meziantou.DocumentationGenerator</RootNamespace>
     <Description>Generate a fully static documentation site from NuGet packages and Markdown pages.</Description>
     <PackageTags>documentation;docfx;api-reference;static-site;nuget</PackageTags>

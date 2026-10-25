@@ -80,7 +80,7 @@ public sealed partial class DocumentationTests(InstalledToolFixture fixture)
         Assert.Contains("net10.0", greeter);
         Assert.Contains("net11.0", greeter);
         var loud = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "sample" / "api" / "Sample.Library.LoudGreeter.html", cancellationToken));
-        Assert.Equal("Returns a greeting using a custom salutation.", loud.GetElementById("Greet(System.String)")!.QuerySelector(".summary")!.TextContent.Trim());
+        Assert.Equal("Returns a greeting using a custom salutation.", loud.GetElementById("Greet(System.String)")!.QuerySelector(".summary")!.TextContent!.Trim());
     }
 
     private static IEnumerable<string> GetDocumentationFiles()

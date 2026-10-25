@@ -1,7 +1,7 @@
-using AngleSharp.Dom;
-using AngleSharp.Html.Dom;
 using Meziantou.DocumentationGenerator.Cli;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
+using Document = Meziantou.Framework.WebPlatform.Dom.Document;
+using Element = Meziantou.Framework.WebPlatform.Dom.Element;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
@@ -39,7 +39,7 @@ public sealed class ApiPageTests
         Assert.Equal("Client Class", document.QuerySelector("h1")!.TextContent);
         Assert.Equal("Client Class | Test site", document.Title);
         Assert.Equal("A client that sends Message instances.", document.QuerySelector("meta[name=description]")!.GetAttribute("content"));
-        Assert.Equal(["Constructors", "Properties", "Indexers", "Methods", "Operators", "Events", "Fields", "Constants"], document.QuerySelectorAll("article > section > h2").Select(h => h.TextContent));
+        Assert.Equal(["Constructors", "Properties", "Indexers", "Methods", "Operators", "Events", "Fields", "Constants"], document.QuerySelectorAll<Element>("article > section > h2").Select(h => h.TextContent));
 
         // Members have the anchors computed by the link service, and overloads are grouped
         Assert.NotNull(document.GetElementById("Send(System.String)"));
@@ -47,7 +47,7 @@ public sealed class ApiPageTests
         Assert.NotNull(document.GetElementById("System#IDisposable#Dispose"));
         Assert.NotNull(document.GetElementById("op_Implicit(System.String)~Contoso.Library.Client"));
         var sendGroup = document.GetElementById("Send-overloads")!;
-        Assert.Equal(3, sendGroup.QuerySelectorAll("section.api-member").Length);
+        Assert.Equal(3, sendGroup.QuerySelectorAll<Element>("section.api-member").Count);
 
         // TFM-specific overload
         var span = document.GetElementById("Send(System.ReadOnlySpan{System.Byte})")!;
@@ -59,11 +59,11 @@ public sealed class ApiPageTests
         var declaration = send.QuerySelector("pre.declaration")!;
         Assert.Equal("public void Send(Message message, int retryCount = 3)", declaration.TextContent);
         Assert.Equal("/contoso.library/api/Contoso.Library.Message.html", declaration.QuerySelector("a")!.GetAttribute("href"));
-        Assert.DoesNotContain("throw null", document.DocumentElement.OuterHtml);
+        Assert.DoesNotContain("throw null", document.DocumentElement!.OuterHtml);
 
         // Documentation sections
         Assert.Contains("The retry count.", send.TextContent);
-        var parameters = send.QuerySelectorAll("dl.parameters dt").Select(d => d.TextContent).ToList();
+        var parameters = send.QuerySelectorAll<Element>("dl.parameters dt").Select(d => d.TextContent).ToList();
         Assert.Equal(["message Message", "retryCount int"], parameters);
         Assert.Contains("when sent", document.GetElementById("Send(System.String)")!.TextContent);
 
@@ -82,8 +82,8 @@ public sealed class ApiPageTests
 
         var enumPage = Load(site, "contoso.library/api/Contoso.Library.MessageKind.html");
         Assert.Equal("MessageKind Enum", enumPage.QuerySelector("h1")!.TextContent);
-        Assert.Equal(["None", "Text", "Binary"], enumPage.QuerySelectorAll("table.api-table tbody tr td:first-child").Select(c => c.TextContent));
-        Assert.Equal("2", enumPage.GetElementById("Binary")!.QuerySelectorAll("td")[1].TextContent);
+        Assert.Equal(["None", "Text", "Binary"], enumPage.QuerySelectorAll<Element>("table.api-table tbody tr td:first-child").Select(c => c.TextContent));
+        Assert.Equal("2", enumPage.GetElementById("Binary")!.QuerySelectorAll<Element>("td")[1].TextContent);
 
         var delegatePage = Load(site, "contoso.library/api/Contoso.Library.MessageHandler.html");
         Assert.Equal("MessageHandler Delegate", delegatePage.QuerySelector("h1")!.TextContent);
@@ -98,7 +98,7 @@ public sealed class ApiPageTests
 
         var nested = Load(site, "contoso.library/api/Contoso.Library.Collections.Tree-1.Node.Child-1.html");
         Assert.Equal("Tree<T>.Node.Child<TKey> Class", nested.QuerySelector("h1")!.TextContent);
-        Assert.Equal("/contoso.library/api/Contoso.Library.Collections.Tree-1.Node.html", nested.QuerySelectorAll("dl.api-metadata a")[^1].GetAttribute("href"));
+        Assert.Equal("/contoso.library/api/Contoso.Library.Collections.Tree-1.Node.html", nested.QuerySelectorAll<Element>("dl.api-metadata a")[^1].GetAttribute("href"));
     }
 
     [Fact]
@@ -107,12 +107,12 @@ public sealed class ApiPageTests
         await using var site = await BuildKitchenSinkAsync();
 
         var ns = Load(site, "contoso.library/api/namespaces/Contoso.Library.html");
-        Assert.Equal(["Classes", "Structs", "Interfaces", "Enums", "Delegates"], ns.QuerySelectorAll("h2:not(#page-toc-title)").Select(h => h.TextContent));
-        var modernOnly = ns.QuerySelectorAll("tr").Single(r => r.TextContent.Contains("ModernOnly", StringComparison.Ordinal));
+        Assert.Equal(["Classes", "Structs", "Interfaces", "Enums", "Delegates"], ns.QuerySelectorAll<Element>("h2:not(#page-toc-title)").Select(h => h.TextContent));
+        var modernOnly = ns.QuerySelectorAll<Element>("tr").Single(r => r.TextContent!.Contains("ModernOnly", StringComparison.Ordinal));
         Assert.Equal("net8.0", modernOnly.GetAttribute("data-tfms"));
 
         var reference = Load(site, "contoso.library/api/index.html");
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll("tbody td:first-child a").Select(a => a.TextContent));
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll<Element>("tbody td:first-child a").Select(a => a.TextContent));
     }
 
     [Fact]
@@ -145,12 +145,12 @@ public sealed class ApiPageTests
         var document = Load(site, "contoso.variants/api/Contoso.Variants.Widget.html");
 
         var name = document.GetElementById("Name")!;
-        Assert.Equal(["public string? Name { get; set; }", "public string Name { get; set; }"], name.QuerySelectorAll("pre.declaration").Select(p => p.TextContent));
-        Assert.Equal(["net8.0", "netstandard2.0"], name.QuerySelectorAll(".declaration-variant").Select(v => v.GetAttribute("data-tfms")));
-        Assert.Equal(["Documentation for net8.0", "Documentation for netstandard2.0"], name.QuerySelectorAll(".documentation-variant .variant-label").Select(l => l.TextContent));
+        Assert.Equal(["public string? Name { get; set; }", "public string Name { get; set; }"], name.QuerySelectorAll<Element>("pre.declaration").Select(p => p.TextContent));
+        Assert.Equal(["net8.0", "netstandard2.0"], name.QuerySelectorAll<Element>(".declaration-variant").Select(v => v.GetAttribute("data-tfms")));
+        Assert.Equal(["Documentation for net8.0", "Documentation for netstandard2.0"], name.QuerySelectorAll<Element>(".documentation-variant .variant-label").Select(l => l.TextContent));
 
         var common = document.GetElementById("Common")!;
-        Assert.Single(common.QuerySelectorAll("pre.declaration"));
+        Assert.Single(common.QuerySelectorAll<Element>("pre.declaration"));
         Assert.Null(common.QuerySelector(".member-availability"));
         Assert.Equal("net8.0 netstandard2.0", document.QuerySelector("[data-tfm-options]")!.GetAttribute("data-tfm-options"));
     }
@@ -184,8 +184,8 @@ public sealed class ApiPageTests
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
         var product = Load(site, "contoso/index.html");
-        Assert.Equal(["Contoso.First", "Contoso.Second"], product.QuerySelectorAll("table.packages tbody td:first-child").Select(c => c.TextContent));
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], product.QuerySelectorAll(".namespace-list a").Select(a => a.TextContent));
+        Assert.Equal(["Contoso.First", "Contoso.Second"], product.QuerySelectorAll<Element>("table.packages tbody td:first-child").Select(c => c.TextContent));
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], product.QuerySelectorAll<Element>(".namespace-list a").Select(a => a.TextContent));
         var home = Load(site, "index.html");
         Assert.Equal("Everything Contoso.", home.QuerySelector(".product-card p")!.TextContent);
     }
@@ -200,7 +200,7 @@ public sealed class ApiPageTests
 
         var typeLink = document.QuerySelector("article > .api-documentation .source-link")!;
         Assert.Equal("file", typeLink.GetAttribute("data-precision"));
-        Assert.Equal("Source file", typeLink.TextContent.Trim());
+        Assert.Equal("Source file", typeLink.TextContent!.Trim());
         var methodLink = document.GetElementById("Compute(System.Int32)")!.QuerySelector(".source-link")!;
         Assert.Equal("line", methodLink.GetAttribute("data-precision"));
         Assert.Equal($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Widget.cs#L6", methodLink.GetAttribute("href"));
@@ -212,7 +212,7 @@ public sealed class ApiPageTests
         await using var site = await BuildKitchenSinkAsync(arguments: ["--base-path", "/docs/"]);
         var document = Load(site, "contoso.library/api/Contoso.Library.Client.html");
 
-        Assert.All(document.QuerySelectorAll("a[href^='/']"), a => Assert.StartsWith("/docs/", a.GetAttribute("href")));
+        Assert.All(document.QuerySelectorAll<Element>("a[href^='/']"), a => Assert.StartsWith("/docs/", a.GetAttribute("href")));
         Assert.Equal("/docs/_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
     }
 
@@ -227,7 +227,7 @@ public sealed class ApiPageTests
 
         // References to the excluded type are displayed without link
         var client = Load(site, "contoso.library/api/Contoso.Library.Client.html");
-        Assert.DoesNotContain(client.QuerySelectorAll("a"), a => a.GetAttribute("href")?.Contains("Contoso.Library.Message.html", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(client.QuerySelectorAll<Element>("a"), a => a.GetAttribute("href")?.Contains("Contoso.Library.Message.html", StringComparison.Ordinal) == true);
     }
 
     private static Task<SiteBuilder> BuildKitchenSinkAsync(string extraConfiguration = "", string[]? arguments = null)
@@ -235,5 +235,5 @@ public sealed class ApiPageTests
         return SiteBuilder.BuildAsync([ApiModelTests.CreateKitchenSinkPackage()], extraConfiguration: extraConfiguration, arguments: arguments);
     }
 
-    private static IHtmlDocument Load(SiteBuilder site, string path) => HtmlDocumentLoader.Parse(site.ReadFile(path));
+    private static Document Load(SiteBuilder site, string path) => HtmlDocumentLoader.Parse(site.ReadFile(path));
 }

@@ -5,7 +5,7 @@ namespace Meziantou.DocumentationGenerator.Tests;
 [Collection(InstalledToolCollection.Name)]
 public sealed class ToolPackageTests(InstalledToolFixture fixture)
 {
-    internal const string ToolCommandName = "meziantou-docgen";
+    internal const string ToolCommandName = "Meziantou.DocumentationGenerator";
 
     [Fact]
     public async Task PackAndInstallAsLocalTool()

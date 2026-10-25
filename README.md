@@ -1,6 +1,6 @@
 # Meziantou.DocumentationGenerator
 
-`meziantou-docgen` is a .NET tool that generates a fully static documentation site from NuGet packages and Markdown
+Meziantou.DocumentationGenerator is a .NET tool that generates a fully static documentation site from NuGet packages and Markdown
 pages organized with DocFX-style `toc.yml` files.
 
 - API reference generated from the public API of the packages (read as metadata, package code is never executed),
@@ -33,13 +33,13 @@ dotnet tool install Meziantou.DocumentationGenerator
 Create a configuration file and a `docs` directory:
 
 ```bash
-dotnet meziantou-docgen init --package Contoso.Json --package-version 2.1.0 --title "Contoso"
+dotnet Meziantou.DocumentationGenerator init --package Contoso.Json --package-version 2.1.0 --title "Contoso"
 ```
 
 Generate the site in `_site`:
 
 ```bash
-dotnet meziantou-docgen build
+dotnet Meziantou.DocumentationGenerator build
 ```
 
 Open the site with any static file server, for example:
@@ -49,7 +49,7 @@ python3 -m http.server --directory _site 8080
 ```
 
 To install the tool globally instead, use `dotnet tool install --global Meziantou.DocumentationGenerator` and run
-`meziantou-docgen`.
+`Meziantou.DocumentationGenerator`.
 
 ## Minimal configuration
 
@@ -71,9 +71,9 @@ contains Markdown pages; `docs/index.md` is the home page and `docs/toc.yml`, wh
 
 | Command | Description |
 | --- | --- |
-| `meziantou-docgen init [directory]` | Creates `docgen.json`, `docs/index.md` and `docs/toc.yml`. Existing Markdown files are never overwritten; `--force` overwrites `docgen.json`. Options: `--package`, `--package-version`, `--title`. |
-| `meziantou-docgen build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`. |
-| `meziantou-docgen --version`, `--help` | Displays the version or the help. |
+| `Meziantou.DocumentationGenerator init [directory]` | Creates `docgen.json`, `docs/index.md` and `docs/toc.yml`. Existing Markdown files are never overwritten; `--force` overwrites `docgen.json`. Options: `--package`, `--package-version`, `--title`. |
+| `Meziantou.DocumentationGenerator build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`. |
+| `Meziantou.DocumentationGenerator --version`, `--help` | Displays the version or the help. |
 
 Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid command line, `130` cancelled.
 

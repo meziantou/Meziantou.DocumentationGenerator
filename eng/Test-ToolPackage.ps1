@@ -37,14 +37,14 @@ try {
 
     $toolDirectory = 'tools/net11.0/any/'
     [xml] $settings = Read-Entry "${toolDirectory}DotnetToolSettings.xml"
-    if ($null -eq $settings -or $settings.DotNetCliTool.Commands.Command.Name -ne 'meziantou-docgen') { $errors.Add('The command name must be meziantou-docgen') }
+    if ($null -eq $settings -or $settings.DotNetCliTool.Commands.Command.Name -ne 'Meziantou.DocumentationGenerator') { $errors.Add('The command name must be Meziantou.DocumentationGenerator') }
 
-    $runtimeConfig = Read-Entry "${toolDirectory}meziantou-docgen.runtimeconfig.json" | ConvertFrom-Json
+    $runtimeConfig = Read-Entry "${toolDirectory}Meziantou.DocumentationGenerator.runtimeconfig.json" | ConvertFrom-Json
     $framework = @($runtimeConfig.runtimeOptions.framework) + @($runtimeConfig.runtimeOptions.frameworks) | Where-Object { $_ }
     if (-not ($framework | Where-Object { $_.name -eq 'Microsoft.NETCore.App' -and $_.version -like '11.*' })) { $errors.Add('The tool must target the .NET 11 runtime') }
     if ($framework | Where-Object { $_.name -eq 'Microsoft.AspNetCore.App' }) { $errors.Add('The tool must not require the ASP.NET Core shared framework') }
 
-    foreach ($assembly in 'meziantou-docgen.dll', 'Microsoft.AspNetCore.Components.Web.dll', 'Microsoft.AspNetCore.Components.dll', 'Meziantou.Framework.PublicApiGenerator.dll', 'Meziantou.Framework.Markdown.dll', 'Meziantou.Framework.SyntaxHighlighting.dll', 'NuGet.Protocol.dll', 'System.CommandLine.dll') {
+    foreach ($assembly in 'Meziantou.DocumentationGenerator.dll', 'Microsoft.AspNetCore.Components.Web.dll', 'Microsoft.AspNetCore.Components.dll', 'Meziantou.Framework.PublicApiGenerator.dll', 'Meziantou.Framework.Markdown.dll', 'Meziantou.Framework.SyntaxHighlighting.dll', 'NuGet.Protocol.dll', 'System.CommandLine.dll') {
         if ("$toolDirectory$assembly" -notin $entries) { $errors.Add("'$assembly' is not packaged") }
     }
 }

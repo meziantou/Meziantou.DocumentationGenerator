@@ -1,5 +1,9 @@
 name: CI
 
+# Every build is validated on Linux, Windows and macOS. On main, when the version in
+# src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj is not on nuget.org yet, the validated
+# package is published to nuget.org, then the GitHub release is created. To release a new version, update the version
+# in the project file.
 on:
   push:
     branches: [main]
@@ -22,20 +26,20 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
 
     - name: Build
-      run: dotnet build Meziantou.DocumentationGenerator.slnx --configuration Release
+      run: dotnet build Meziantou.DocumentationGenerator.slnx --configuration Release -p:ContinuousIntegrationBuild=true
 
     - name: Pack
-      run: dotnet pack src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj --configuration Release --no-build --output ${{ github.workspace }}/artifacts/package
+      run: dotnet pack src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj --configuration Release --no-build --output ${{ github.workspace }}/artifacts/release
 
     - name: Install Chromium for browser tests
       run: pwsh tests/Meziantou.DocumentationGenerator.Tests/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
@@ -44,36 +48,172 @@ jobs:
     - name: Test
       run: dotnet test --solution Meziantou.DocumentationGenerator.slnx --configuration Release --no-build
       env:
-        DOCGEN_TOOL_PACKAGE_DIRECTORY: ${{ github.workspace }}/artifacts/package
+        DOCGEN_TOOL_PACKAGE_DIRECTORY: ${{ github.workspace }}/artifacts/release
+
+    - name: Get the version
+      id: version
+      if: matrix.os == 'ubuntu-latest'
+      shell: pwsh
+      run: |
+        $version = dotnet msbuild src/Meziantou.DocumentationGenerator/Meziantou.DocumentationGenerator.csproj -getProperty:Version
+        if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw "Invalid version '$version'" }
+        "version=$version" >> $env:GITHUB_OUTPUT
+
+    - name: Verify package
+      if: matrix.os == 'ubuntu-latest'
+      shell: pwsh
+      run: ./eng/Test-ToolPackage.ps1 -PackagePath artifacts/release/Meziantou.DocumentationGenerator.${{ steps.version.outputs.version }}.nupkg -ExpectedVersion ${{ steps.version.outputs.version }}
 
     - name: Generate the example site with the installed package
       if: matrix.os == 'ubuntu-latest'
       shell: pwsh
-      run: |
-        $package = Get-ChildItem artifacts/package/Meziantou.DocumentationGenerator.*.nupkg | Select-Object -First 1
-        $version = $package.BaseName.Substring('Meziantou.DocumentationGenerator.'.Length)
-        ./eng/Test-ToolPackage.ps1 -PackagePath $package.FullName -ExpectedVersion $version
-        ./eng/New-SampleSite.ps1 -PackageDirectory artifacts/package -Version $version -OutputDirectory artifacts/site -BasePath "/${{ github.event.repository.name }}/"
+      run: ./eng/New-SampleSite.ps1 -PackageDirectory artifacts/release -Version ${{ steps.version.outputs.version }} -OutputDirectory artifacts/site -BasePath "/${{ github.event.repository.name }}/" -SiteUrl "https://${{ github.repository_owner }}.github.io"
+
+    - name: Write release notes
+      if: matrix.os == 'ubuntu-latest'
+      shell: pwsh
+      run: ./eng/New-ReleaseNotes.ps1 -Version ${{ steps.version.outputs.version }} -PackagePath artifacts/release/Meziantou.DocumentationGenerator.${{ steps.version.outputs.version }}.nupkg -OutputPath artifacts/release/RELEASE-NOTES.md
+
+    - name: Upload release artifacts
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v7
+      with:
+        name: release
+        path: artifacts/release/
+        if-no-files-found: error
 
     - name: Upload example site
       if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: example-site
         path: artifacts/site
 
-    - name: Upload package
-      if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@v4
+    - name: Upload example site for GitHub Pages
+      if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      uses: actions/upload-pages-artifact@v5
       with:
-        name: nuget
-        path: artifacts/package/*.nupkg
-        if-no-files-found: error
+        path: artifacts/site
 
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: test-results-${{ matrix.os }}
         path: '**/TestResults/**'
         if-no-files-found: ignore
+
+  # Decides whether the version is new. It runs without any secret, so builds that publish nothing never wait for the
+  # approval rules of the nuget environment.
+  release-check:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      release: ${{ steps.check.outputs.release }}
+    steps:
+    - name: Download the validated package
+      uses: actions/download-artifact@v8
+      with:
+        name: release
+        path: artifacts/release
+
+    - name: Check whether the version is published
+      id: check
+      shell: pwsh
+      run: |
+        $package = Get-ChildItem artifacts/release/Meziantou.DocumentationGenerator.*.nupkg | Select-Object -First 1
+        $version = $package.BaseName.Substring('Meziantou.DocumentationGenerator.'.Length)
+        $published = $false
+        try {
+            $index = Invoke-RestMethod 'https://api.nuget.org/v3-flatcontainer/meziantou.documentationgenerator/index.json'
+            $published = $index.versions -contains $version.ToLowerInvariant()
+        }
+        catch {
+            if ($_.Exception.Response.StatusCode -ne 404) { throw }
+        }
+
+        if ($published) {
+            Write-Host "$version is already on nuget.org. Update the version in the project file to release a new version."
+        }
+        else {
+            Write-Host "$version is not on nuget.org: it will be released."
+        }
+
+        "version=$version" >> $env:GITHUB_OUTPUT
+        "release=$((-not $published).ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+  publish:
+    needs: release-check
+    if: needs.release-check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    # The environment holds the approval rules and the NuGet trusted publishing policy configured by the owner
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        sparse-checkout: eng
+
+    - name: Download the validated package
+      uses: actions/download-artifact@v8
+      with:
+        name: release
+        path: artifacts/release
+
+    - name: NuGet login (trusted publishing)
+      uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+      id: login
+      with:
+        user: ${{ vars.NUGET_USER }}
+
+    - name: Publish to NuGet
+      shell: pwsh
+      run: ./eng/Publish-NuGetPackage.ps1 -PackagePath artifacts/release/Meziantou.DocumentationGenerator.${{ needs.release-check.outputs.version }}.nupkg -ApiKey "${{ steps.login.outputs.NUGET_API_KEY }}"
+
+  github-release:
+    needs: [release-check, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Download the validated package
+      uses: actions/download-artifact@v8
+      with:
+        name: release
+        path: artifacts/release
+
+    - name: Create or update the GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ needs.release-check.outputs.version }}
+      run: |
+        tag="v$VERSION"
+        prerelease=""
+        if [[ "$VERSION" == *-* ]]; then prerelease="--prerelease"; fi
+        if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          gh release upload "$tag" artifacts/release/* --clobber --repo "$GITHUB_REPOSITORY"
+        else
+          gh release create "$tag" artifacts/release/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSION" --notes-file artifacts/release/RELEASE-NOTES.md $prerelease
+        fi
+
+  deploy-site:
+    needs: [release-check, publish]
+    if: vars.DOCGEN_DEPLOY_PAGES == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy the example site
+      id: deployment
+      uses: actions/deploy-pages@v5

@@ -16,7 +16,7 @@ public sealed class SiteMetadataTests
         Assert.Null(guide.QuerySelector("meta[property='og:url']"));
         Assert.Null(guide.QuerySelector("meta[name=robots]"));
         Assert.Equal("Guide | Test site", guide.Title);
-        Assert.Equal("en", guide.DocumentElement.GetAttribute("lang"));
+        Assert.Equal("en", guide.DocumentElement!.GetAttribute("lang"));
         Assert.False(File.Exists(site.Output / "sitemap.xml"));
         Assert.False(File.Exists(site.Output / "robots.txt"));
 
@@ -90,7 +90,7 @@ public sealed class SiteMetadataTests
         Assert.Equal("summary_large_image", document.QuerySelector("meta[name='twitter:card']")!.GetAttribute("content"));
         Assert.Equal("/_assets/favicon.ico", document.QuerySelector("link[rel=icon]")!.GetAttribute("href"));
         Assert.Equal("/_assets/logo.svg", document.QuerySelector(".site-logo")!.GetAttribute("src"));
-        Assert.Equal("fr", document.DocumentElement.GetAttribute("lang"));
+        Assert.Equal("fr", document.DocumentElement!.GetAttribute("lang"));
         Assert.True(File.Exists(site.Output / "_assets" / "social.png"));
     }
 
