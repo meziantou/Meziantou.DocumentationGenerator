@@ -184,7 +184,9 @@ internal sealed partial class LinkService
             if (kind is null && ResolveNamespace(value, context) is { Kind: CrefResolutionKind.Resolved } namespaceResolution)
                 return namespaceResolution;
 
-            return ResolveExternal((kind ?? 'T') + ":" + value);
+            // Without prefix, an external symbol is a type, unless it is a value of a framework enum (System.StringComparison.Ordinal)
+            kind ??= GetQualifiedName(value) is var name && name.AsSpan().LastIndexOf('.') is > 0 and var separator && FrameworkEnumIndex.IsEnum(name[..separator]) ? 'F' : 'T';
+            return ResolveExternal(kind + ":" + value);
         }
 
         return Select(candidates, context, cref);
@@ -212,31 +214,73 @@ internal sealed partial class LinkService
     }
 
     /// <summary>Returns the URL of a symbol from a configured external mapping, or <see langword="null"/>. URLs are never guessed.</summary>
-    public string? GetExternalUrl(string documentationId)
+    public string? GetExternalUrl(string documentationId) => GetExternalUrl(documentationId, symbol: null);
+
+    private string? GetExternalUrl(string documentationId, ApiSymbolModel? symbol)
     {
         var qualifiedName = GetQualifiedName(documentationId);
         foreach (var mapping in _configuration.ExternalReferences)
         {
-            if (mapping.Matches(qualifiedName))
-                return mapping.UrlTemplate.Replace("{uid}", GetExternalUid(documentationId), StringComparison.Ordinal);
+            if (!mapping.Matches(qualifiedName))
+                continue;
+
+            if (GetEnumName(documentationId, qualifiedName, symbol) is { } enumName)
+            {
+                // Enum values have no page: they are documented on the page of their enum, such as
+                // system.stringcomparison#system-stringcomparison-ordinal. The fragment goes after any query string.
+                var enumUrl = mapping.UrlTemplate.Replace("{uid}", GetExternalUid("T:" + enumName), StringComparison.Ordinal);
+                return enumUrl.Contains('#', StringComparison.Ordinal) ? enumUrl : enumUrl + "#" + GetExternalUid(documentationId).Replace('.', '-');
+            }
+
+            return mapping.UrlTemplate.Replace("{uid}", GetExternalUid(documentationId), StringComparison.Ordinal);
         }
 
         return null;
     }
 
     /// <summary>
-    /// <c>T:System.Collections.Generic.List`1</c> becomes <c>system.collections.generic.list-1</c>, and
-    /// <c>M:System.String.Join(System.String,System.String[])</c> becomes <c>system.string.join</c> (the overload page).
+    /// <c>T:System.Collections.Generic.List`1</c> becomes <c>system.collections.generic.list-1</c>,
+    /// <c>M:System.String.Join(System.String,System.String[])</c> becomes <c>system.string.join</c> (the overload page), and
+    /// <c>M:System.String.System#IComparable#CompareTo(System.Object)</c> becomes <c>system.string.system-icomparable-compareto</c>.
     /// </summary>
     public static string GetExternalUid(string documentationId)
     {
         var key = ApiCatalog.GetNameKey(documentationId);
+        var kind = 'T';
         if (key.Length > 2 && key[1] == ':')
         {
+            kind = key[0];
             key = key[2..];
         }
 
-        return key.Replace("#ctor", "-ctor", StringComparison.Ordinal).Replace('`', '-').ToLowerInvariant();
+        // Select{TSource,TResult} is normalized to Select`2, and generic methods share the page of their overloads
+        if (kind is 'M')
+        {
+            key = TrailingGenericArityRegex().Replace(key, "");
+        }
+
+        // #ctor becomes -ctor, and explicit implementations such as System#IEquatable{System#String}#Equals become
+        // system-iequatable-system-string--equals
+        return string.Create(key.Length, key, static (span, value) =>
+        {
+            for (var i = 0; i < value.Length; i++)
+            {
+                span[i] = value[i] is '`' or '#' or '{' or '}' or ',' ? '-' : char.ToLowerInvariant(value[i]);
+            }
+        });
+    }
+
+    /// <summary>Returns the enum of an enum value, such as <c>System.StringComparison</c> for <c>F:System.StringComparison.Ordinal</c>.</summary>
+    private static string? GetEnumName(string documentationId, string qualifiedName, ApiSymbolModel? symbol)
+    {
+        if (symbol is not null)
+            return symbol is ApiMemberModel { Category: ApiMemberCategory.EnumValue } member ? GetQualifiedName(member.DeclaringType.DocumentationId) : null;
+
+        if (!documentationId.StartsWith("F:", StringComparison.Ordinal) || qualifiedName.AsSpan().LastIndexOf('.') is not (> 0 and var separator))
+            return null;
+
+        var typeName = qualifiedName[..separator];
+        return FrameworkEnumIndex.IsEnum(typeName) ? typeName : null;
     }
 
     /// <summary>Display name of a documentation ID that has no page, such as <c>Client.Send</c> for <c>M:Contoso.Client.Send(System.String)</c>.</summary>
@@ -279,7 +323,7 @@ internal sealed partial class LinkService
             var isOverloadGroup = matches.Count > 1;
             if (symbol.Assembly.IsReference)
             {
-                var external = GetExternalUrl(symbol.DocumentationId);
+                var external = GetExternalUrl(symbol.DocumentationId, symbol);
                 return new CrefResolution(external is null ? CrefResolutionKind.Unresolved : CrefResolutionKind.External, external, GetDisplayName(symbol), symbol, []);
             }
 
@@ -376,12 +420,21 @@ internal sealed partial class LinkService
 
     private static string NormalizeGenericSyntax(string value)
     {
-        // Contoso.Tree<T>.Node becomes Contoso.Tree`1.Node, and List{T} becomes List`1 outside of parameter lists
+        // Contoso.Tree<T>.Node becomes Contoso.Tree`1.Node, and List{T} becomes List`1 outside of parameter lists and
+        // explicit implementation names such as System#IEquatable{System#String}#Equals
         var parameterStart = value.IndexOf('(', StringComparison.Ordinal);
         var name = parameterStart >= 0 ? value[..parameterStart] : value;
         var parameters = parameterStart >= 0 ? value[parameterStart..] : "";
-        name = GenericArgumentsRegex().Replace(name, match => "`" + (match.Groups["args"].Value.Count(c => c == ',') + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        name = GenericArgumentsRegex().Replace(name, match => IsInExplicitImplementationName(name, match.Index)
+            ? match.Value
+            : "`" + (match.Groups["args"].Value.Count(c => c == ',') + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
         return name + parameters;
+
+        static bool IsInExplicitImplementationName(string name, int index)
+        {
+            var segmentStart = name.AsSpan(0, index).LastIndexOf('.') + 1;
+            return name.AsSpan(segmentStart, index - segmentStart).Contains('#');
+        }
     }
 
     private static string GetQualifiedName(string documentationId)
@@ -396,4 +449,7 @@ internal sealed partial class LinkService
 
     [GeneratedRegex("`+[0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex GenericArityRegex();
+
+    [GeneratedRegex("`[0-9]+$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TrailingGenericArityRegex();
 }
