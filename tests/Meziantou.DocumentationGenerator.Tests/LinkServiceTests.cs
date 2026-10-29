@@ -182,6 +182,13 @@ public sealed class LinkServiceTests
     [InlineData("T:System.String", "External", "https://learn.microsoft.com/dotnet/api/system.string", "String")]
     [InlineData("T:System.Collections.Generic.List`1", "External", "https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1", "List")]
     [InlineData("M:System.String.Join(System.String,System.String[])", "External", "https://learn.microsoft.com/dotnet/api/system.string.join", "String.Join")]
+    [InlineData("F:System.String.Empty", "External", "https://learn.microsoft.com/dotnet/api/system.string.empty", "String.Empty")]
+    [InlineData("F:System.StringComparison.Ordinal", "External", "https://learn.microsoft.com/dotnet/api/system.stringcomparison#system-stringcomparison-ordinal", "StringComparison.Ordinal")]
+    [InlineData("System.StringComparison.Ordinal", "External", "https://learn.microsoft.com/dotnet/api/system.stringcomparison#system-stringcomparison-ordinal", "StringComparison.Ordinal")]
+    [InlineData("F:System.Environment.SpecialFolder.Desktop","External", "https://learn.microsoft.com/dotnet/api/system.environment.specialfolder#system-environment-specialfolder-desktop", "SpecialFolder.Desktop")]
+    [InlineData("M:System.Linq.Enumerable.Select{TSource,TResult}", "External", "https://learn.microsoft.com/dotnet/api/system.linq.enumerable.select", "Enumerable.Select")]
+    [InlineData("M:System.String.System#IComparable#CompareTo(System.Object)", "External", "https://learn.microsoft.com/dotnet/api/system.string.system-icomparable-compareto", "String.System#IComparable#CompareTo")]
+    [InlineData("M:System.Int32.System#Numerics#IAdditionOperators{System#Int32,System#Int32,System#Int32}#op_Addition(System.Int32,System.Int32)", "External", "https://learn.microsoft.com/dotnet/api/system.int32.system-numerics-iadditionoperators-system-int32-system-int32-system-int32--op_addition", "Int32.System#Numerics#IAdditionOperators{System#Int32,System#Int32,System#Int32}#op_Addition")]
     [InlineData("T:Newtonsoft.Json.JsonConvert", "Unresolved", null, "JsonConvert")]
     [InlineData("!:MissingType", "Unresolved", null, "MissingType")]
     [InlineData("Contoso.Library.DoesNotExist", "Unresolved", null, "DoesNotExist")]
@@ -228,6 +235,12 @@ public sealed class LinkServiceTests
         Assert.Equal("system.collections.generic.list-1", LinkService.GetExternalUid("T:System.Collections.Generic.List`1"));
         Assert.Equal("system.linq.enumerable.select", LinkService.GetExternalUid("M:System.Linq.Enumerable.Select``2(System.Collections.Generic.IEnumerable{``0},System.Func{``0,``1})"));
         Assert.Equal("system.string.-ctor", LinkService.GetExternalUid("M:System.String.#ctor(System.Char[])"));
+        Assert.Equal("system.string", LinkService.GetExternalUid("T:System.String"));
+        Assert.Equal("system.collections.generic.dictionary-2.keycollection", LinkService.GetExternalUid("T:System.Collections.Generic.Dictionary`2.KeyCollection"));
+        Assert.Equal("system.linq.enumerable.select", LinkService.GetExternalUid("M:System.Linq.Enumerable.Select`2"));
+        Assert.Equal("system.string.system-icomparable-compareto", LinkService.GetExternalUid("M:System.String.System#IComparable#CompareTo(System.Object)"));
+        Assert.Equal("system.collections.generic.list-1.system-collections-generic-ienumerable-t--getenumerator", LinkService.GetExternalUid("M:System.Collections.Generic.List`1.System#Collections#Generic#IEnumerable{T}#GetEnumerator"));
+        Assert.Equal("system.int32.system-numerics-iadditionoperators-system-int32-system-int32-system-int32--op_addition", LinkService.GetExternalUid("M:System.Int32.System#Numerics#IAdditionOperators{System#Int32,System#Int32,System#Int32}#op_Addition(System.Int32,System.Int32)"));
     }
 
     [Fact]

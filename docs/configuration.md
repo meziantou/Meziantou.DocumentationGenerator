@@ -119,8 +119,12 @@ and types. `exclude` patterns win over `include` patterns.
 
 References to symbols that are not part of the configured packages are linked only when a mapping matches
 their namespace. `{uid}` is replaced by the lowercase documentation ID without its prefix, with generic arity
-markers replaced by `-N` (`T:System.Collections.Generic.List`1` → `system.collections.generic.list-1`). The
-longest matching namespace wins.
+markers replaced by `-N` (`T:System.Collections.Generic.List`1` → `system.collections.generic.list-1`), and `#`, `{`,
+`}` and `,` replaced by `-` (`M:System.String.#ctor(System.Char[])` → `system.string.-ctor`). Methods link to the page of
+their overloads, without parameters or generic arity. Enum values link to the page of their enum with a fragment
+(`F:System.StringComparison.Ordinal` → `system.stringcomparison#system-stringcomparison-ordinal`), as on Microsoft
+Learn; enums are recognized from `references` packages and from the .NET runtime running the tool. The longest
+matching namespace wins.
 
 ## `diagnostics`
 
