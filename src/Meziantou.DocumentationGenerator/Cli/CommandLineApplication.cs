@@ -1,14 +1,18 @@
 using System.CommandLine;
 using System.Globalization;
+using System.Net;
 using Meziantou.DocumentationGenerator.Build;
 using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.Diagnostics;
+using Meziantou.DocumentationGenerator.Preview;
 using Meziantou.Framework;
 
 namespace Meziantou.DocumentationGenerator.Cli;
 
 internal sealed class CommandLineApplication
 {
+    private const int DefaultPreviewPort = 8080;
+
     private readonly TextWriter _output;
     private readonly TextWriter _error;
     private readonly Func<BuildContext, IReadOnlyList<IBuildStage>> _stageFactory;
@@ -128,6 +132,20 @@ internal sealed class CommandLineApplication
             Description = "Output verbosity: quiet, minimal, normal or detailed.",
             DefaultValueFactory = _ => Verbosity.Normal,
         };
+        var watchOption = new Option<bool>("--watch") { Description = "Rebuild the site when the configuration, content or local packages change. Stop with Ctrl+C." };
+        var serveOption = new Option<bool>("--serve") { Description = "Serve the site on a local web server to preview it. With --watch, open pages reload after each build. Stop with Ctrl+C." };
+        var portOption = new Option<int>("--port")
+        {
+            Description = "Port of the preview web server. Use 0 to pick a free port.",
+            DefaultValueFactory = _ => DefaultPreviewPort,
+        };
+        portOption.Validators.Add(result =>
+        {
+            if (result.GetValueOrDefault<int>() is < 0 or > 65535)
+            {
+                result.AddError("The port must be between 0 and 65535.");
+            }
+        });
 
         var command = new Command("build", "Generate the site.")
         {
@@ -139,6 +157,9 @@ internal sealed class CommandLineApplication
             noSourceLinksOption,
             warnAsErrorOption,
             verbosityOption,
+            watchOption,
+            serveOption,
+            portOption,
         };
 
         command.SetAction(async (parseResult, cancellationToken) =>
@@ -156,18 +177,132 @@ internal sealed class CommandLineApplication
                 WarningsAsErrors = parseResult.GetValue(warnAsErrorOption),
             };
 
-            var coordinator = new BuildCoordinator(_stageFactory, new ConsoleBuildReporter(_output, verbosity));
-            var result = await coordinator.RunAsync(options, cancellationToken);
-            WriteDiagnostics(result, verbosity);
-            return result.Status switch
-            {
-                BuildStatus.Succeeded => ExitCodes.Success,
-                BuildStatus.Cancelled => ExitCodes.Cancelled,
-                _ => ExitCodes.BuildFailed,
-            };
+            var watch = parseResult.GetValue(watchOption);
+            var serve = parseResult.GetValue(serveOption);
+            if (watch || serve)
+                return await RunPreviewAsync(options, verbosity, watch, serve ? parseResult.GetValue(portOption) : null, cancellationToken);
+
+            var result = await BuildAsync(options, verbosity, cancellationToken);
+            return GetExitCode(result);
         });
 
         return command;
+    }
+
+    private async Task<BuildResult> BuildAsync(BuildOptions options, Verbosity verbosity, CancellationToken cancellationToken)
+    {
+        var coordinator = new BuildCoordinator(_stageFactory, new ConsoleBuildReporter(_output, verbosity));
+        var result = await coordinator.RunAsync(options, cancellationToken);
+        WriteDiagnostics(result, verbosity);
+        return result;
+    }
+
+    private static int GetExitCode(BuildResult result)
+    {
+        return result.Status switch
+        {
+            BuildStatus.Succeeded => ExitCodes.Success,
+            BuildStatus.Cancelled => ExitCodes.Cancelled,
+            _ => ExitCodes.BuildFailed,
+        };
+    }
+
+    /// <summary>
+    /// Builds the site, then serves it and/or rebuilds it when an input changes, until the user presses Ctrl+C.
+    /// Without --watch, a failed build stops immediately. With --watch, failed builds are reported and the next change triggers a new build.
+    /// </summary>
+    private async Task<int> RunPreviewAsync(BuildOptions options, Verbosity verbosity, bool watch, int? port, CancellationToken cancellationToken)
+    {
+        using var watcher = watch ? new InputWatcher() : null;
+        PreviewServer? server = null;
+        try
+        {
+            var inputs = InputWatcher.GetInputs(options.ConfigurationFile, configuration: null);
+            UrlBasePath? servedBasePath = null;
+            while (true)
+            {
+                var result = await BuildAsync(options, verbosity, cancellationToken);
+                if (result.Status is BuildStatus.Cancelled || cancellationToken.IsCancellationRequested)
+                    return ExitCodes.Success;
+
+                if (!watch && result.Status is not BuildStatus.Succeeded)
+                    return GetExitCode(result);
+
+                if (port is { } serverPort && result.Configuration is { } configuration)
+                {
+                    if (server is null)
+                    {
+                        try
+                        {
+                            server = PreviewServer.Start(serverPort, liveReload: watch);
+                        }
+                        catch (HttpListenerException ex)
+                        {
+                            _error.WriteLine($"Cannot start the preview server on port {serverPort.ToString(CultureInfo.InvariantCulture)}: {ex.Message}. Use --port to choose another port.");
+                            return ExitCodes.BuildFailed;
+                        }
+                    }
+
+                    server.SetSite(configuration.OutputDirectory, configuration.Site.BasePath);
+                    if (servedBasePath != configuration.Site.BasePath)
+                    {
+                        servedBasePath = configuration.Site.BasePath;
+                        _output.WriteLine($"Preview: {server.GetUrl(configuration.Site.BasePath)}");
+                    }
+
+                    if (result.Status is BuildStatus.Succeeded && result.IsPublished)
+                    {
+                        server.NotifyReload();
+                    }
+                }
+
+                if (watcher is null)
+                {
+                    _output.WriteLine("Press Ctrl+C to stop.");
+                    await WaitForCancellationAsync(cancellationToken);
+                    return ExitCodes.Success;
+                }
+
+                // Keep watching the previous inputs when the configuration cannot be loaded, so fixing a referenced file triggers a build
+                if (result.Configuration is not null)
+                {
+                    inputs = InputWatcher.GetInputs(options.ConfigurationFile, result.Configuration);
+                }
+
+                watcher.Watch(inputs.Files, inputs.Directories);
+                _output.WriteLine("Watching for changes. Press Ctrl+C to stop.");
+                var changes = await watcher.WaitForChangesAsync(cancellationToken);
+                _output.WriteLine($"Change detected: {FormatChanges(changes, result.Configuration)}");
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return ExitCodes.Success;
+        }
+        finally
+        {
+            if (server is not null)
+            {
+                await server.DisposeAsync();
+            }
+        }
+    }
+
+    private static string FormatChanges(IReadOnlyList<string> changes, SiteConfiguration? configuration)
+    {
+        const int MaxDisplayed = 3;
+        var names = changes.Take(MaxDisplayed).Select(change => configuration?.GetDisplayPath(FullPath.FromPath(change)) ?? Path.GetFileName(change));
+        var text = string.Join(", ", names);
+        return changes.Count > MaxDisplayed ? text + string.Create(CultureInfo.InvariantCulture, $" and {changes.Count - MaxDisplayed} more") : text;
+    }
+
+    private static async Task WaitForCancellationAsync(CancellationToken cancellationToken)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (cancellationToken.Register(() => completion.TrySetResult()))
+        {
+            await completion.Task;
+        }
     }
 
     private void WriteDiagnostics(BuildResult result, Verbosity verbosity)

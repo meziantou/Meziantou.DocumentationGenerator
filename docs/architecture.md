@@ -334,8 +334,24 @@ or `github.com`). Links are pinned to the commit present in the Source Link URL.
 the first visible sequence point of the method body and are labeled *approximate*; types link to the file of
 their first method. Fields and members without bodies get no line number.
 
+## Watch mode and preview server
+
+`build --watch` and `build --serve` are authoring conveniences; the published site is identical with or without them.
+
+- `--watch` builds once, then rebuilds when an input changes: the configuration file, the content directory, local
+  package files and the site logo, favicon and social image. Changes are grouped until the file system has been quiet
+  for 300 ms. Remote packages and the cache are not watched. A failed build is reported and the previous output is kept;
+  the next change triggers a new build. When the configuration cannot be loaded, the inputs of the last valid
+  configuration stay watched.
+- `--serve` serves the output directory on `http://localhost:<port>` under `site.basePath`, like an ordinary static
+  host: directory URLs serve `index.html`, missing files return `404.html` with status 404, and `/` redirects to the
+  base path. It uses `HttpListener`, so the tool does not require the ASP.NET Core shared framework.
+- With both options, HTML responses get a `<script src="/__docgen/livereload.js">` tag inserted before `</body>` by the
+  server; the generated files are not modified. The script listens to server-sent events on `/__docgen/livereload` and
+  reloads the page after each successful build.
+
 ## Deferred features
 
 Versioned sites and version selectors, API diffs, full-text and semantic search, localization, theming and
-plugins, watch mode and preview server, `file://` browsing, and complete DocFX compatibility are
+plugins, `file://` browsing, and complete DocFX compatibility are
 **Deferred**.

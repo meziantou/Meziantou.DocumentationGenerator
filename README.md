@@ -44,10 +44,10 @@ Generate the site in `_site`:
 dotnet Meziantou.DocumentationGenerator build
 ```
 
-Open the site with any static file server, for example:
+Preview the site on `http://localhost:8080`, rebuilding it and reloading open pages when you edit the content:
 
 ```bash
-python3 -m http.server --directory _site 8080
+dotnet Meziantou.DocumentationGenerator build --watch --serve
 ```
 
 To install the tool globally instead, use `dotnet tool install --global Meziantou.DocumentationGenerator` and run
@@ -74,10 +74,12 @@ the home page and the folder structure of `docs` defines the navigation.
 | Command | Description |
 | --- | --- |
 | `Meziantou.DocumentationGenerator init [directory]` | Creates `docgen.json` and `docs/index.md`. Existing Markdown files are never overwritten; `--force` overwrites `docgen.json`. Options: `--package`, `--package-version`, `--title`. |
-| `Meziantou.DocumentationGenerator build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`. |
+| `Meziantou.DocumentationGenerator build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`, `--watch` (rebuild when the configuration, content or local packages change), `--serve` (preview the site on a local web server; with `--watch`, open pages reload after each build), `--port` (default `8080`, `0` picks a free port). |
 | `Meziantou.DocumentationGenerator --version`, `--help` | Displays the version or the help. |
 
-Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid command line, `130` cancelled.
+Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid command line, `130` cancelled. With
+`--watch` or `--serve`, the command runs until Ctrl+C and then exits with `0`; without `--watch`, a failed build exits
+with `1` and the server is not started.
 
 ## Documentation
 
@@ -96,8 +98,8 @@ Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid co
 
 ## Limitations
 
-Versioned sites and version selectors, API diffs, full-text search, localization, custom themes and plugins, a watch
-mode or preview server, and complete DocFX compatibility are not supported. See
+Versioned sites and version selectors, API diffs, full-text search, localization, custom themes and plugins, and
+complete DocFX compatibility are not supported. See
 [architecture.md](docs/architecture.md#deferred-features).
 
 ## Building from source
