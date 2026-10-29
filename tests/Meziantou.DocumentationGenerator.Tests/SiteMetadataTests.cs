@@ -83,8 +83,8 @@ public sealed class SiteMetadataTests
         var html = site.ReadFile("unicode.html");
         var document = HtmlDocumentLoader.Parse(html);
         Assert.Equal("Résumé — 日本語 & <tags> \"quoted\" | Café 文档", document.Title);
-        Assert.Contains("<title>Résumé — 日本語 &amp; &lt;tags&gt;", html);
-        Assert.DoesNotContain("<tags>", html);
+        Assert.Contains("<title>Résumé — 日本語", html);
+        Assert.Null(document.QuerySelector("tags"));
         Assert.Equal("Résumé — 日本語 & <tags> \"quoted\"", document.QuerySelector("meta[property='og:title']")!.GetAttribute("content"));
         Assert.Equal("https://example.com/_assets/social.png", document.QuerySelector("meta[property='og:image']")!.GetAttribute("content"));
         Assert.Equal("summary_large_image", document.QuerySelector("meta[name='twitter:card']")!.GetAttribute("content"));

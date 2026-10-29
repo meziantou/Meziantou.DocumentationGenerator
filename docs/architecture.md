@@ -28,7 +28,7 @@ flowchart LR
 | API models | Selected assemblies | One `PublicApiAssembly` per asset, aggregated per assembly name | `Api/` (PublicApiGenerator) |
 | Content models | Markdown, `_folder.yml`, XML docs | Parsed pages, navigation trees, documentation trees | `Markdown/`, `Navigation/`, `XmlDocs/` |
 | Link index | All models | Routes, anchors, symbol index, cross-reference resolution | `Links/` |
-| Rendering | All models + link index | HTML files written into a staging directory | `Rendering/`, `Components/` |
+| Rendering | All models + link index | Minified HTML files written into a staging directory | `Rendering/`, `Components/` |
 | Validation | Staging directory | Link, anchor and collision diagnostics | `Rendering/` |
 | Publication | Validated staging directory | Output directory and ownership manifest | `Rendering/OutputPublisher` |
 

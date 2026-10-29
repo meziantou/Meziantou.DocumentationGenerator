@@ -21,8 +21,14 @@ internal sealed class RenderStage : IBuildStage
         var validator = new SiteLinkValidator(links.Urls, context.Diagnostics);
         context.LinkValidator = validator;
 
+        var styleSheet = "";
         foreach (var (fileName, content) in StaticAssets.GetAll())
         {
+            if (fileName is StaticAssets.StyleSheetFileName)
+            {
+                styleSheet = System.Text.Encoding.UTF8.GetString(content);
+            }
+
             var path = LinkService.AssetsDirectory + "/" + fileName;
             if (links.TryRegister(new SiteRoute(path, PageKind.Asset, "static asset")))
             {
@@ -55,13 +61,16 @@ internal sealed class RenderStage : IBuildStage
 
         // A single renderer is used sequentially: HtmlRenderer has dispatcher affinity, and sequential rendering keeps the output deterministic
         await using var renderer = new RazorRenderer(services => services.AddSingleton(site));
+        var minifier = new HtmlMinifier(styleSheet);
         foreach (var page in SitePageCatalog.GetPages(site))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var html = await renderer.RenderAsync(page.Component, page.Parameters);
             html = html.ReplaceLineEndings("\n");
-            staging.WriteText(page.FilePath, html);
+
+            // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
             validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html));
+            staging.WriteText(page.FilePath, minifier.Minify(html));
         }
 
         // The search index lists URLs relative to the base path; they are validated like links

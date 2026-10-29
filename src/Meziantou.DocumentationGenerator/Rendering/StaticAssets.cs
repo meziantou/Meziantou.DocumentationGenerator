@@ -7,6 +7,8 @@ internal static class StaticAssets
 {
     private const string Prefix = "assets/";
 
+    public const string StyleSheetFileName = "site.css";
+
     public static IEnumerable<(string FileName, byte[] Content)> GetAll()
     {
         var assembly = typeof(StaticAssets).Assembly;

@@ -22,10 +22,12 @@ public sealed class PublicationTests
 
         var html = await File.ReadAllTextAsync(output / "guide.html", TestContext.Current.CancellationToken);
         Assert.StartsWith("<!DOCTYPE html>", html);
-        Assert.Contains("<title>&lt;script&gt;alert(1)&lt;/script&gt; | Test site</title>", html);
-        Assert.Contains("<h1>&lt;script&gt;alert(1)&lt;/script&gt;</h1>", html);
-        Assert.Contains("<strong>bold</strong>", html);
-        Assert.Contains("<link rel=\"stylesheet\" href=\"/_assets/site.css\" />", html);
+        var document = HtmlDocumentLoader.Parse(html);
+        Assert.DoesNotContain(document.QuerySelectorAll<Meziantou.Framework.WebPlatform.Dom.Element>("script"), script => script.TextContent!.Contains("alert(1)", StringComparison.Ordinal));
+        Assert.Equal("<script>alert(1)</script> | Test site", document.Title);
+        Assert.Equal("<script>alert(1)</script>", document.QuerySelector("h1")!.TextContent);
+        Assert.Equal("bold", document.QuerySelector("strong")!.TextContent);
+        Assert.Equal("/_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
         Assert.DoesNotContain("blazor", html, ignoreCase: true);
         Assert.DoesNotContain("_framework", html);
         Assert.DoesNotContain("<!--!-->", html);
@@ -43,8 +45,8 @@ public sealed class PublicationTests
         var rootFiles = GetFiles(root.FullPath / "_site");
         var docsFiles = GetFiles(docs.FullPath / "_site");
         Assert.Equal(rootFiles.Keys, docsFiles.Keys);
-        Assert.Contains("href=\"/docs/guide.html\"", docsFiles["index.html"]);
-        Assert.Equal(rootFiles["guide.html"], docsFiles["guide.html"].Replace("\"/docs/", "\"/", StringComparison.Ordinal));
+        Assert.NotNull(HtmlDocumentLoader.Parse(docsFiles["index.html"]).QuerySelector("a[href='/docs/guide.html']"));
+        Assert.Equal(rootFiles["guide.html"], docsFiles["guide.html"].Replace("=/docs/", "=/", StringComparison.Ordinal).Replace("\"/docs/", "\"/", StringComparison.Ordinal));
     }
 
     [Fact]
