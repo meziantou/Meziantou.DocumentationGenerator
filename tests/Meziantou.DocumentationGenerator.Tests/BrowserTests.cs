@@ -162,6 +162,28 @@ public sealed class BrowserTests(BrowserFixture fixture)
     }
 
     [Fact]
+    public async Task Sidebar_ScrollsToTheCurrentPage()
+    {
+        // A short viewport makes the sidebar scroll; the API reference, and so the current type, is at its end
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 1280, Height = 200 } });
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html");
+
+        var state = await page.EvaluateAsync<double[]>("""
+            () => {
+                const sidebar = document.getElementById('sidebar');
+                const bounds = sidebar.getBoundingClientRect();
+                const rect = sidebar.querySelector('[aria-current=page]').getBoundingClientRect();
+                const visible = rect.top >= bounds.top && rect.bottom <= Math.min(bounds.bottom, window.innerHeight);
+                return [sidebar.scrollTop, visible ? 1 : 0, window.scrollY];
+            }
+            """);
+        Assert.True(state[0] > 0, "The sidebar did not scroll");
+        Assert.Equal(1, state[1]);
+        Assert.Equal(0, state[2]);
+    }
+
+    [Fact]
     public async Task NarrowScreens_NoHorizontalOverflowAndMenu()
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 360, Height = 740 }, HasTouch = true });
@@ -198,15 +220,28 @@ public sealed class BrowserTests(BrowserFixture fixture)
         var page = await context.NewPageAsync();
         await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
 
-        await page.Locator("pre .copy-button").First.ClickAsync();
+        await page.Locator(".code-block > .copy-button").First.ClickAsync();
         await page.WaitForFunctionAsync("document.getElementById('live-status').textContent === 'Code copied to the clipboard.'");
         Assert.Equal("dotnet add package Contoso.Library", (await page.EvaluateAsync<string>("navigator.clipboard.readText()")).Trim());
+
+        // The button stays at the right of the block when a long line is scrolled
+        var moved = await page.EvaluateAsync<double>("""
+            () => {
+                const block = document.querySelector('.code-block');
+                const pre = block.querySelector('pre');
+                pre.querySelector('code').textContent += ' ' + 'x'.repeat(500);
+                const before = block.querySelector('.copy-button').getBoundingClientRect().right;
+                pre.scrollLeft = pre.scrollWidth;
+                return Math.abs(block.querySelector('.copy-button').getBoundingClientRect().right - before) + (pre.scrollLeft > 0 ? 0 : 1000);
+            }
+            """);
+        Assert.Equal(0, moved);
 
         await using var noClipboard = await fixture.Browser.NewContextAsync();
         await noClipboard.AddInitScriptAsync("Object.defineProperty(navigator, 'clipboard', { get() { return undefined; } });");
         var page2 = await noClipboard.NewPageAsync();
         await page2.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
-        await page2.Locator("pre .copy-button").First.ClickAsync();
+        await page2.Locator(".code-block > .copy-button").First.ClickAsync();
         await page2.WaitForFunctionAsync("document.getElementById('live-status').textContent.includes('not available')");
     }
 

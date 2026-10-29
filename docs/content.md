@@ -37,6 +37,9 @@ slug: start
 
 Other keys are ignored. Front matter is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 
+With [`content.editUrl`](configuration.md#content), each page shows an "edit" link next to its title that opens its
+Markdown file in the editor, such as GitHub.
+
 ### Supported syntax
 
 CommonMark, pipe tables, task lists, footnotes, auto links, strikethrough and other emphasis extras, heading
@@ -94,7 +97,8 @@ generated HTML is validated afterwards: every internal `href`, `src` and fragmen
 
 References are resolved first in the current assembly, then in the current product, then in every package. Several
 matches at the same level are ambiguous (`DG4002`); unresolved references are displayed as code (`DG4001`). Symbols
-outside the configured packages are linked only through [`xrefs`](configuration.md#xrefs).
+outside the configured packages are linked only through [`xrefs`](configuration.md#xrefs) (by default, `System` and
+`Microsoft` namespaces to Microsoft Learn).
 
 ### Raw HTML
 
@@ -135,13 +139,15 @@ slug: guides
 ```
 
 - Files and folders of a folder are interleaved and sorted ordinally by name; number prefixes set the order.
-- A folder is a non-clickable group. Only folders containing at least one page appear.
+- A folder is a group that links to its first page, in the sidebar and in breadcrumbs. Only folders containing at least
+  one page appear.
 - `_folder.yml` keys: `title` (display name), `description` (shown on the generated home page), `slug` (URL segment).
   Other keys are ignored. It is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 - Without `_folder.yml` or without `title`, the title is the folder name without its number prefix (`03-Guides` →
   `Guides`) and `DG5011` is reported.
-- The last section is the generated API reference: an `API reference` group with one entry per product, in configuration
-  order, linking to `{product}/api/index.html`, then its namespaces and their types, sorted ordinally.
+- The last section is the generated API reference: an `API reference` group, linking to the API reference of the first
+  product, with one entry per product, in configuration order, linking to `{product}/api/index.html`, then its
+  namespaces and their types, sorted ordinally.
 - Previous and next links only go through authored pages.
 
 ## XML documentation

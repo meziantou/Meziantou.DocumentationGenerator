@@ -236,6 +236,9 @@ button { cursor: pointer; }
 .sidebar a[aria-current="page"] { color: var(--color-link); font-weight: 600; border-left: 3px solid var(--color-accent); padding-left: 0.4rem; }
 .sidebar .nav-group { font-weight: 600; color: var(--color-text-muted); }
 .nav-node { position: relative; }
+/* Separates the generated API reference from the authored pages; the line spans the toggle column */
+.sidebar > ul > .nav-api-reference:not(:first-child) { margin-top: 0.9rem; }
+.sidebar > ul > .nav-api-reference:not(:first-child)::before { content: ""; position: absolute; top: -0.5rem; left: -1.6rem; right: 0; border-top: 1px solid var(--color-border); }
 .nav-toggle { position: absolute; left: -1.6rem; top: 0; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; cursor: pointer; list-style: none; color: var(--color-text-muted); }
 .nav-toggle::-webkit-details-marker { display: none; }
 .nav-toggle::before { content: "▸"; display: inline-block; }
@@ -283,6 +286,8 @@ img { max-width: 100%; height: auto; }
 code { font-family: var(--font-mono); font-size: 0.9em; background: var(--color-code-bg); border-radius: 4px; padding: 0.1em 0.3em; overflow-wrap: anywhere; }
 pre { position: relative; overflow-x: auto; padding: 0.85rem 1rem; background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: 6px; line-height: 1.45; }
 pre code { padding: 0; background: none; font-size: 0.875rem; overflow-wrap: normal; white-space: pre; }
+.code-block { position: relative; margin: 0 0 1rem; }
+.code-block > pre { margin: 0; }
 .copy-button { position: absolute; top: 0.4rem; right: 0.4rem; font-size: 0.8rem; padding: 0.15rem 0.5rem; opacity: 0.85; }
 
 table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
@@ -327,15 +332,21 @@ blockquote { margin-left: 0; padding: 0.25rem 1rem; color: var(--color-text-mute
 .badge-obsolete { background: var(--color-danger-bg); color: var(--color-text); border: 1px solid var(--color-danger-border); }
 .badge-experimental { background: var(--color-warning-bg); color: var(--color-text); border: 1px solid var(--color-warning-border); }
 .api-member { margin: 0 0 2rem; padding-top: 0.25rem; }
-.api-member > h3, .api-member > h4 { font-family: var(--font-mono); font-size: 1.05rem; overflow-wrap: anywhere; }
+.heading-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.75rem; margin: 1.75rem 0 0.75rem; }
+.heading-row > :is(h1, h3, h4) { margin: 0; }
+:is(.api-page, .article) > .heading-row:first-child { margin-top: 0.5rem; }
+.api-member > .heading-row > :is(h3, h4) { font-family: var(--font-mono); font-size: 1.05rem; overflow-wrap: anywhere; }
 .overload-group > h3 { font-family: var(--font-mono); }
 .declaration { white-space: pre; }
 .variant-label { margin: 0 0 0.25rem; font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); }
 .parameters dt, .exceptions dt { margin-top: 0.5rem; }
 .parameters dd, .exceptions dd { margin-left: 1.5rem; }
 .no-documentation { color: var(--color-text-muted); font-style: italic; }
-.source-links { font-size: 0.875rem; }
-.source-link::after { content: " ↗"; }
+.source-links { display: inline-flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: 0.875rem; font-weight: 400; white-space: nowrap; }
+.edit-link { font-size: 0.875rem; white-space: nowrap; }
+:is(.source-link, .edit-link)::after { content: " ↗"; }
+/* GitHub mark (Octicons, MIT), drawn with the link color so it follows the theme and forced colors */
+:is(.source-link, .edit-link)[href^="https://github.com/"]::before { content: ""; display: inline-block; width: 1em; height: 1em; margin-right: 0.3em; vertical-align: -0.125em; background-color: currentColor; forced-color-adjust: none; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'/%3E%3C/svg%3E") center / contain no-repeat; }
 .tfm-filter { margin-bottom: 1rem; font-size: 0.925rem; }
 .product-catalog { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1rem; }
 .product-card { padding: 1rem; border: 1px solid var(--color-border); border-radius: 8px; }
@@ -358,6 +369,6 @@ a.hljs-type { text-decoration: underline; text-decoration-color: var(--color-bor
 }
 
 @media print {
-    .site-header, .sidebar, .page-toc, .pager, .copy-button, .heading-anchor { display: none !important; }
+    .site-header, .sidebar, .page-toc, .pager, .copy-button, .heading-anchor, .edit-link { display: none !important; }
     .site-body { display: block; }
 }

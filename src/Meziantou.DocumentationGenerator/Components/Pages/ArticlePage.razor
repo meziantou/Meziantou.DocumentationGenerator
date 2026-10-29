@@ -1,7 +1,14 @@
 @inject SiteRenderContext Site
 <SiteLayout Title="@Page.Title" Description="@Page.Rendered?.Description" PagePath="@PagePath" Headings="@Headings">
     <article class="article">
-        <h1>@Page.Title</h1>
+        <div class="heading-row">
+            <h1>@Page.Title</h1>
+            @if (EditUrl is { } editUrl)
+            {
+                @* The GitHub icon is drawn by CSS; the accessible name contains the visible text *@
+                <a class="edit-link" href="@editUrl" aria-label="@(GitHubRepository.TryParse(editUrl) is null ? "Edit this page" : "Edit this page on GitHub")">edit</a>
+            }
+        </div>
         @((MarkupString)(Page.Rendered?.Html ?? ""))
     </article>
 </SiteLayout>
@@ -11,6 +18,8 @@
     public required string PagePath { get; set; }
 
     private AuthoredPage Page => Site.Content.Pages.Single(p => p.Route.FilePath == PagePath);
+
+    private string? EditUrl => Site.Configuration.Content?.GetEditUrl(Page.Source);
 
     private IReadOnlyList<PageHeading> Headings => Page.Rendered is { } rendered ? [.. rendered.Headings.Select(h => new PageHeading(h.Level, h.Id, h.Text))] : [];
 }

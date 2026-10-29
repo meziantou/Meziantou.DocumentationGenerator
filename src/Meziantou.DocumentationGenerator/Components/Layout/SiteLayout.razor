@@ -199,7 +199,7 @@
             else
             {
                 @* The disclosure toggle is separate from the link, so that interactive elements are not nested *@
-                <li class="nav-node">
+                <li class="@(node.Kind == NavigationNode.ApiReferenceKind ? "nav-node nav-api-reference" : "nav-node")">
                     @RenderLink(node)
                     <details open="@(node.IsExpanded || Navigation.IsInTrail(node))">
                         <summary class="nav-toggle" aria-label="@($"{node.Title} section")"></summary>
@@ -213,6 +213,7 @@
     private RenderFragment RenderLink(NavigationNode node) => node switch
     {
         { Url: null } => @<span class="nav-group">@node.Title</span>,
+        { IsGroup: true } => @<a href="@node.Url" class="nav-group">@node.Title</a>,
         { IsExternal: true } => @<a href="@node.Url" class="nav-external" rel="noopener">@node.Title</a>,
         _ => @<a href="@node.Url" aria-current="@(Navigation.IsActive(node) ? "page" : null)">@node.Title</a>,
     };

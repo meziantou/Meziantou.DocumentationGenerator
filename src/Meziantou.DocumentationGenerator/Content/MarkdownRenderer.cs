@@ -92,6 +92,12 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
             document.Remove(leadingHeading);
         }
 
+        // The front matter is a code block for the parser: the highlighting renderer, which handles every code block, would print it
+        foreach (var block in document.Descendants<YamlFrontMatterBlock>().ToList())
+        {
+            block.Parent?.Remove(block);
+        }
+
         foreach (var link in document.Descendants<LinkInline>().ToList())
         {
             RewriteLink(link, source);

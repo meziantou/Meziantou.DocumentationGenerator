@@ -259,7 +259,8 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 - Markdown syntax: `[text](cref:T:Contoso.Json.JsonReader)`, `[text](cref:Contoso.Json.JsonReader)` (the kind
   prefix is optional and then searched in type, method, property, field, event order), and
   `cref:{packageId}!{id}` to select a package explicitly. An empty link text uses the symbol display name.
-- Symbols outside the configured packages are resolved only through `xrefs` configuration entries, a list of
+- Symbols outside the configured packages are resolved only through `xrefs` configuration entries (by default,
+  `System` and `Microsoft` to Microsoft Learn), a list of
   `{ "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }` where `{uid}` is the
   lowercase documentation ID without its prefix and generic arity markers replaced by `-N`. Without a matching
   mapping the reference is displayed as code without a link. Markdown `cref:` links and XML references the compiler

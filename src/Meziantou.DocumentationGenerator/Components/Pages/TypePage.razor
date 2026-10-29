@@ -1,7 +1,10 @@
 @inject SiteRenderContext Site
 <SiteLayout Title="@($"{Type.DisplayName} {Kind}")" Description="@Description" PagePath="@PagePath" Headings="@Headings" TargetFrameworks="@Type.Assembly.TargetFrameworks">
     <article class="api-page" data-tfms="@Tfms(Type)">
-        <h1>@Type.DisplayName @Kind</h1>
+        <div class="heading-row">
+            <h1>@Type.DisplayName @Kind</h1>
+            @RenderSourceLinks(Type)
+        </div>
         <dl class="api-metadata">
             <dt>Namespace</dt>
             <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.ProductId!, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
@@ -165,14 +168,17 @@
     </text>;
 
     private RenderFragment RenderMember(ApiMemberModel member, int level) => @<section class="api-member" id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
-        @if (level == 3)
-        {
-            <h3>@ApiRenderHelper.GetMemberDisplayName(member)</h3>
-        }
-        else
-        {
-            <h4>@ApiRenderHelper.GetMemberDisplayName(member)</h4>
-        }
+        <div class="heading-row">
+            @if (level == 3)
+            {
+                <h3>@ApiRenderHelper.GetMemberDisplayName(member)</h3>
+            }
+            else
+            {
+                <h4>@ApiRenderHelper.GetMemberDisplayName(member)</h4>
+            }
+            @RenderSourceLinks(member)
+        </div>
         @if (!member.Availability.IsAvailableInAllTargetFrameworks)
         {
             <p class="member-availability">Available in: @RenderAvailability(member)</p>
@@ -221,7 +227,6 @@
         {
             <p class="no-documentation">No documentation is available.</p>
         }
-        @RenderSourceLinks(symbol)
     </div>;
 
     private static RenderFragment RenderHeading(int level, string text) => level switch
@@ -324,14 +329,16 @@
         }
         @if (!locations.IsEmpty)
         {
-            <p class="source-links">
+            @* Next to the heading, outside of it, so the heading text and its permalink stay the symbol name *@
+            <span class="source-links">
                 @foreach (var location in locations)
                 {
-                    <a class="source-link" href="@location.Location.Url" data-precision="@(location.Location.Precision is SourcePrecision.Line ? "line" : "file")" title="@(location.Location.Precision is SourcePrecision.Line ? "First line of the implementation; the declaration may be a few lines above" : "File containing the implementation")">
-                        @(location.Location.Precision is SourcePrecision.Line ? "Source" : "Source file")@(locations.Length > 1 ? " (" + string.Join(", ", location.TargetFrameworks) + ")" : "")
-                    </a>
+                    var isLine = location.Location.Precision is SourcePrecision.Line;
+                    var frameworks = locations.Length > 1 ? " (" + string.Join(", ", location.TargetFrameworks) + ")" : "";
+                    @* The GitHub icon is drawn by CSS; the accessible name contains the visible text *@
+                    <a class="source-link" href="@location.Location.Url" data-precision="@(isLine ? "line" : "file")" aria-label="@((isLine ? "Source code on GitHub" : "Source file on GitHub") + frameworks)" title="@(isLine ? "First line of the implementation; the declaration may be a few lines above" : "File containing the implementation")">@((isLine ? "code" : "file") + frameworks)</a>
                 }
-            </p>
+            </span>
         }
     </text>;
 

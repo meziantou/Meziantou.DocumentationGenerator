@@ -47,8 +47,8 @@ internal sealed class NavigationBuilder(SiteConfiguration configuration, Content
                     yield return CreatePageNode(page);
                     break;
 
-                case ContentFolder child when child.FirstPage is not null:
-                    yield return new NavigationNode { Title = child.Title, Children = [.. CreateEntryNodes(child)] };
+                case ContentFolder { FirstPage: { } firstPage } child:
+                    yield return new NavigationNode { Title = child.Title, Url = firstPage.Url, IsGroup = true, Children = [.. CreateEntryNodes(child)] };
                     break;
             }
         }
@@ -79,7 +79,7 @@ internal sealed class NavigationBuilder(SiteConfiguration configuration, Content
         if (products.Count == 0)
             return null;
 
-        return new NavigationNode { Title = ApiReferenceTitle, Kind = NavigationNode.ApiReferenceKind, Children = products.ToImmutable() };
+        return new NavigationNode { Title = ApiReferenceTitle, Url = products[0].Url, IsGroup = true, Kind = NavigationNode.ApiReferenceKind, Children = products.ToImmutable() };
     }
 
     /// <summary>Namespaces sorted ordinally, each listing its types (including nested types) sorted by metadata name.</summary>

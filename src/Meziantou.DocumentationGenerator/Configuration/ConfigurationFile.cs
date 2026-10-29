@@ -40,7 +40,7 @@ internal sealed class ConfigurationFile
     [Description("API selection rules.")]
     public ApiSection? Api { get; set; }
 
-    [Description("Links to documentation of symbols that are not part of the configured packages.")]
+    [Description("Links to documentation of symbols that are not part of the configured packages. Default: System and Microsoft namespaces link to Microsoft Learn. An empty list disables external links.")]
     public List<XrefSection>? Xrefs { get; set; }
 
     [Description("Diagnostic settings.")]
@@ -131,6 +131,9 @@ internal sealed class ConfigurationFile
 
         [Description("Glob patterns of Markdown files to ignore, relative to the content root.")]
         public List<string>? Exclude { get; set; }
+
+        [Description("URL of the editor of a page, containing {path}: the path of the Markdown file relative to the content root (https://github.com/contoso/docs/edit/main/docs/{path}). Default: no edit link.")]
+        public string? EditUrl { get; set; }
     }
 
     internal sealed class ApiSection

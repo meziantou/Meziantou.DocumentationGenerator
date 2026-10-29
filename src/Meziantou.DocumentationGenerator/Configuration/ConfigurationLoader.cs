@@ -622,11 +622,27 @@ internal static partial class ConfigurationLoader
                 }
             }
 
+            string? editUrl = null;
+            if (section.EditUrl is not null)
+            {
+                const string Placeholder = ContentConfiguration.EditUrlPathPlaceholder;
+                if (!section.EditUrl.Contains(Placeholder, StringComparison.Ordinal) ||
+                    !Uri.TryCreate(section.EditUrl.Replace(Placeholder, "x", StringComparison.Ordinal), UriKind.Absolute, out var editUri) || editUri.Scheme is not ("https" or "http"))
+                {
+                    Error(DiagnosticDescriptors.InvalidConfigurationValue, $"The edit URL must be an absolute http or https URL containing {Placeholder}", "$.content.editUrl");
+                }
+                else
+                {
+                    editUrl = section.EditUrl;
+                }
+            }
+
             return new ContentConfiguration
             {
                 Root = root,
                 Assets = assets.ToImmutable(),
                 Exclude = section.Exclude is null ? [] : [.. section.Exclude],
+                EditUrl = editUrl,
             };
         }
 
@@ -647,7 +663,10 @@ internal static partial class ConfigurationLoader
         private ImmutableArray<ExternalReferenceMapping> ValidateXrefs(List<ConfigurationFile.XrefSection>? sections)
         {
             if (sections is null)
-                return [];
+            {
+                _defaultedValues.Add("$.xrefs");
+                return ExternalReferenceMapping.Defaults;
+            }
 
             var result = ImmutableArray.CreateBuilder<ExternalReferenceMapping>();
             for (var i = 0; i < sections.Count; i++)

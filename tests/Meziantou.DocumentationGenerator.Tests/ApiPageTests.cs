@@ -58,7 +58,9 @@ public sealed class ApiPageTests
         var send = document.GetElementById("Send(Contoso.Library.Message,System.Int32)")!;
         var declaration = send.QuerySelector("pre.declaration")!;
         Assert.Equal("public void Send(Message message, int retryCount = 3)", declaration.TextContent);
-        Assert.Equal("/contoso.library/api/Contoso.Library.Message.html", declaration.QuerySelector("a")!.GetAttribute("href"));
+        // Framework types link to Microsoft Learn by default; void is never a link
+        Assert.Equal(["Message", "int"], declaration.QuerySelectorAll<Element>("a").Select(a => a.TextContent));
+        Assert.Equal(["/contoso.library/api/Contoso.Library.Message.html", "https://learn.microsoft.com/dotnet/api/system.int32"], declaration.QuerySelectorAll<Element>("a").Select(a => a.GetAttribute("href")));
         Assert.DoesNotContain("throw null", document.DocumentElement!.OuterHtml);
 
         // Documentation sections
@@ -188,6 +190,7 @@ public sealed class ApiPageTests
         var items = reference.QuerySelectorAll<Element>(".sidebar > ul > li");
         var api = items[items.Count - 1];
         Assert.Equal("API reference", api.QuerySelector(".nav-group")!.TextContent);
+        Assert.Contains("nav-api-reference", api.GetAttribute("class")!.Split(' '));
         Assert.Equal(["Contoso"], api.QuerySelectorAll<Element>("details > ul > li > a").Where(a => a.GetAttribute("href") == "/contoso/api/").Select(a => a.TextContent));
     }
 
@@ -199,11 +202,14 @@ public sealed class ApiPageTests
         await using var site = await SiteBuilder.BuildAsync([package]);
         var document = Load(site, "contoso.sources/api/Contoso.Sources.Widget.html");
 
-        var typeLink = document.QuerySelector("article > .api-documentation .source-link")!;
+        var typeLink = document.QuerySelector("article > .heading-row .source-link")!;
         Assert.Equal("file", typeLink.GetAttribute("data-precision"));
-        Assert.Equal("Source file", typeLink.TextContent!.Trim());
-        var methodLink = document.GetElementById("Compute(System.Int32)")!.QuerySelector(".source-link")!;
+        Assert.Equal("file", typeLink.TextContent!.Trim());
+        Assert.Equal("Source file on GitHub", typeLink.GetAttribute("aria-label"));
+        var methodLink = document.GetElementById("Compute(System.Int32)")!.QuerySelector(".heading-row > .source-links > .source-link")!;
         Assert.Equal("line", methodLink.GetAttribute("data-precision"));
+        Assert.Equal("code", methodLink.TextContent!.Trim());
+        Assert.Equal("Source code on GitHub", methodLink.GetAttribute("aria-label"));
         Assert.Equal($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Widget.cs#L6", methodLink.GetAttribute("href"));
     }
 

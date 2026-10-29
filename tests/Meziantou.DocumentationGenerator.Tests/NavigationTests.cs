@@ -32,11 +32,30 @@ public sealed class NavigationTests
         var root = build.Context.Navigation.Root;
         Assert.Equal(["Imaging", "Other"], root.Select(n => n.Title));
         var imaging = root[0];
-        Assert.Null(imaging.Url);
+        Assert.True(imaging.IsGroup);
+        Assert.Null(imaging.PagePath);
         Assert.Equal(["Introduction", "Getting started", "Guides", "Supported formats", "Limitations"], imaging.Children.Select(n => n.Title));
         Assert.Equal(["Formats", "PNG"], imaging.Children[3].Children.Select(n => n.Title));
         Assert.Equal(["Guides"], imaging.Children[2].Children.Select(n => n.Title));
         Assert.DoesNotContain(build.Context.Content.Pages, p => p.Id.EndsWith("AGENTS", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Folders_LinkToTheirFirstPage()
+    {
+        await using var build = await BuildAsync();
+
+        var imaging = build.Context.Navigation.Root[0];
+        Assert.Equal("/docs/imaging/introduction.html", imaging.Url);
+        var formats = imaging.Children[3];
+        Assert.Equal("Supported formats", formats.Title);
+        Assert.Equal("/docs/imaging/supported-formats/formats.html", formats.Url);
+
+        // The first page stays the active page; its folder is only in the trail
+        var navigation = build.Context.Navigation.GetPageNavigation("imaging/introduction.html");
+        Assert.True(navigation.IsActive(imaging.Children[0]));
+        Assert.False(navigation.IsActive(imaging));
+        Assert.Equal("/docs/imaging/introduction.html", Assert.Single(navigation.Breadcrumbs, n => n.Title == "Imaging").Url);
     }
 
     [Fact]
@@ -109,10 +128,11 @@ public sealed class NavigationTests
 
         var api = build.Context.Navigation.Root[^1];
         Assert.Equal("API reference", api.Title);
-        Assert.Null(api.Url);
+        Assert.True(api.IsGroup);
         var product = Assert.Single(api.Children);
         Assert.Equal("Contoso.Library", product.Title);
         Assert.Equal("/docs/contoso.library/api/", product.Url);
+        Assert.Equal(product.Url, api.Url);
         Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], product.Children.Select(n => n.Title));
         Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], product.Children[1].Children.Select(n => n.Title));
     }

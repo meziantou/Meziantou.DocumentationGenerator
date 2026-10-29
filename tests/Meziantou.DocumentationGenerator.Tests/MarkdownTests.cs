@@ -44,6 +44,8 @@ public sealed class MarkdownTests
         Assert.Equal("The home page.", index.Rendered!.Description);
         Assert.Contains("""<a href="/docs/guides/getting-started.html#install">the guide</a>""", index.Rendered.Html);
         Assert.Contains("""<a href="/docs/guides/custom-url.html">the folder</a>""", index.Rendered.Html);
+        Assert.DoesNotContain("title:", index.Rendered.Html);
+        Assert.DoesNotContain("<pre", index.Rendered.Html);
         Assert.Contains("""<a href="/docs/guides/getting-started.html?tab=cli#install">a query</a>""", index.Rendered.Html);
 
         var guide = pages.Single(p => p.Id == "guides/getting-started");
@@ -54,6 +56,25 @@ public sealed class MarkdownTests
         Assert.Contains("""<a href="/docs/">home</a>""", guide.Rendered.Html);
         Assert.Contains("and missing.", guide.Rendered.Html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG5001" && d.Severity == DiagnosticSeverity.Error && d.Location?.FilePath == "docs/guides/getting-started.md" && d.Location.Line == 9);
+    }
+
+    [Fact]
+    public async Task EditUrl_LinksEveryPageToItsSource()
+    {
+        await using var site = await SiteBuilder.BuildAsync([], files: new()
+        {
+            ["pages/index.md"] = "---\ntitle: Home\n---\nText.",
+            ["pages/01-Guides/_folder.yml"] = "title: Guides",
+            ["pages/01-Guides/01-Install.md"] = "# Install",
+        }, extraConfiguration: """ "content": { "root": "pages", "editUrl": "https://github.com/contoso/docs/edit/main/pages/{path}" }, """);
+
+        Assert.Equal(0, site.Result.ExitCode);
+        var home = HtmlDocumentLoader.Parse(site.ReadFile("index.html")).QuerySelector("article .heading-row > a.edit-link")!;
+        Assert.Equal("https://github.com/contoso/docs/edit/main/pages/index.md", home.GetAttribute("href"));
+        Assert.Equal("Edit this page on GitHub", home.GetAttribute("aria-label"));
+        Assert.Equal("edit", home.TextContent);
+        var install = HtmlDocumentLoader.Parse(site.ReadFile("guides/install.html")).QuerySelector("a.edit-link")!;
+        Assert.Equal("https://github.com/contoso/docs/edit/main/pages/01-Guides/01-Install.md", install.GetAttribute("href"));
     }
 
     [Fact]

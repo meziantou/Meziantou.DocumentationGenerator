@@ -52,8 +52,7 @@ and compiled: it is never executed, and no analyzer or source generator runs.
   "references": [
     { "id": "Microsoft.CodeAnalysis.Common", "version": "5.9.0" },
     { "id": "Microsoft.CodeAnalysis.CSharp", "version": "5.9.0" }
-  ],
-  "xrefs": [ { "namespace": "Microsoft.CodeAnalysis", "url": "https://learn.microsoft.com/dotnet/api/{uid}" } ]
+  ]
   ```
 
 - Not supported: preprocessed files (`.cs.pp`), the `buildAction` of the nuspec `contentFiles` element (every `.cs` file is
@@ -106,13 +105,14 @@ Source links are best effort. A PDB embedded in the assembly, next to it in the 
 symbol server is used only when its identifier matches the assembly. Symbols of reference assemblies are matched to the
 implementation by documentation ID. Links target GitHub at the commit recorded by Source Link:
 
-- methods, properties and events link to the first line of their body (labeled "Source"); the declaration may be a few
-  lines above;
-- types link to the file of their first method (labeled "Source file");
+- methods, properties and events link to the first line of their body (a GitHub icon and "code", next to the member
+  name); the declaration may be a few lines above;
+- types link to the file of their first method (a GitHub icon and "file", next to the page title);
 - fields and members without code have no link;
 - generated files that are not mapped by Source Link, and hosts other than GitHub (`DG3006`), have no link.
 
 ## External references
 
-References to symbols outside the configured packages are displayed as code. Configure [`xrefs`](configuration.md#xrefs)
-to link them, for instance to Microsoft Learn for `System` types.
+References to symbols outside the configured packages link to Microsoft Learn when they are in a `System` or
+`Microsoft` namespace, and are displayed as code otherwise. Configure [`xrefs`](configuration.md#xrefs) to link other
+namespaces or to change these links.

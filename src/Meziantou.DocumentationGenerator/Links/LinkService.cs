@@ -200,8 +200,9 @@ internal sealed partial class LinkService
             }
         }
 
+        // void is the absence of a type: a link to its page would be noise in every method signature
         if (candidates.Count == 0)
-            return ResolveExternal(documentationId);
+            return documentationId == "T:System.Void" ? new CrefResolution(CrefResolutionKind.Unresolved, Url: null, "void", Symbol: null, []) : ResolveExternal(documentationId);
 
         return Select(candidates, context, documentationId);
     }

@@ -36,7 +36,7 @@ configuration model, so it cannot drift from what the tool accepts.
 | `products` | array | one product per package | Groups of packages sharing an API reference and URLs. |
 | `content` | object | | Authored Markdown pages. |
 | `api` | object | all visible APIs | API selection rules. |
-| `xrefs` | array | `[]` | Links to documentation of symbols outside the configured packages. |
+| `xrefs` | array | `System` and `Microsoft` to Microsoft Learn | Links to documentation of symbols outside the configured packages. |
 | `diagnostics` | object | | Diagnostic severity settings. |
 | `sourceLinks` | object | enabled | Source link settings. |
 
@@ -91,6 +91,7 @@ When `products` is omitted, each package is a product whose `id` is the lowercas
 | `root` | required | Directory containing Markdown pages. Every `.md` file is a page; the folder structure defines the navigation (see [content.md](content.md#navigation)). |
 | `assets` | `[]` | Files or directories, relative to `root`, copied as-is (for example `CNAME`). Files referenced by Markdown links and images are copied automatically. |
 | `exclude` | `[]` | Glob patterns of Markdown files to ignore. Files such as `AGENTS.md` are not skipped automatically: `"exclude": ["**/AGENTS.md"]`. |
+| `editUrl` | none | Absolute URL of the editor of a page. `{path}` is replaced by the path of the Markdown file relative to `root`, such as `https://github.com/contoso/docs/edit/main/docs/{path}`. Each page then shows an "edit" link next to its title. |
 
 ## `api`
 
@@ -113,6 +114,11 @@ and types. `exclude` patterns win over `include` patterns.
   { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }
 ]
 ```
+
+When `xrefs` is omitted, `System` and `Microsoft` namespaces link to Microsoft Learn
+(`https://learn.microsoft.com/dotnet/api/{uid}`). A configured list replaces this default: include these two entries to
+keep them next to your own, and add a query string to pin a version
+(`https://learn.microsoft.com/dotnet/api/{uid}?view=net-10.0`). `"xrefs": []` disables external links.
 
 References to symbols that are not part of the configured packages are linked only when a mapping matches
 their namespace. `{uid}` is replaced by the lowercase documentation ID without its prefix, with generic arity

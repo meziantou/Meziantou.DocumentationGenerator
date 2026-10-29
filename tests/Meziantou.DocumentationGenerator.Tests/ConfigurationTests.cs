@@ -33,6 +33,20 @@ public sealed class ConfigurationTests
         Assert.Contains("$.site.basePath", configuration.DefaultedValues);
         Assert.Contains("$.output", configuration.DefaultedValues);
         Assert.DoesNotContain("$.packages", configuration.DefaultedValues);
+        Assert.Equal(["Microsoft", "System"], configuration.ExternalReferences.Select(x => x.Namespace));
+        Assert.All(configuration.ExternalReferences, x => Assert.Equal("https://learn.microsoft.com/dotnet/api/{uid}", x.UrlTemplate));
+        Assert.Contains("$.xrefs", configuration.DefaultedValues);
+    }
+
+    [Fact]
+    public async Task Xrefs_ConfiguredListReplacesTheDefault()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (empty, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "xrefs": [] }""");
+        Assert.Empty(empty!.ExternalReferences);
+
+        var (custom, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "xrefs": [ { "namespace": "Newtonsoft", "url": "https://example.com/{uid}" } ] }""");
+        Assert.Equal(["Newtonsoft"], custom!.ExternalReferences.Select(x => x.Namespace));
     }
 
     [Fact]
@@ -131,6 +145,40 @@ public sealed class ConfigurationTests
         Assert.NotNull(configuration.Content);
         Assert.Equal(temp.FullPath / "content", configuration.Content.Root);
         Assert.Equal(["images", "CNAME"], configuration.Content.Assets);
+    }
+
+    [Fact]
+    public async Task ContentEditUrl_EncodesThePathRelativeToTheRoot()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        temp.CreateTextFile("content/01-Guides/Getting started.md", "# Start");
+        var (configuration, diagnostics) = Load(temp, """
+            {
+              "version": 1,
+              "content": { "root": "content", "editUrl": "https://github.com/contoso/docs/edit/main/content/{path}" }
+            }
+            """);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("https://github.com/contoso/docs/edit/main/content/01-Guides/Getting%20started.md", configuration!.Content!.GetEditUrl(temp.FullPath / "content" / "01-Guides" / "Getting started.md"));
+    }
+
+    [Theory]
+    [InlineData("https://github.com/contoso/docs/edit/main/content/")]
+    [InlineData("javascript:alert(1)//{path}")]
+    [InlineData("edit/{path}")]
+    public async Task ContentEditUrl_Invalid(string editUrl)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        temp.CreateTextFile("content/index.md", "# Home");
+        var (_, diagnostics) = Load(temp, $$"""
+            {
+              "version": 1,
+              "content": { "root": "content", "editUrl": "{{editUrl}}" }
+            }
+            """);
+
+        Assert.Contains(diagnostics, d => d.Code == "DG1013" && d.Severity == DiagnosticSeverity.Error && d.Location?.JsonPath == "$.content.editUrl");
     }
 
     [Theory]

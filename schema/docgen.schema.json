@@ -178,6 +178,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "editUrl": {
+          "description": "URL of the editor of a page, containing {path}: the path of the Markdown file relative to the content root (https://github.com/contoso/docs/edit/main/docs/{path}). Default: no edit link.",
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -204,7 +208,7 @@
       "additionalProperties": false
     },
     "xrefs": {
-      "description": "Links to documentation of symbols that are not part of the configured packages.",
+      "description": "Links to documentation of symbols that are not part of the configured packages. Default: System and Microsoft namespaces link to Microsoft Learn. An empty list disables external links.",
       "type": "array",
       "items": {
         "type": "object",

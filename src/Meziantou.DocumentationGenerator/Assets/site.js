@@ -61,6 +61,20 @@
         });
     }
 
+    // Scrolls the sidebar, never the page, so the current page is visible in the navigation
+    function revealCurrentPage() {
+        var sidebar = document.getElementById('sidebar');
+        if (!sidebar || sidebar.scrollHeight <= sidebar.clientHeight) return;
+        var current = sidebar.querySelector('[aria-current=page]');
+        if (!current) return;
+        var bounds = sidebar.getBoundingClientRect();
+        var top = Math.max(bounds.top, 0);
+        var bottom = Math.min(bounds.bottom, window.innerHeight);
+        var rect = current.getBoundingClientRect();
+        if (rect.top >= top && rect.bottom <= bottom) return;
+        sidebar.scrollTop += rect.top - top - (bottom - top - rect.height) / 2;
+    }
+
     function initCopyButtons() {
         var blocks = document.querySelectorAll('main pre > code');
         for (var i = 0; i < blocks.length; i++) {
@@ -85,17 +99,23 @@
                         announce('The code could not be copied.');
                     });
                 });
-                code.parentElement.appendChild(button);
+                // The button is outside the pre so that it does not move when the code scrolls horizontally
+                var pre = code.parentElement;
+                var wrapper = document.createElement('div');
+                wrapper.className = 'code-block';
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+                wrapper.appendChild(button);
             })(blocks[i]);
         }
     }
 
     // Permalinks on headings and API members
     function initPermalinks() {
-        var targets = document.querySelectorAll('main h2[id], main h3[id], main h4[id], main section.api-member[id] > :is(h3, h4), main .overload-group[id] > h3');
+        var targets = document.querySelectorAll('main h2[id], main h3[id], main h4[id], main section.api-member[id] > .heading-row > :is(h3, h4), main .overload-group[id] > h3');
         for (var i = 0; i < targets.length; i++) {
             var heading = targets[i];
-            var id = heading.id || heading.parentElement.id;
+            var id = heading.id || (heading.closest('[id]') || {}).id;
             if (!id) continue;
             var link = document.createElement('a');
             link.className = 'heading-anchor';
@@ -183,6 +203,7 @@
         initScrollableRegions();
         initTheme();
         initMenu();
+        revealCurrentPage();
         initCopyButtons();
         initPermalinks();
         initFrameworkFilter();
