@@ -36,10 +36,11 @@ internal static class SearchIndexBuilder
         foreach (var product in site.Configuration.Products)
         {
             var productIndex = ProductIndex(product.Id);
-            items.Add(new SearchItem(product.Name, RouteNames.GetProductPath(product.Id), "product", productIndex, "", ""));
             var model = site.GetProductModel(product.Id);
-            if (model is null)
+            if (model is null || model.Namespaces.IsEmpty)
                 continue;
+
+            items.Add(new SearchItem(product.Name, RouteNames.GetApiReferencePath(product.Id), "product", productIndex, "", ""));
 
             foreach (var ns in model.Namespaces)
             {

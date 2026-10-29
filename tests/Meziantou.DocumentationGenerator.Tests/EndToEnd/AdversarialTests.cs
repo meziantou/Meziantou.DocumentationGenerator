@@ -36,16 +36,12 @@ public sealed class AdversarialTests
         await using var site = await SiteBuilder.BuildAsync([package], files: new()
         {
             ["docs/index.md"] = "---\ntitle: \"<script>alert(9)</script>\"\n---\n<iframe src=\"https://example.com\"></iframe><style>body{}</style>\n\n```html\n</code></pre><script>alert(10)</script>\n```",
-            ["docs/toc.yml"] = "- name: \"<b>bold</b>\"\n  href: index.md\n- name: x\n  href: \"javascript:alert(11)\"",
+            ["docs/01-Hostile/_folder.yml"] = "title: \"<b>bold</b><script>alert(11)</script>\"\ndescription: \"<img src=x onerror=alert(12)>\"",
+            ["docs/01-Hostile/01-Page.md"] = "---\ntitle: \"<a href='javascript:alert(13)'>x</a>\"\n---\nText.",
         });
 
-        Assert.Equal(ExitCodes.BuildFailed, site.Result.ExitCode);
-        Assert.Contains("DG5003", site.Result.Error);
-
-        // Without the unsafe TOC entry, the site is generated and contains no active content from the inputs
-        site.Directory.CreateTextFile("docs/toc.yml", "- name: \"<b>bold</b>\"\n  href: index.md");
-        var result = await CliRunner.RunAsync(["build", "--config", site.Directory.FullPath / "docgen.json"]);
-        Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
+        // The package README is not published, and the authored content contains no active markup once rendered
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
         foreach (var file in Directory.EnumerateFiles(site.Output, "*.html", SearchOption.AllDirectories))
         {
             var document = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken));

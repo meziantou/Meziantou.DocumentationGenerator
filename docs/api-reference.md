@@ -40,7 +40,6 @@ compiler-generated types. Use [`api.include` and `api.exclude`](configuration.md
 
 | Page | URL |
 | --- | --- |
-| Product | `/{product}/` |
 | API reference | `/{product}/api/` |
 | Namespace | `/{product}/api/namespaces/{Namespace}.html` |
 | Type | `/{product}/api/{Namespace}.{Type}.html`, generic arity as `-N` (`Tree-1.Node.html`) |
@@ -56,7 +55,6 @@ two packages of a product, or names differing only by case) are disambiguated wi
 
 | Missing | Behavior |
 | --- | --- |
-| README | The product page lists the packages, install commands and namespaces (`DG3001`). |
 | XML documentation | Pages show declarations; members show "No documentation is available" (`DG3002`). |
 | PDB or Source Link | No source link (`DG3003`). |
 | Dependency documentation for `inheritdoc` | A note explains that the inherited documentation is not available (`DG6003`). |

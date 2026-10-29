@@ -5,6 +5,11 @@ namespace Meziantou.DocumentationGenerator.Navigation;
 /// <summary>An entry of a navigation tree. A node without <see cref="Url"/> is a group label.</summary>
 internal sealed class NavigationNode
 {
+    public const string ApiReferenceKind = "api";
+    public const string ProductKind = "product";
+    public const string NamespaceKind = "namespace";
+    public const string TypeKind = "type";
+
     public required string Title { get; init; }
     public string? Url { get; init; }
 
@@ -13,7 +18,7 @@ internal sealed class NavigationNode
     public bool IsExternal { get; init; }
     public bool IsExpanded { get; init; }
 
-    /// <summary>Kind of generated node: <c>namespace</c>, <c>type</c> or <see langword="null"/> for authored nodes.</summary>
+    /// <summary>Kind of generated node (<c>api</c>, <c>product</c>, <c>namespace</c>, <c>type</c>), or <see langword="null"/> for authored pages and folders.</summary>
     public string? Kind { get; init; }
     public ImmutableArray<NavigationNode> Children { get; init; } = [];
 

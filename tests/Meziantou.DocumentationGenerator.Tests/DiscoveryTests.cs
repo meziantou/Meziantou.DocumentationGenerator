@@ -60,7 +60,6 @@ public sealed class DiscoveryTests
         Assert.Equal(
             [new SymbolCandidate("lib/net8.0/Contoso.Library.dll", "lib/net8.0/Contoso.Library.pdb", null), new SymbolCandidate("runtimes/win/lib/net8.0/Contoso.Library.dll", null, "win")],
             asset.SymbolCandidates);
-        Assert.Equal("README.md", discovered.ReadmeEntry);
         Assert.Contains(diagnostics, d => d.Code == "DG2011" && d.Message.Contains("reference assembly", StringComparison.Ordinal));
     }
 
@@ -87,7 +86,7 @@ public sealed class DiscoveryTests
     }
 
     [Fact]
-    public async Task MissingReadmeAndXml_AreReported()
+    public async Task MissingXml_IsReported()
     {
         await using var temp = TemporaryDirectory.Create();
         var package = new TestPackageBuilder("Contoso.Library", "1.0.0").AddFile("lib/net8.0/Contoso.Library.dll", Library.Value.Assembly);
@@ -95,20 +94,7 @@ public sealed class DiscoveryTests
         var (discovered, diagnostics) = await DiscoverAsync(temp, package);
 
         Assert.Null(Assert.Single(discovered.Assets).XmlDocumentationEntry);
-        Assert.Contains(diagnostics, d => d.Code == "DG3001" && d.Severity == DiagnosticSeverity.Warning);
         Assert.Contains(diagnostics, d => d.Code == "DG3002" && d.Severity == DiagnosticSeverity.Warning && d.Location?.TargetFramework == "net8.0");
-    }
-
-    [Fact]
-    public async Task ReadmeDeclaredButMissing()
-    {
-        await using var temp = TemporaryDirectory.Create();
-        var package = new TestPackageBuilder("Contoso.Library", "1.0.0").WithNuspecMetadata("<readme>docs/README.md</readme>").AddFile("lib/net8.0/Contoso.Library.dll", Library.Value.Assembly).AddFile("lib/net8.0/Contoso.Library.xml", Library.Value.Xml);
-
-        var (discovered, diagnostics) = await DiscoverAsync(temp, package);
-
-        Assert.Null(discovered.ReadmeEntry);
-        Assert.Contains("docs/README.md", Assert.Single(diagnostics, d => d.Code == "DG3001").Message);
     }
 
     [Fact]

@@ -1,11 +1,13 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Meziantou.DocumentationGenerator.Api;
 
 namespace Meziantou.DocumentationGenerator.Links;
 
 /// <summary>Route and anchor naming rules from docs/architecture.md.</summary>
-internal static class RouteNames
+internal static partial class RouteNames
 {
     public const string GlobalNamespaceFileName = "_global";
 
@@ -13,8 +15,6 @@ internal static class RouteNames
     {
         "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     };
-
-    public static string GetProductPath(string productId) => productId + "/index.html";
 
     public static string GetApiReferencePath(string productId) => productId + "/api/index.html";
 
@@ -76,4 +76,43 @@ internal static class RouteNames
 
         return result;
     }
+
+    /// <summary>URL segment computed from a title: <c>Loading and saving</c> becomes <c>loading-and-saving</c>. Accents are removed; other characters become <c>-</c>.</summary>
+    public static string Slugify(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        var pendingSeparator = false;
+        foreach (var c in value.Normalize(NormalizationForm.FormD))
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.EnclosingMark)
+                continue;
+
+            if (char.IsAsciiLetterOrDigit(c))
+            {
+                if (pendingSeparator && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(char.ToLowerInvariant(c));
+                pendingSeparator = false;
+            }
+            else
+            {
+                pendingSeparator = true;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>Removes the number prefix that orders files and folders: <c>02-GettingStarted</c> becomes <c>GettingStarted</c>.</summary>
+    public static string RemoveOrderPrefix(string name)
+    {
+        var result = OrderPrefixRegex().Replace(name, "");
+        return result.Length == 0 ? name : result;
+    }
+
+    [GeneratedRegex(@"^[0-9]+[-_.\s]+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex OrderPrefixRegex();
 }

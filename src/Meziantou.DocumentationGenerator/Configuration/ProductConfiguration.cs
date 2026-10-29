@@ -11,10 +11,6 @@ internal sealed class ProductConfiguration
 
     /// <summary>Package identifiers, in configuration order.</summary>
     public required ImmutableArray<string> Packages { get; init; }
-    public FullPath? LandingPage { get; init; }
-
-    /// <summary>Package whose README is the landing page when <see cref="LandingPage"/> is not set.</summary>
-    public string? ReadmePackage { get; init; }
 
     /// <summary><see langword="true"/> when the product was created implicitly for a package.</summary>
     public required bool IsImplicit { get; init; }

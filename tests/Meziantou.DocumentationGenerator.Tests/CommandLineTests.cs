@@ -19,7 +19,7 @@ public sealed class CommandLineTests
         Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
         Assert.Contains("\"id\": \"Contoso.Json\"", await File.ReadAllTextAsync(temp.FullPath / "docgen.json", TestContext.Current.CancellationToken));
         Assert.True(File.Exists(temp.FullPath / "docs" / "index.md"));
-        Assert.True(File.Exists(temp.FullPath / "docs" / "toc.yml"));
+        Assert.False(File.Exists(temp.FullPath / "docs" / "toc.yml"));
     }
 
     [Fact]

@@ -78,17 +78,6 @@
                 </select>
             </div>
         </div>
-        @if (!Site.Navigation.Header.IsEmpty)
-        {
-            <nav class="site-nav" aria-label="Products">
-                <ul>
-                    @foreach (var node in Site.Navigation.Header)
-                    {
-                        <li><a href="@node.Url" aria-current="@(node.PagePath == PagePath ? "page" : null)">@node.Title</a></li>
-                    }
-                </ul>
-            </nav>
-        }
     </header>
     <div class="site-body">
         @if (!Navigation.Sidebar.IsEmpty)
@@ -168,10 +157,6 @@
     [Parameter, EditorRequired]
     public required string PagePath { get; set; }
 
-    /// <summary>Product of the page, used to select the generated product navigation.</summary>
-    [Parameter]
-    public string? ProductId { get; set; }
-
     [Parameter]
     public IReadOnlyList<PageHeading>? Headings { get; set; }
 
@@ -195,7 +180,7 @@
 
     protected override void OnParametersSet()
     {
-        Navigation = Site.Navigation.GetPageNavigation(PagePath, ProductId);
+        Navigation = Site.Navigation.GetPageNavigation(PagePath);
         var siteUrl = Site.Configuration.Site.SiteUrl;
         Metadata = (
             IsNotFound ? null : UrlBuilder.GetAbsoluteUrl(siteUrl, Site.Links.Urls.GetUrl(PagePath)),
@@ -207,7 +192,7 @@
         @foreach (var node in nodes)
         {
             @* Only the types of the current namespace are listed, so pages of large APIs stay small *@
-            @if (node.Children.IsEmpty || (node.Kind == "namespace" && !Navigation.IsInTrail(node)))
+            @if (node.Children.IsEmpty || (node.Kind == NavigationNode.NamespaceKind && !Navigation.IsInTrail(node)))
             {
                 <li>@RenderLink(node)</li>
             }

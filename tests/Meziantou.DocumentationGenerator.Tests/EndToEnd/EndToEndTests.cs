@@ -22,25 +22,30 @@ public sealed class EndToEndTests(InstalledToolFixture fixture)
         [
             "index.html", "404.html", "sitemap.xml", "robots.txt", "_assets/search-index.json",
             "guides/getting-started.html", "guides/extensions.html",
-            "contoso/index.html", "contoso/api/index.html",
+            "contoso/api/index.html",
             "contoso/api/Contoso.Library.Client.html", "contoso/api/Contoso.Extensions.SmartClient.html", "contoso/api/Utils.Guard.html",
-            "contoso/_readme/docs/logo.png",
-            "meta/index.html", "undocumented/index.html", "undocumented/api/Utils.Guard.html",
+            "guides/images/diagram.png",
+            "undocumented/api/Utils.Guard.html",
         ];
         Assert.All(expectedFiles, file => Assert.True(File.Exists(output / file), file));
-        Assert.False(File.Exists(output / "meta" / "api" / "index.html"));
+        string[] removedFiles = ["contoso/index.html", "meta/index.html", "undocumented/index.html", "meta/api/index.html", "agents.html", "AGENTS.html"];
+        Assert.All(removedFiles, file => Assert.False(File.Exists(output / file), file));
+        Assert.False(Directory.Exists(output / "contoso" / "_readme"));
+        Assert.False(Directory.Exists(output / "01-Guides"));
 
-        // Inherited documentation across packages, source links pinned to the commit, and README links
+        // Navigation: authored folders sorted by name, then the API reference by product
+        var home = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "index.html", TestContext.Current.CancellationToken));
+        Assert.Equal(["Contoso documentation", "Guides", "API reference"], home.QuerySelectorAll<Meziantou.Framework.WebPlatform.Dom.Element>(".sidebar > ul > li > a, .sidebar > ul > li > .nav-group").Select(e => e.TextContent));
+        Assert.Contains("""href="/guides/getting-started.html">guides</a>""", await File.ReadAllTextAsync(output / "index.html", TestContext.Current.CancellationToken));
+
+        // Inherited documentation across packages and source links pinned to the commit
         var smartClient = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "contoso" / "api" / "Contoso.Extensions.SmartClient.html", TestContext.Current.CancellationToken));
         Assert.Equal("Runs.", smartClient.GetElementById("Run")!.QuerySelector(".summary")!.TextContent!.Trim());
         var client = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "contoso" / "api" / "Contoso.Library.Client.html", TestContext.Current.CancellationToken));
         Assert.StartsWith($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Library.cs#L", client.GetElementById("Send(System.String)")!.QuerySelector(".source-link")!.GetAttribute("href"));
-        var product = await File.ReadAllTextAsync(output / "contoso" / "index.html", TestContext.Current.CancellationToken);
-        Assert.Contains($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/CONTRIBUTING.md", product);
-        Assert.Contains("does not provide a README", await File.ReadAllTextAsync(output / "undocumented" / "index.html", TestContext.Current.CancellationToken));
 
         // Degraded inputs are reported, the fixture's module initializer never ran, and nothing leaks machine paths
-        Assert.Contains("DG3001", result.AllOutput);
+        Assert.DoesNotContain("DG3001", result.AllOutput);
         Assert.Contains("DG3002", result.AllOutput);
         Assert.DoesNotContain("The fixture was executed", result.AllOutput);
         AssertNoMachinePaths(output, temp.FullPath);

@@ -153,7 +153,7 @@ internal static partial class ConfigurationLoader
 
             if (output is { } outputPath)
             {
-                ValidateOutputOverlap(outputPath, cache, content, packages, references, products);
+                ValidateOutputOverlap(outputPath, cache, content, packages, references);
             }
 
             if (_errorCount > 0 || site is null || output is null || cache is null || apiFilter is null)
@@ -420,13 +420,6 @@ internal static partial class ConfigurationLoader
                     }
                 }
 
-                var readme = ResolveExistingFile(section.Readme, path + ".readme");
-                if (isReference && section.Readme is not null)
-                {
-                    Error(DiagnosticDescriptors.InvalidConfigurationValue, "A reference package is not published, so it cannot have a README", path + ".readme");
-                    isValid = false;
-                }
-
                 if (isValid && version is not null)
                 {
                     result.Add(new PackageConfiguration
@@ -437,7 +430,6 @@ internal static partial class ConfigurationLoader
                         LocalPath = localPath,
                         TargetFrameworks = frameworks.ToImmutable(),
                         Assemblies = assemblies.ToImmutable(),
-                        ReadmeOverride = readme,
                         Index = i,
                         IsReference = isReference,
                     });
@@ -532,18 +524,6 @@ internal static partial class ConfigurationLoader
                     }
                 }
 
-                string? readmePackage = null;
-                if (section.ReadmePackage is not null)
-                {
-                    readmePackage = productPackages.FirstOrDefault(p => string.Equals(p, section.ReadmePackage, StringComparison.OrdinalIgnoreCase));
-                    if (readmePackage is null)
-                    {
-                        Error(DiagnosticDescriptors.InvalidProductMapping, $"readmePackage '{section.ReadmePackage}' is not one of the packages of product '{section.Id}'", path + ".readmePackage");
-                        isValid = false;
-                    }
-                }
-
-                var landingPage = ResolveExistingFile(section.LandingPage, path + ".landingPage");
                 if (isValid)
                 {
                     result.Add(new ProductConfiguration
@@ -552,8 +532,6 @@ internal static partial class ConfigurationLoader
                         Name = string.IsNullOrWhiteSpace(section.Name) ? productPackages[0] : section.Name.Trim(),
                         Description = section.Description,
                         Packages = productPackages.ToImmutable(),
-                        LandingPage = landingPage,
-                        ReadmePackage = readmePackage,
                         IsImplicit = false,
                     });
                 }
@@ -591,32 +569,6 @@ internal static partial class ConfigurationLoader
                 return null;
             }
 
-            FullPath? toc = null;
-            if (section.Toc is not null)
-            {
-                var path = root / section.Toc;
-                if (!path.IsChildOf(root))
-                {
-                    Error(DiagnosticDescriptors.InvalidConfigurationValue, $"The table of contents '{section.Toc}' must be inside the content root", "$.content.toc");
-                }
-                else if (!File.Exists(path))
-                {
-                    Error(DiagnosticDescriptors.InputNotFound, $"Table of contents '{section.Toc}' not found", "$.content.toc");
-                }
-                else
-                {
-                    toc = path;
-                }
-            }
-            else
-            {
-                _defaultedValues.Add("$.content.toc");
-                if (File.Exists(root / "toc.yml"))
-                {
-                    toc = root / "toc.yml";
-                }
-            }
-
             var assets = ImmutableArray.CreateBuilder<string>();
             if (section.Assets is not null)
             {
@@ -649,7 +601,6 @@ internal static partial class ConfigurationLoader
             return new ContentConfiguration
             {
                 Root = root,
-                Toc = toc,
                 Assets = assets.ToImmutable(),
                 Exclude = section.Exclude is null ? [] : [.. section.Exclude],
             };
@@ -773,7 +724,7 @@ internal static partial class ConfigurationLoader
             };
         }
 
-        private void ValidateOutputOverlap(FullPath output, FullPath? cache, ContentConfiguration? content, ImmutableArray<PackageConfiguration> packages, ImmutableArray<PackageConfiguration> references, ImmutableArray<ProductConfiguration> products)
+        private void ValidateOutputOverlap(FullPath output, FullPath? cache, ContentConfiguration? content, ImmutableArray<PackageConfiguration> packages, ImmutableArray<PackageConfiguration> references)
         {
             // The publisher deletes stale generated files from the output directory, so inputs must never be inside it
             void Check(FullPath input, string description, string jsonPath)
@@ -816,19 +767,6 @@ internal static partial class ConfigurationLoader
                 if (package.LocalPath is { } localPath)
                 {
                     Check(localPath, $"package '{package.Id}'", package.JsonPath + ".path");
-                }
-
-                if (package.ReadmeOverride is { } readme)
-                {
-                    Check(readme, $"README of package '{package.Id}'", package.JsonPath + ".readme");
-                }
-            }
-
-            foreach (var product in products)
-            {
-                if (product.LandingPage is { } landingPage)
-                {
-                    Check(landingPage, $"landing page of product '{product.Id}'", "$.products");
                 }
             }
         }

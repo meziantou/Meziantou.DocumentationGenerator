@@ -14,7 +14,7 @@ internal sealed class ContentStage : IBuildStage
         context.Assets = assets;
         RegisterConfiguredAssets(context, assets);
         var processor = new ContentProcessor(context.Configuration, links, assets, context.Diagnostics);
-        context.Content = processor.Process(context.DiscoveredPackages, cancellationToken);
+        context.Content = processor.Process(cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -32,7 +32,7 @@ internal sealed class ContentStage : IBuildStage
             foreach (var file in files.Order())
             {
                 var outputPath = file.MakePathRelativeTo(content.Root).Replace('\\', '/');
-                assets.Register(new SiteAsset(outputPath, file, PackagePath: null, PackageEntry: null), new DiagnosticLocation { FilePath = context.Configuration.GetDisplayPath(file) });
+                assets.Register(new SiteAsset(outputPath, file), new DiagnosticLocation { FilePath = context.Configuration.GetDisplayPath(file) });
             }
         }
     }

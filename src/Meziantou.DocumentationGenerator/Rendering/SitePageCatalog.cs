@@ -23,7 +23,6 @@ internal static class SitePageCatalog
 
         foreach (var product in site.Configuration.Products)
         {
-            yield return PageRequest.Create<ProductPage>(RouteNames.GetProductPath(product.Id), new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(ProductPage.ProductId)] = product.Id });
             var model = site.GetProductModel(product.Id);
             if (model is null || model.Namespaces.IsEmpty)
                 continue;

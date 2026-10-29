@@ -1,5 +1,5 @@
 @inject SiteRenderContext Site
-<SiteLayout Title="@($"{Type.DisplayName} {Kind}")" Description="@Description" PagePath="@PagePath" ProductId="@Type.Assembly.ProductId" Headings="@Headings" TargetFrameworks="@Type.Assembly.TargetFrameworks">
+<SiteLayout Title="@($"{Type.DisplayName} {Kind}")" Description="@Description" PagePath="@PagePath" Headings="@Headings" TargetFrameworks="@Type.Assembly.TargetFrameworks">
     <article class="api-page" data-tfms="@Tfms(Type)">
         <h1>@Type.DisplayName @Kind</h1>
         <dl class="api-metadata">

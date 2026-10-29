@@ -1,6 +1,10 @@
 @inject SiteRenderContext Site
-<SiteLayout Title="@($"{Product.Name} API reference")" Description="@($"API reference of {Product.Name}.")" PagePath="@RouteNames.GetApiReferencePath(ProductId)" ProductId="@ProductId">
+<SiteLayout Title="@($"{Product.Name} API reference")" Description="@($"API reference of {Product.Name}.")" PagePath="@RouteNames.GetApiReferencePath(ProductId)">
     <h1>@Product.Name API reference</h1>
+    @if (Site.GetProductDescription(Product) is { } description)
+    {
+        <p class="lead">@description</p>
+    }
     <table class="api-table">
         <thead><tr><th scope="col">Namespace</th><th scope="col">Types</th></tr></thead>
         <tbody>

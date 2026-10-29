@@ -3,7 +3,7 @@
 ## Reading diagnostics
 
 Diagnostics have a stable code (see [diagnostics.md](diagnostics.md)), a severity, and the most precise location
-available: configuration file, line, column and JSON path; Markdown or TOC file and line; package, target framework,
+available: configuration file, line, column and JSON path; Markdown or `_folder.yml` file and line; package, target framework,
 assembly or symbol. Use `--verbosity detailed` to see informational diagnostics and stage timings.
 
 Diagnostics never contain credentials: URLs with user information and secret query parameters are redacted.
@@ -37,4 +37,4 @@ the output directory is not modified (exit code `130`).
 
 The configuration format is versioned (`"version": 1`). Unknown properties are errors, so that a misspelled option is
 not silently ignored. Generated URLs follow the rules of [api-reference.md](api-reference.md#urls-and-anchors) and only
-change when product identifiers, namespaces, type names or authored paths change.
+change when product identifiers, namespaces, type names or the titles or slugs of authored pages and folders change.

@@ -1,7 +1,0 @@
-- name: Home
-  href: index.md
-- name: Guides
-  items:
-    - href: guides/getting-started.md
-- name: API reference
-  href: api:sample

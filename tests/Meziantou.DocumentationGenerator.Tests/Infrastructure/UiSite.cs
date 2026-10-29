@@ -1,6 +1,6 @@
 namespace Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
-/// <summary>A representative site for browser tests: authored pages, a table of contents, and multi-target packages.</summary>
+/// <summary>A representative site for browser tests: authored pages and multi-target packages.</summary>
 internal static class UiSite
 {
     public static async Task<SiteBuilder> BuildAsync(string[] arguments)
@@ -39,12 +39,6 @@ internal static class UiSite
 
                     > [!NOTE]
                     > A note.
-                    """,
-                ["docs/toc.yml"] = """
-                    - href: index.md
-                    - href: guide.md
-                    - name: API
-                      href: api:contoso.library
                     """,
             },
             arguments: arguments);

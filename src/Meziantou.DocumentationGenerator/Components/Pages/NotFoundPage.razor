@@ -4,9 +4,9 @@
     <p>The page you requested does not exist. It may have been moved or removed.</p>
     <ul>
         <li><a href="@Site.Links.HomeUrl">Go to the home page</a></li>
-        @foreach (var product in Site.Configuration.Products)
+        @foreach (var product in Site.Configuration.Products.Where(p => Site.GetProductModel(p.Id) is { Namespaces.IsEmpty: false }))
         {
-            <li><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></li>
+            <li><a href="@Site.Links.GetApiReferenceUrl(product.Id)">@product.Name API reference</a></li>
         }
     </ul>
     <p>You can also use the search box at the top of the page.</p>

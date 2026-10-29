@@ -25,13 +25,13 @@ Read [docs/architecture.md](docs/architecture.md) first. Each stage of the build
 | --- | --- |
 | `Configuration` | `docgen.json` model, validation and schema |
 | `Packages` | Acquisition, cache and safe archive reading |
-| `Discovery` | Asset selection, XML documentation and PDB candidates, README |
+| `Discovery` | Asset selection, XML documentation and PDB candidates |
 | `Api` | PublicApiGenerator integration, visibility policy, aggregation across frameworks |
 | `Links` | Routes, anchors, URLs, cross-reference resolution and link validation |
 | `XmlDocs` | XML documentation parsing, rendering, `inheritdoc` and `include` |
 | `SourceLinks` | PDB validation and GitHub source links |
 | `Content` | Markdown rendering, highlighting, sanitization, assets |
-| `Navigation` | `toc.yml` and generated navigation |
+| `Navigation` | Folder-based navigation and the API reference tree |
 | `Search` | Search index |
 | `Rendering`, `Components` | Razor rendering, staging, validation and publication |
 | `Build`, `Cli` | Stages, coordinator and command line |

@@ -78,7 +78,7 @@ public sealed class SiteMetadataTests
     {
         await using var site = await BuildAsync(
             """ "site": { "title": "Café 文档", "url": "https://example.com", "favicon": "favicon.ico", "logo": "logo.svg", "socialImage": "social.png", "language": "fr" }, """,
-            extraFiles: new() { ["docs/unicode.md"] = "---\ntitle: Résumé — 日本語 & <tags> \"quoted\"\n---\nText.", ["favicon.ico"] = "ico", ["logo.svg"] = "<svg/>", ["social.png"] = "png" });
+            extraFiles: new() { ["docs/unicode.md"] = "---\ntitle: Résumé — 日本語 & <tags> \"quoted\"\nslug: unicode\n---\nText.", ["favicon.ico"] = "ico", ["logo.svg"] = "<svg/>", ["social.png"] = "png" });
 
         var html = site.ReadFile("unicode.html");
         var document = HtmlDocumentLoader.Parse(html);

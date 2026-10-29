@@ -3,49 +3,31 @@ using Meziantou.DocumentationGenerator.Links;
 
 namespace Meziantou.DocumentationGenerator.Navigation;
 
-/// <summary>Navigation trees of the site: the root table of contents, the header links, and the generated tree of each product.</summary>
+/// <summary>Navigation tree of the site: the authored pages by folder, then the generated API reference.</summary>
 internal sealed class SiteNavigation
 {
-    public static SiteNavigation Empty { get; } = new([], [], ImmutableDictionary<string, ImmutableArray<NavigationNode>>.Empty, "Home", "/");
+    public static SiteNavigation Empty { get; } = new([], "Home", "/");
 
     private readonly ImmutableArray<NavigationNode> _articleOrder;
 
-    public SiteNavigation(ImmutableArray<NavigationNode> root, ImmutableArray<NavigationNode> header, ImmutableDictionary<string, ImmutableArray<NavigationNode>> products, string homeTitle, string homeUrl)
+    public SiteNavigation(ImmutableArray<NavigationNode> root, string homeTitle, string homeUrl)
     {
         Root = root;
-        Header = header;
-        Products = products;
         HomeTitle = homeTitle;
         HomeUrl = homeUrl;
         _articleOrder = [.. root.SelectMany(n => n.DescendantsAndSelf()).Where(n => n.PagePath is not null && n.Kind is null).DistinctBy(n => n.PagePath, StringComparer.Ordinal)];
     }
 
-    /// <summary>The tree of the root table of contents, with generated API navigation inserted at <c>api:</c> entries.</summary>
+    /// <summary>The authored pages, sorted by folder and name, followed by the generated API reference.</summary>
     public ImmutableArray<NavigationNode> Root { get; }
 
-    /// <summary>Links of the site header.</summary>
-    public ImmutableArray<NavigationNode> Header { get; }
-
-    /// <summary>Generated navigation of each product: overview, API reference, namespaces and types.</summary>
-    public ImmutableDictionary<string, ImmutableArray<NavigationNode>> Products { get; }
     public string HomeTitle { get; }
     public string HomeUrl { get; }
 
-    /// <summary>
-    /// Returns the navigation of a page. The root table of contents is used when it contains the page (first occurrence in
-    /// depth-first order); otherwise the generated tree of the product of the page is used.
-    /// </summary>
-    public PageNavigation GetPageNavigation(string pagePath, string? productId)
+    /// <summary>Returns the navigation of a page. Previous and next links only follow the authored pages.</summary>
+    public PageNavigation GetPageNavigation(string pagePath)
     {
-        var trail = FindTrail(Root, pagePath);
-        var sidebar = Root;
-        if (trail is null && productId is not null && Products.TryGetValue(productId, out var productTree))
-        {
-            sidebar = productTree;
-            trail = FindTrail(productTree, pagePath);
-        }
-
-        trail ??= [];
+        var trail = FindTrail(Root, pagePath) ?? [];
         var home = new NavigationNode { Title = HomeTitle, Url = HomeUrl, PagePath = LinkService.HomePath };
         var breadcrumbs = ImmutableArray.CreateBuilder<NavigationNode>();
         if (pagePath != LinkService.HomePath)
@@ -64,7 +46,7 @@ internal sealed class SiteNavigation
             next = index < _articleOrder.Length - 1 ? _articleOrder[index + 1] : null;
         }
 
-        return new PageNavigation(sidebar, [.. trail], breadcrumbs.ToImmutable(), previous, next);
+        return new PageNavigation(Root, [.. trail], breadcrumbs.ToImmutable(), previous, next);
     }
 
     public bool Contains(string pagePath) => FindTrail(Root, pagePath) is not null;

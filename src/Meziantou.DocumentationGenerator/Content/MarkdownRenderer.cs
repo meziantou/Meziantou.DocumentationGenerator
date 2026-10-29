@@ -16,7 +16,7 @@ using Meziantou.Framework.Yaml.Model;
 namespace Meziantou.DocumentationGenerator.Content;
 
 /// <summary>
-/// Renders authored Markdown and package READMEs at build time: resolves <c>cref:</c> links through the link service,
+/// Renders authored Markdown at build time: resolves <c>cref:</c> links through the link service,
 /// rewrites links to Markdown pages and local files, highlights code, and sanitizes the result.
 /// Supported extensions: CommonMark, pipe tables, task lists, heading identifiers (GitHub rules), YAML front matter,
 /// GitHub alerts, auto links, footnotes and emphasis extras.
@@ -51,7 +51,6 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
                 frontMatter = new FrontMatter(
                     YamlDocumentLoader.GetString(mapping, "title"),
                     YamlDocumentLoader.GetString(mapping, "description"),
-                    YamlDocumentLoader.GetString(mapping, "uid"),
                     YamlDocumentLoader.GetString(mapping, "slug"));
             }
             else if (element is not null)
@@ -69,15 +68,28 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         return Render(document, frontMatter, source);
     }
 
+    /// <summary>Title of a document: the front matter title, then a leading level-1 heading.</summary>
+    public static string? GetTitle(MarkdownDocument document, FrontMatter frontMatter)
+    {
+        if (frontMatter.Title is { } title)
+            return title;
+
+        return GetLeadingHeading(document) is { } heading ? GetPlainText(heading.Inline) : null;
+    }
+
+    private static HeadingBlock? GetLeadingHeading(MarkdownDocument document)
+    {
+        var firstHeading = document.OfType<HeadingBlock>().FirstOrDefault();
+        return firstHeading is { Level: 1 } && document.Where(b => b is not YamlFrontMatterBlock and not LinkReferenceDefinitionGroup).FirstOrDefault() == firstHeading ? firstHeading : null;
+    }
+
     public RenderedMarkdown Render(MarkdownDocument document, FrontMatter frontMatter, MarkdownSource source)
     {
-        var title = frontMatter.Title;
-        var firstHeading = document.OfType<HeadingBlock>().FirstOrDefault();
-        if (firstHeading is { Level: 1 } && document.Where(b => b is not YamlFrontMatterBlock and not LinkReferenceDefinitionGroup).FirstOrDefault() == firstHeading)
+        var title = GetTitle(document, frontMatter);
+        if (GetLeadingHeading(document) is { } leadingHeading)
         {
             // The page template displays the title, so the leading level-1 heading is not repeated
-            title ??= GetPlainText(firstHeading.Inline);
-            document.Remove(firstHeading);
+            document.Remove(leadingHeading);
         }
 
         foreach (var link in document.Descendants<LinkInline>().ToList())

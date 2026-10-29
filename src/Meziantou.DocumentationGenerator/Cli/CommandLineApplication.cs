@@ -91,10 +91,6 @@ internal sealed class CommandLineApplication
 
                 This page is the home page of the site. Edit `docs/index.md` to change it.
                 """, cancellationToken);
-            await CreateFileIfMissingAsync(directory, "docs/toc.yml", """
-                - name: Home
-                  href: index.md
-                """, cancellationToken);
 
             _output.WriteLine("Run 'Meziantou.DocumentationGenerator build' to generate the site.");
             return ExitCodes.Success;

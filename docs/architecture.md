@@ -24,9 +24,9 @@ flowchart LR
 | --- | --- | --- | --- |
 | Configuration | `docgen.json` | Validated, path-resolved `SiteConfiguration` | `Configuration/` |
 | Acquisition | Package references | Verified `.nupkg` files in the cache | `Packages/` |
-| Discovery | `.nupkg` files | Selected API assemblies, XML files, PDB candidates, README, metadata | `Discovery/` |
+| Discovery | `.nupkg` files | Selected API assemblies, XML files, PDB candidates, metadata | `Discovery/` |
 | API models | Selected assemblies | One `PublicApiAssembly` per asset, aggregated per assembly name | `Api/` (PublicApiGenerator) |
-| Content models | Markdown, `toc.yml`, XML docs | Parsed pages, navigation trees, documentation trees | `Markdown/`, `Navigation/`, `XmlDocs/` |
+| Content models | Markdown, `_folder.yml`, XML docs | Parsed pages, navigation trees, documentation trees | `Markdown/`, `Navigation/`, `XmlDocs/` |
 | Link index | All models | Routes, anchors, symbol index, cross-reference resolution | `Links/` |
 | Rendering | All models + link index | HTML files written into a staging directory | `Rendering/`, `Components/` |
 | Validation | Staging directory | Link, anchor and collision diagnostics | `Rendering/` |
@@ -53,13 +53,11 @@ one, never a partial site.
 **Guaranteed.**
 
 - A *package* is a NuGet package identified by `id` + exact `version`.
-- A *product* is the unit of navigation: it owns a landing page, an API reference and URLs.
+- A *product* is a group of packages sharing an API reference and URLs. Its `description` (default: the package
+  description) is the lead paragraph of its API reference page.
 - When `products` is omitted, each package becomes its own product (`id` = lowercase package ID).
-- A product may group several packages. Its landing page is selected deterministically:
-  1. the product `landingPage` Markdown file when configured;
-  2. otherwise the README of the package named in `readmePackage`;
-  3. otherwise the README of the first package listed in the product `packages` array;
-  4. otherwise a generated fallback page listing packages and namespaces, with warning `DG3001`.
+- Pages are only the authored Markdown files. Nothing is generated from package READMEs; READMEs are never read or
+  published.
 - A package can belong to at most one product. A package not referenced by any product while `products` is
   configured is an error (`DG1012`).
 
@@ -69,7 +67,7 @@ one, never a partial site.
 { "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ] }
 ```
 
-Product `contoso.json`, landing page from the package README.
+Product `contoso.json`, API reference at `/contoso.json/api/`.
 
 ### Example: grouped product
 
@@ -80,7 +78,7 @@ Product `contoso.json`, landing page from the package README.
     { "id": "Contoso.Data.Sqlite", "version": "3.0.0" }
   ],
   "products": [
-    { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ], "readmePackage": "Contoso.Data" }
+    { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ] }
   ]
 }
 ```
@@ -149,7 +147,7 @@ A member is documented when it is visible to a consumer of the package:
 | Assembly scope | `packageId/assemblyName` (TFM independent) | `Contoso.Json/Contoso.Json` |
 | Assembly asset | scope + TFM | `Contoso.Json/Contoso.Json` + `net8.0` |
 | Symbol | assembly scope + XML documentation ID | `Contoso.Json/Contoso.Json` + `T:Contoso.Json.JsonReader` |
-| Authored page | path relative to the content root, without extension, `/` separators | `guides/getting-started` |
+| Authored page | source path relative to the content root, without extension, `/` separators | `03-Guides/01-GettingStarted` |
 
 - XML documentation IDs alone are not unique: two packages can both define `T:Utils.Guard`. Symbol lookups
   from XML or `cref:` links are resolved first in the current assembly scope, then in the current product,
@@ -159,7 +157,8 @@ A member is documented when it is visible to a consumer of the package:
 
 ## Routes and anchors
 
-**Guaranteed.** URLs never depend on display titles, discovery order, the selected TFM or unrelated symbols.
+**Guaranteed.** API URLs never depend on display titles, discovery order, the selected TFM or unrelated symbols.
+Authored page URLs are computed from folder and page titles unless a `slug` is set.
 
 ### Files and URLs
 
@@ -173,13 +172,12 @@ A member is documented when it is visible to a consumer of the package:
 | Page | File | URL with `basePath: /` | URL with `basePath: /docs/` |
 | --- | --- | --- | --- |
 | Site home | `index.html` | `/` | `/docs/` |
-| Product home | `{product}/index.html` | `/json/` | `/docs/json/` |
 | API reference | `{product}/api/index.html` | `/json/api/` | `/docs/json/api/` |
 | Namespace | `{product}/api/namespaces/{Namespace}.html` | `/json/api/namespaces/Contoso.Json.html` | `/docs/json/api/namespaces/Contoso.Json.html` |
 | Type | `{product}/api/{TypeName}.html` | `/json/api/Contoso.Json.JsonReader.html` | `/docs/json/api/Contoso.Json.JsonReader.html` |
 | Member | type page + fragment | `/json/api/Contoso.Json.JsonReader.html#Read(System.Int32)` | `/docs/json/api/Contoso.Json.JsonReader.html#Read(System.Int32)` |
-| Authored page | `{path}.html` | `/guides/getting-started.html` | `/docs/guides/getting-started.html` |
-| Authored `index.md` | `{dir}/index.html` | `/guides/` | `/docs/guides/` |
+| Authored page | `{folder slugs}/{page slug}.html` | `/guides/getting-started.html` | `/docs/guides/getting-started.html` |
+| Root `index.md` | `index.html` (site home) | `/` | `/docs/` |
 | Asset | `_assets/...`, or content-relative path | `/_assets/site.css` | `/docs/_assets/site.css` |
 | Search index | `_assets/search-index.json` | `/_assets/search-index.json` | `/docs/_assets/search-index.json` |
 | 404 page | `404.html` | `/404.html` | `/docs/404.html` |
@@ -267,10 +265,13 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 
 **Guaranteed.**
 
-- Markdown pages use YAML front matter with `title`, `description`, `uid` (optional page identity used by
-  `toc.yml` `uid` entries) and `slug` (optional route override, relative to the content root without
-  extension). Unknown front matter keys are ignored.
-- The page title is, in order: front matter `title`, first level-1 heading, file name.
+- Markdown pages use YAML front matter with `title`, `description` and `slug` (optional single URL segment
+  replacing the slugified title: no `/`, no `.html`; an invalid slug is `DG5002` and the title is used). Unknown
+  front matter keys, including the former `uid`, are ignored.
+- The page title is, in order: front matter `title`, leading level-1 heading, file name without its number prefix.
+- `AGENTS.md`-style files are not skipped automatically; use `content.exclude`.
+- Links to missing or excluded Markdown pages and folders without pages (`DG5001`) and to missing files (`DG5008`)
+  are errors. A link to a folder targets its first page in name order; the content root targets the home page.
 - **Raw HTML policy:** raw HTML in Markdown is allowed but sanitized with an allow-list: no `<script>`,
   `<style>`, `<iframe>`, `<object>`, `<embed>`, `<form>`, event handler attributes, `style` attributes, or
   URLs with schemes other than `http`, `https`, `mailto` and relative URLs. XML documentation follows the same
@@ -280,28 +281,30 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
   footnotes, and emphasis extras. DocFX-specific syntax (`[!INCLUDE]`, `:::` zones, `@uid` shorthand links,
   tabbed content) is **Unsupported** and rendered as plain Markdown.
 
-### TOC subset
+### Navigation
 
-**Guaranteed** subset of [DocFX table of contents](https://dotnet.github.io/docfx/docs/table-of-contents.html):
+**Guaranteed.** Navigation is derived from the folder structure of `content.root`; there is no table of contents file.
 
-- root shapes: a top-level sequence or an object with an `items` sequence;
-- node keys: `name`, `href`, `uid`, `items`, `expanded` (and the DocFX aliases `topicHref`, `topicUid`); other keys
-  are ignored with info `DG5007`;
-- `href` to a Markdown file (optionally with a `#fragment`), an external `http(s)` URL, a nested `toc.yml` (its items are included in place)
-  or a directory (`guides/`, which includes `guides/toc.yml`); a group node without `href` is not clickable;
-- `uid` to an authored page `uid` or an API documentation ID (with or without prefix);
-- special `href` values `api:{productId}` insert the generated API navigation of a product (namespaces, then their
-  types). With a `name`, the entry is a group linking to the API reference; without, the namespaces are inserted in place;
-- display names: explicit `name`, then the page title (front matter `title`, first level-1 heading, file name), or the
-  symbol display name for API `uid` entries;
-- YAML anchors and aliases are rejected, nesting is bounded, and nested TOC cycles are errors (`DG5004`);
-- pages whose route is in the root TOC use it as sidebar; other product pages use the generated product tree
-  (overview, API reference, namespaces, types).
-- TOC order is preserved. Generated API navigation is sorted by namespace then type name using ordinal
-  comparison.
-- When a page appears in several TOCs, the first occurrence in a depth-first traversal of the root TOC is its
-  navigation location. A configured Markdown page that no TOC references is still generated (warning `DG5005`)
-  and reachable through search.
+- Files and folders of a folder are interleaved and sorted ordinally by name, so number prefixes set the order
+  (`01-Introduction.md`, `02-GettingStarted.md`, `03-Guides/`).
+- Each folder may contain `_folder.yml`, a YAML mapping with `title` (display name), `description` (shown on the
+  generated home page) and `slug` (URL segment). Other keys are ignored. Nesting is bounded and anchors and aliases are
+  rejected. Without `_folder.yml` or `title`, the title is the folder name without its number prefix
+  (`03-Guides` → `Guides`) with warning `DG5011`.
+- A folder is a non-clickable group. Only folders containing at least one page appear.
+- The root `index.md`, when present, is the home page and the first navigation entry. Without it, the generated home
+  page lists the top-level folders (title and description, linking to their first page in name order) and the
+  top-level pages.
+- Routes: each folder contributes its `_folder.yml` `slug`, otherwise its slugified title; the page contributes its
+  front matter `slug`, otherwise its slugified title. `01-Imaging/05-LoadingAndSaving/02-LoadingImages.md` titled
+  "Imaging" / "Loading and saving" / "Loading images" → `imaging/loading-and-saving/loading-images.html`. Slugify
+  removes accents, lowercases, replaces runs of characters other than ASCII letters and digits with `-`, and trims.
+  The root `index.md` is always `index.html`; other `index.md` files are ordinary pages. Collisions are errors
+  (`DG4005`).
+- The last section is always the generated API reference: a non-clickable `API reference` group, one node per product
+  (product name, linking to `{product}/api/index.html`) in configuration order, then namespaces and types sorted
+  ordinally.
+- Previous and next links only go through authored pages.
 
 ## Optional metadata and strictness
 
@@ -309,10 +312,8 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 
 | Missing input | Behavior | Diagnostic |
 | --- | --- | --- |
-| README | Generated product page with package metadata and namespaces | `DG3001` warning |
 | XML documentation | API pages show signatures without documentation | `DG3002` warning |
 | PDB or Source Link | No source link | `DG3003` info |
-| Repository metadata for README relative links | Link left unresolved and rendered as text | `DG3004` warning |
 | Dependency documentation for `inheritdoc` | Section omitted and marked | `DG6003` warning |
 
 Warnings can be promoted with `diagnostics.warningsAsErrors` or `--warnaserror`, and individual codes can be
