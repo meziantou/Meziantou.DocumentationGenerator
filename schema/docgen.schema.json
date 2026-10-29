@@ -109,6 +109,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "defineConstants": {
+            "description": "Preprocessor symbols defined when compiling a source package, in addition to the symbols of the target framework, such as the symbols its MSBuild targets define in the consuming project. Default: none.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false

@@ -14,8 +14,37 @@ internal sealed class DiscoveryStage : IBuildStage
         var discoverer = new PackageDiscoverer(context.Diagnostics);
         context.DiscoveredPackages = Discover(context.Packages, discoverer, context.Diagnostics, cancellationToken);
         context.DiscoveredReferences = Discover(context.References, discoverer, context.Diagnostics, cancellationToken);
+        CompileSourcePackages(context, cancellationToken);
         ReportUnconfiguredDependencies(context);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Source packages are compiled once every package is discovered, so that they can reference the other packages.</summary>
+    private static void CompileSourcePackages(BuildContext context, CancellationToken cancellationToken)
+    {
+        var all = context.DiscoveredPackages.Concat(context.DiscoveredReferences).ToList();
+        if (!all.Any(p => p.IsSourcePackage))
+            return;
+
+        var compiler = new SourcePackageCompiler(context.Diagnostics);
+        context.DiscoveredPackages = [.. context.DiscoveredPackages.Select(Compile)];
+        context.DiscoveredReferences = [.. context.DiscoveredReferences.Select(Compile)];
+
+        DiscoveredPackage Compile(DiscoveredPackage package)
+        {
+            if (!package.IsSourcePackage)
+                return package;
+
+            try
+            {
+                return package.WithAssets(compiler.Compile(package, all, cancellationToken));
+            }
+            catch (PackageArchiveException ex)
+            {
+                context.Diagnostics.Report(DiagnosticDescriptors.PackageIntegrity, ex.Message, new DiagnosticLocation { Package = package.Package.Configuration.Identity });
+                return package;
+            }
+        }
     }
 
     private static ImmutableArray<DiscoveredPackage> Discover(ImmutableArray<AcquiredPackage> packages, PackageDiscoverer discoverer, DiagnosticBag diagnostics, CancellationToken cancellationToken)

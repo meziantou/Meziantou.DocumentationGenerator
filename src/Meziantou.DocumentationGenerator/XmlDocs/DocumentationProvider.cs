@@ -26,7 +26,9 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
             foreach (var model in group.Models)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (model.Asset.XmlDocumentationEntry is not { } entry)
+                // The documentation of a source package is produced by the compiler from its sources
+                var entry = model.Asset.CompiledSource is not null ? model.Asset.AssemblyEntry : model.Asset.XmlDocumentationEntry;
+                if (entry is null)
                 {
                     _files[model] = null;
                     continue;
@@ -34,7 +36,7 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
 
                 var displayPath = group.Package.Package.Configuration.Identity + "/" + entry;
                 var location = new DiagnosticLocation { Package = group.Package.Package.Configuration.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
-                using var stream = archive.OpenRead(entry);
+                using var stream = model.Asset.CompiledSource is { } compiled ? new MemoryStream(compiled.XmlDocumentation, writable: false) : archive.OpenRead(entry);
                 var file = XmlDocumentationFile.Load(stream, displayPath, diagnostics, location);
                 _files[model] = file;
                 if (file is not null)

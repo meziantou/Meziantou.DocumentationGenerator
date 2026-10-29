@@ -16,6 +16,9 @@ internal sealed class PackageConfiguration
     public required ImmutableArray<NuGetFramework> TargetFrameworks { get; init; }
     public required ImmutableArray<string> Assemblies { get; init; }
 
+    /// <summary>Preprocessor symbols added to those of the target framework when compiling a source package.</summary>
+    public ImmutableArray<string> DefineConstants { get; init; } = [];
+
     /// <summary>Index of the package in the configuration, used to locate diagnostics.</summary>
     public required int Index { get; init; }
 

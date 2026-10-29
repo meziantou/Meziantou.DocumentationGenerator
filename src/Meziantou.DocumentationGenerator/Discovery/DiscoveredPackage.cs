@@ -19,7 +19,21 @@ internal sealed class DiscoveredPackage
 
     public required ImmutableArray<PackageDependencyGroup> Dependencies { get; init; }
 
+    /// <summary>Source files per target framework when the package is a source package (no compile-time assembly).</summary>
+    public ImmutableArray<SourceFolder> SourceFolders { get; init; } = [];
+
+    public bool IsSourcePackage => !SourceFolders.IsEmpty;
+
     public string Id => Package.Id;
+
+    public DiscoveredPackage WithAssets(ImmutableArray<ApiAsset> assets) => new()
+    {
+        Package = Package,
+        Assets = assets,
+        PlaceholderFrameworks = PlaceholderFrameworks,
+        Dependencies = Dependencies,
+        SourceFolders = SourceFolders,
+    };
 
     public IEnumerable<string> TargetFrameworks => Assets.Select(a => a.TargetFramework).Distinct(StringComparer.Ordinal);
 }

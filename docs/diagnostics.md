@@ -52,6 +52,7 @@ input and cannot be lowered.
 | `DG2011` | info | Explains which asset is documented for each target framework |
 | `DG2012` | warning | Unsupported or unreadable metadata (the assembly or attribute is skipped or displayed partially) |
 | `DG2013` | error | The builds of an assembly cannot be aggregated across target frameworks (duplicate inputs) |
+| `DG2014` | warning | The sources of a source package cannot be compiled for a framework (usually a dependency missing from `references`); the framework has no API reference |
 | `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
 | `DG3003` | info | No usable PDB or Source Link information for an assembly; no source links are generated |
 | `DG3005` | warning | A PDB does not match its assembly (PDB identifier and timestamp); it is not used |

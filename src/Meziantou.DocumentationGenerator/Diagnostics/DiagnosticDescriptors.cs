@@ -34,6 +34,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnsupportedMetadata = new("DG2012", "Unsupported or unreadable metadata", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor InvalidAggregation = new("DG2013", "Assemblies cannot be aggregated across target frameworks", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor AssetSelected = new("DG2011", "Selected API asset", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor SourceCompilationFailed = new("DG2014", "The sources of a source package cannot be compiled", DiagnosticSeverity.Warning);
 
     // DG3xxx: missing optional content
     public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);

@@ -67,6 +67,7 @@ At least one package or a content directory is required.
 | `path` | | Local `.nupkg` file. No feed is queried. Cannot be combined with `source`. |
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
 | `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
+| `defineConstants` | none | Preprocessor symbols defined when compiling a [source package](api-reference.md#source-packages), in addition to those of the target framework. Use it for the symbols the package's MSBuild targets define in the consuming project (`"ROSLYN_4_12_OR_GREATER"`). |
 
 Dependencies of the documented packages are never downloaded implicitly. To inherit documentation from a
 dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the

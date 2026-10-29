@@ -19,6 +19,46 @@ For each target framework folder of a package:
 
 The detailed `DG2011` diagnostics (`--verbosity detailed`) explain which file is documented for each framework.
 
+## Source packages
+
+A package with no compile-time assembly (only `_._` placeholders, or no `ref/` and `lib/` folders) whose
+`contentFiles/cs/{tfm}/` or `contentFiles/any/{tfm}/` folders contain `.cs` files is a source package: NuGet adds
+those files to the consuming project. For each framework folder, the files are compiled in memory with Roslyn into a
+metadata-only assembly and its XML documentation, then documented like any other assembly. The code is only parsed
+and compiled: it is never executed, and no analyzer or source generator runs.
+
+- The preprocessor symbols of the framework are defined (`NET8_0`, `NET6_0_OR_GREATER`, `NETSTANDARD2_0`, `NET472`,
+  `TRACE`, `RELEASE`...), so `#if` branches match what the consuming project compiles. MSBuild targets of the package
+  never run: add the symbols they define with [`defineConstants`](configuration.md#packages).
+- `internal` and `protected internal` types, members and accessors are documented, as well as top-level types without
+  accessibility modifier: the consuming project can use them because the files are part of it. Declarations show
+  their accessibility (`internal sealed class Options`, `public string Name { get; internal set; }`), and type pages
+  say the code is compiled into the consuming project. `private` and `private protected` symbols are not documented.
+- The sources are compiled against the compile-time assemblies of the configured `packages` and `references`, for the
+  nearest framework (for `contentFiles/{lang}/any/`, the framework of the running .NET runtime). Packages the sources
+  use without declaring them as dependencies must be configured too. When none of them provides a core library (`System.Runtime.dll`, `netstandard.dll` or
+  `mscorlib.dll`), the assemblies of the .NET runtime the tool runs on are used. To document against the exact
+  framework, add a targeting pack such as `Microsoft.NETCore.App.Ref` to `references`.
+- Errors in method bodies don't matter. Errors in declarations, usually a dependency that is not configured, skip the
+  framework (`DG2014`).
+- The assembly is named after the package; use `{PackageId}.dll` in `assemblies` filters.
+- Example, for [Meziantou.Framework.Roslyn](https://www.nuget.org/packages/Meziantou.Framework.Roslyn), whose sources
+  use Roslyn and whose targets define `ROSLYN_*` symbols from the Roslyn version of the project:
+
+  ```json
+  "packages": [
+    { "id": "Meziantou.Framework.Roslyn", "version": "1.2.2", "defineConstants": [ "ROSLYN_4_12_OR_GREATER", "ROSLYN_5_6_OR_GREATER" ] }
+  ],
+  "references": [
+    { "id": "Microsoft.CodeAnalysis.Common", "version": "5.9.0" },
+    { "id": "Microsoft.CodeAnalysis.CSharp", "version": "5.9.0" }
+  ],
+  "xrefs": [ { "namespace": "Microsoft.CodeAnalysis", "url": "https://learn.microsoft.com/dotnet/api/{uid}" } ]
+  ```
+
+- Not supported: preprocessed files (`.cs.pp`), the `buildAction` of the nuspec `contentFiles` element (every `.cs` file is
+  compiled), `<include>` in documentation comments, and source links.
+
 ## Target frameworks
 
 The frameworks shown are the asset folders of the package (`net8.0`, `netstandard2.0`...). They are not a compatibility
@@ -32,7 +72,8 @@ with its frameworks. With JavaScript, a filter hides the members of other framew
 ## Visibility
 
 Documented: public types; public, protected and protected internal members of visible types; explicit interface
-implementations of visible interfaces. Not documented: internal and private protected symbols, protected members of
+implementations of visible interfaces, and the internal symbols of [source packages](#source-packages). Not
+documented: other internal and private protected symbols, protected members of
 sealed types or structs, accessors (documented with their property or event), record `EqualityContract`, and
 compiler-generated types. Use [`api.include` and `api.exclude`](configuration.md#api) to filter further.
 

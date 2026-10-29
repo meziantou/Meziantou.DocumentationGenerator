@@ -66,6 +66,9 @@ internal sealed class ApiSymbolPolicy(ApiFilter filter)
         return symbol.Accessibility switch
         {
             PublicApiAccessibility.Public => true,
+
+            // Only assemblies compiled from source packages are read with internal symbols, which the consuming project can use
+            PublicApiAccessibility.Internal => true,
             PublicApiAccessibility.Protected or PublicApiAccessibility.ProtectedInternal => symbol.DeclaringType is not { } declaringType || !(declaringType.IsSealed || declaringType.IsStatic || declaringType.TypeKind is PublicApiTypeKind.Struct),
             _ => symbol is PublicApiMember { IsExplicitInterfaceImplementation: true },
         };

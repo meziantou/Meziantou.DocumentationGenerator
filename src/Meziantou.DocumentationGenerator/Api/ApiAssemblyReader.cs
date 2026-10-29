@@ -25,11 +25,14 @@ internal sealed class ApiAssemblyReader(DiagnosticBag diagnostics)
             var location = new DiagnosticLocation { Package = package.Package.Configuration.Identity, TargetFramework = asset.TargetFramework, Assembly = asset.AssemblyEntry };
             try
             {
-                using var stream = archive.OpenRead(asset.AssemblyEntry);
+                using var stream = asset.CompiledSource is { } compiled ? new MemoryStream(compiled.Assembly, writable: false) : archive.OpenRead(asset.AssemblyEntry);
                 var assembly = PublicApi.ReadAssembly(stream, new PublicApiReadOptions
                 {
                     TargetFramework = asset.TargetFramework,
                     InputIdentity = ApiAssemblyModel.CreateScope(package.Id, asset.AssemblyName),
+
+                    // The internal symbols of a source package are part of the consuming project
+                    IncludeInternalSymbols = asset.CompiledSource is not null,
                 });
 
                 ReportUndecodedAttributes(assembly, location);

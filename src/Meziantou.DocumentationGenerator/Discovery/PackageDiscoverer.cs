@@ -12,6 +12,8 @@ namespace Meziantou.DocumentationGenerator.Discovery;
 /// <c>ref/{tfm}/*.dll</c> when the package has a <c>ref/{tfm}</c> folder, otherwise <c>lib/{tfm}/*.dll</c>, which is the
 /// choice the compiler makes. <c>lib/</c> assemblies shadowed by <c>ref/</c> and <c>runtimes/{rid}/lib/</c> assemblies are
 /// only symbol candidates and never add APIs. Discovery reads entries without loading or executing assemblies.
+/// A package without compile-time assembly whose <c>contentFiles</c> contain C# files is a source package: its files are
+/// recorded per target framework and compiled later by <see cref="SourcePackageCompiler"/>.
 /// </summary>
 internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
 {
@@ -26,7 +28,11 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
         var libFolders = GetFrameworkFolders(archive, "lib", location);
         var runtimeAssemblies = GetRuntimeAssemblies(archive);
 
-        var frameworks = refFolders.Keys.Union(libFolders.Keys).Distinct().OrderBy(f => f.GetShortFolderName(), StringComparer.Ordinal).ToList();
+        // Source packages often add lib/{tfm}/_._ placeholders, so the sources are used when no folder contains an assembly
+        var hasAssemblies = refFolders.Values.Concat(libFolders.Values).Any(files => files.Any(IsCandidateAssembly));
+        var sourceFolders = hasAssemblies ? [] : GetSourceFolders(archive, location);
+
+        var frameworks = (sourceFolders.Count > 0 ? sourceFolders.Keys : refFolders.Keys.Union(libFolders.Keys)).Distinct().OrderBy(f => f.GetShortFolderName(), StringComparer.Ordinal).ToList();
         var configuredFrameworks = package.Configuration.TargetFrameworks;
         foreach (var configured in configuredFrameworks)
         {
@@ -38,10 +44,22 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
 
         var assets = ImmutableArray.CreateBuilder<ApiAsset>();
         var placeholders = ImmutableArray.CreateBuilder<NuGetFramework>();
+        var sources = ImmutableArray.CreateBuilder<SourceFolder>();
         foreach (var framework in frameworks)
         {
             if (!configuredFrameworks.IsEmpty && !configuredFrameworks.Contains(framework))
                 continue;
+
+            if (sourceFolders.TryGetValue(framework, out var sourceFolder))
+            {
+                // The sources are compiled into an assembly named after the package
+                if (package.Configuration.Assemblies.IsEmpty || package.Configuration.Assemblies.Contains(GetSourceAssemblyName(package) + ".dll", StringComparer.OrdinalIgnoreCase))
+                {
+                    sources.Add(sourceFolder);
+                }
+
+                continue;
+            }
 
             var isReference = refFolders.TryGetValue(framework, out var compileFiles);
             if (!isReference)
@@ -99,13 +117,13 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
 
         foreach (var assemblyFilter in package.Configuration.Assemblies)
         {
-            if (!assets.Any(a => string.Equals(a.AssemblyName + ".dll", assemblyFilter, StringComparison.OrdinalIgnoreCase)))
+            if (!assets.Any(a => string.Equals(a.AssemblyName + ".dll", assemblyFilter, StringComparison.OrdinalIgnoreCase)) && !(sources.Count > 0 && string.Equals(GetSourceAssemblyName(package) + ".dll", assemblyFilter, StringComparison.OrdinalIgnoreCase)))
             {
                 diagnostics.Report(DiagnosticDescriptors.FilterMatchesNothing, $"Assembly filter '{assemblyFilter}' matches no compile-time assembly of the package", location);
             }
         }
 
-        if (assets.Count == 0 && configuredFrameworks.IsEmpty && package.Configuration.Assemblies.IsEmpty && !package.Configuration.IsReference)
+        if (assets.Count == 0 && sourceFolders.Count == 0 && configuredFrameworks.IsEmpty && package.Configuration.Assemblies.IsEmpty && !package.Configuration.IsReference)
         {
             diagnostics.Report(DiagnosticDescriptors.NoDocumentableAssembly, "The package contains no compile-time managed assembly (dependency-only, native or tool package); it has no API reference", location);
         }
@@ -116,7 +134,59 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
             Assets = [.. assets.OrderBy(a => a.AssemblyName, StringComparer.OrdinalIgnoreCase).ThenBy(a => a.TargetFramework, StringComparer.Ordinal)],
             PlaceholderFrameworks = placeholders.ToImmutable(),
             Dependencies = package.Metadata.DependencyGroups,
+            SourceFolders = sources.ToImmutable(),
         };
+    }
+
+    /// <summary>Name of the assembly compiled from the sources of a source package.</summary>
+    public static string GetSourceAssemblyName(AcquiredPackage package) => package.Id;
+
+    /// <summary>
+    /// Returns the C# files of <c>contentFiles/{cs|any}/{tfm}/</c>, including sub-folders, grouped by framework.
+    /// Preprocessed files (<c>.cs.pp</c>) are not supported because their tokens depend on the consuming project.
+    /// </summary>
+    private Dictionary<NuGetFramework, SourceFolder> GetSourceFolders(PackageArchive archive, DiagnosticLocation location)
+    {
+        var files = new Dictionary<NuGetFramework, List<(string Language, string Folder, string Entry)>>();
+        var reportedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in archive.Entries)
+        {
+            var segments = entry.Split('/');
+            if (segments.Length < 4 || !string.Equals(segments[0], "contentFiles", StringComparison.OrdinalIgnoreCase) || segments[1].ToLowerInvariant() is not ("cs" or "any"))
+                continue;
+
+            if (!entry.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var framework = NuGetFramework.ParseFolder(segments[2]);
+            if (framework.IsUnsupported)
+            {
+                if (reportedFolders.Add(segments[2]))
+                {
+                    diagnostics.Report(DiagnosticDescriptors.InvalidManagedAssembly, $"'contentFiles/{segments[1]}/{segments[2]}/' is not a recognized target framework folder and is ignored", location);
+                }
+
+                continue;
+            }
+
+            if (!files.TryGetValue(framework, out var list))
+            {
+                list = [];
+                files.Add(framework, list);
+            }
+
+            list.Add((segments[1], segments[2], entry));
+        }
+
+        var result = new Dictionary<NuGetFramework, SourceFolder>();
+        foreach (var (framework, list) in files)
+        {
+            var languages = list.Select(f => f.Language).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+            var displayPath = "contentFiles/" + (languages.Count == 1 ? languages[0] : "{" + string.Join(',', languages) + "}") + "/" + list[0].Folder + "/";
+            result.Add(framework, new SourceFolder(framework, displayPath, [.. list.Select(f => f.Entry).Order(StringComparer.Ordinal)]));
+        }
+
+        return result;
     }
 
     /// <summary>Returns the files directly inside <c>{root}/{tfm}/</c>, grouped by framework. Files in sub-folders (satellite assemblies) are ignored.</summary>

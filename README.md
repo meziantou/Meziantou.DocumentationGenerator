@@ -6,6 +6,8 @@ pages whose folder structure defines the navigation.
 - API reference generated from the public API of the packages (read as metadata, package code is never executed),
   with one page per type, member anchors, C# declarations, XML documentation, inherited documentation and links to the
   source code on GitHub.
+- Source packages (`contentFiles/cs/**/*.cs`) are documented too: their sources are compiled in memory and their
+  `internal` types are shown as the consuming project sees them.
 - APIs of every target framework of a package on a single page, with availability per framework and declaration
   variants when frameworks differ.
 - Authored Markdown pages with front matter, tables, alerts, syntax highlighting and `cref:` links to APIs.

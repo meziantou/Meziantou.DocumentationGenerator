@@ -101,6 +101,9 @@ internal sealed class ConfigurationFile
 
         [Description("Assembly file names to document, such as Contoso.dll. Default: all managed assemblies.")]
         public List<string>? Assemblies { get; set; }
+
+        [Description("Preprocessor symbols defined when compiling a source package, in addition to the symbols of the target framework, such as the symbols its MSBuild targets define in the consuming project. Default: none.")]
+        public List<string>? DefineConstants { get; set; }
     }
 
     internal sealed class ProductSection

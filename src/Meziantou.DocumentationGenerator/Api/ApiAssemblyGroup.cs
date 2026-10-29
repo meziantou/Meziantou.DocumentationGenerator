@@ -20,6 +20,9 @@ internal sealed class ApiAssemblyGroup
     public string Scope => ApiAssemblyModel.CreateScope(Package.Id, AssemblyName);
     public bool IsReference => Package.Package.Configuration.IsReference;
 
+    /// <summary><see langword="true"/> when the assembly is compiled from the sources of a source package.</summary>
+    public bool IsSourcePackage => Models.Any(m => m.Asset.CompiledSource is not null);
+
     public ApiAssemblyModel GetModel(string targetFramework) => Models.Single(m => m.TargetFramework == targetFramework);
 
     public IEnumerable<ApiTypeModel> GetAllTypes()

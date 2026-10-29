@@ -5,8 +5,16 @@
         <dl class="api-metadata">
             <dt>Namespace</dt>
             <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.ProductId!, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
-            <dt>Assembly</dt>
-            <dd>@(Type.Assembly.AssemblyName).dll</dd>
+            @if (Type.Assembly.IsSourcePackage)
+            {
+                <dt>Assembly</dt>
+                <dd>Compiled into the consuming project (source package)</dd>
+            }
+            else
+            {
+                <dt>Assembly</dt>
+                <dd>@(Type.Assembly.AssemblyName).dll</dd>
+            }
             <dt>Package</dt>
             <dd>@Type.Assembly.Package.Id @Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString()</dd>
             <dt>Available in package assets</dt>

@@ -107,7 +107,12 @@ internal static partial class ConfigurationLoader
         }
     }
 
-    private static string CleanJsonExceptionMessage(string message)
+    private static bool IsPreprocessorSymbol(string? value)
+    {
+        return !string.IsNullOrEmpty(value) && !char.IsAsciiDigit(value[0]) && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+    }
+
+        private static string CleanJsonExceptionMessage(string message)
     {
         // Remove the location suffix added by System.Text.Json because the location is reported separately
         var index = message.IndexOf(" Path: ", StringComparison.Ordinal);
@@ -420,6 +425,24 @@ internal static partial class ConfigurationLoader
                     }
                 }
 
+                var defineConstants = ImmutableArray.CreateBuilder<string>();
+                if (section.DefineConstants is not null)
+                {
+                    for (var j = 0; j < section.DefineConstants.Count; j++)
+                    {
+                        var value = section.DefineConstants[j];
+                        if (!IsPreprocessorSymbol(value))
+                        {
+                            Error(DiagnosticDescriptors.InvalidConfigurationValue, $"Invalid preprocessor symbol '{value}': use letters, digits and '_', not starting with a digit", $"{path}.defineConstants[{j.ToString(CultureInfo.InvariantCulture)}]");
+                            isValid = false;
+                        }
+                        else if (!defineConstants.Contains(value, StringComparer.Ordinal))
+                        {
+                            defineConstants.Add(value);
+                        }
+                    }
+                }
+
                 if (isValid && version is not null)
                 {
                     result.Add(new PackageConfiguration
@@ -430,6 +453,7 @@ internal static partial class ConfigurationLoader
                         LocalPath = localPath,
                         TargetFrameworks = frameworks.ToImmutable(),
                         Assemblies = assemblies.ToImmutable(),
+                        DefineConstants = defineConstants.ToImmutable(),
                         Index = i,
                         IsReference = isReference,
                     });

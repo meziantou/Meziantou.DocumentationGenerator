@@ -23,4 +23,10 @@ internal sealed record ApiAsset
 
     /// <summary>Assemblies that may provide debug information: the asset itself for <c>lib/</c>, or the matching implementations.</summary>
     public required ImmutableArray<SymbolCandidate> SymbolCandidates { get; init; }
+
+    /// <summary>
+    /// Set for a source package: the assembly is compiled from the package sources instead of being read from
+    /// <see cref="AssemblyEntry"/>, which is then the source folder.
+    /// </summary>
+    public CompiledSource? CompiledSource { get; init; }
 }

@@ -28,6 +28,7 @@
     <PackageReference Include="Meziantou.Framework.PublicApiGenerator" />
     <PackageReference Include="Meziantou.Framework.SyntaxHighlighting" />
     <PackageReference Include="Meziantou.Framework.Yaml" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="NuGet.Credentials" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="NuGet.Protocol" />

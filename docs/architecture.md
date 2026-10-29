@@ -116,6 +116,11 @@ Product `contoso.json`, API reference at `/contoso.json/api/`.
 - The folder is `lib`, not `libs`.
 - `_._` placeholders mark a framework as supported without assemblies; no API is produced for it.
 - Native files, resource assemblies (`*.resources.dll`) and non-managed files are ignored.
+- **Source packages**: when no `ref/` or `lib/` folder contains an assembly, the `.cs` files of
+  `contentFiles/{cs|any}/<tfm>/` are compiled in memory (metadata only, with XML documentation) and replace the
+  compile-time assembly. It is read with PublicApiGenerator's `IncludeInternalSymbols`, so `internal` symbols are
+  documented with their declared accessibility. See
+  [API reference](api-reference.md#source-packages).
 - The documented target frameworks are the **actual asset folders** of the package. The generator does not
   compute compatibility with consuming frameworks: a type available in `netstandard2.0` is reported as
   available in `netstandard2.0`, not in `net8.0`.
@@ -129,7 +134,8 @@ A member is documented when it is visible to a consumer of the package:
 - types: `public`, or `protected`/`protected internal` nested types of an unsealed visible type;
 - members: `public`, `protected`, and `protected internal` members of a visible type. `protected` members of
   a sealed type are excluded because nobody can access them;
-- `private protected` and `internal` symbols are excluded;
+- `private protected` and `internal` symbols are excluded, except the `internal` symbols of source packages, which
+  are part of the consuming project;
 - explicit interface implementations are documented when the interface is visible;
 - compiler-generated members are documented only when they are part of the public contract: record
   members (`EqualityContract` is excluded, `<Clone>$` is excluded, `Deconstruct`, `Equals`, `PrintMembers`
