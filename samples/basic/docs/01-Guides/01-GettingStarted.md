@@ -1,4 +1,7 @@
-# Getting started
+---
+title: Getting started
+description: Install the package and greet someone.
+---
 
 ## Install the package
 

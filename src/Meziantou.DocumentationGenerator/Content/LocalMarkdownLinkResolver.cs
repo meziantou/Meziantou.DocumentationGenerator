@@ -4,15 +4,17 @@ using Meziantou.Framework;
 namespace Meziantou.DocumentationGenerator.Content;
 
 /// <summary>
-/// Resolves relative links of a local Markdown file: links to Markdown pages target the generated page, other files are
-/// copied. Targets must be inside <paramref name="allowedRoot"/>.
+/// Resolves relative links of a local Markdown file: links to Markdown pages target the generated page, links to folders
+/// target their first page, and other files are copied next to the pages of their folder. Targets must be inside <paramref name="allowedRoot"/>. A missing
+/// target is an error: the link is removed and the build fails.
 /// </summary>
 internal sealed class LocalMarkdownLinkResolver(
     FullPath file,
     FullPath allowedRoot,
-    string outputPrefix,
     string displayPath,
     Func<FullPath, AuthoredPage?> findPage,
+    Func<FullPath, string?> findFolderUrl,
+    Func<FullPath, string> getAssetOutputPath,
     SiteAssetRegistry assets,
     DiagnosticBag diagnostics) : IMarkdownLinkResolver
 {
@@ -20,7 +22,7 @@ internal sealed class LocalMarkdownLinkResolver(
     {
         var location = new DiagnosticLocation { FilePath = displayPath, Line = line };
         var target = FullPath.Combine(file.Parent, path.Replace('\\', '/'));
-        if (!target.IsChildOf(allowedRoot))
+        if (target != allowedRoot && !target.IsChildOf(allowedRoot))
         {
             diagnostics.Report(DiagnosticDescriptors.PathEscapesRoot, $"'{path}' is outside the allowed directory and is not published", location);
             return null;
@@ -31,18 +33,23 @@ internal sealed class LocalMarkdownLinkResolver(
             var page = findPage(target);
             if (page is null)
             {
-                diagnostics.Report(DiagnosticDescriptors.ContentFileNotFound, $"'{path}' is not a page of the content directory", location);
+                var reason = File.Exists(target) ? "is excluded from the content directory" : "does not exist";
+                diagnostics.Report(DiagnosticDescriptors.ContentFileNotFound, $"'{path}' {reason}", location);
                 return null;
             }
 
             return page.Url;
         }
 
-        if (Directory.Exists(target) && !isImage)
+        if (Directory.Exists(target))
         {
-            var index = findPage(target / "index.md");
-            if (index is not null)
-                return index.Url;
+            var url = isImage ? null : findFolderUrl(target);
+            if (url is null)
+            {
+                diagnostics.Report(DiagnosticDescriptors.ContentFileNotFound, $"'{path}' is a folder without page", location);
+            }
+
+            return url;
         }
 
         if (!File.Exists(target))
@@ -51,7 +58,6 @@ internal sealed class LocalMarkdownLinkResolver(
             return null;
         }
 
-        var outputPath = outputPrefix + target.MakePathRelativeTo(allowedRoot).Replace('\\', '/');
-        return assets.Register(new SiteAsset(outputPath, target, PackagePath: null, PackageEntry: null), location);
+        return assets.Register(new SiteAsset(getAssetOutputPath(target), target), location);
     }
 }

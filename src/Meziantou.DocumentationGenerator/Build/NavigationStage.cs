@@ -9,7 +9,7 @@ internal sealed class NavigationStage : IBuildStage
     public Task ExecuteAsync(BuildContext context, CancellationToken cancellationToken)
     {
         var links = context.Links ?? throw new InvalidOperationException("The link index must be created before the navigation");
-        context.Navigation = new NavigationBuilder(context.Configuration, context.Content, context.ApiCatalog, links, context.Diagnostics).Build();
+        context.Navigation = new NavigationBuilder(context.Configuration, context.Content, context.ApiCatalog, links).Build();
         return Task.CompletedTask;
     }
 }

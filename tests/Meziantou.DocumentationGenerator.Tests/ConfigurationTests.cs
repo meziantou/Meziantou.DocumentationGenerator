@@ -49,7 +49,7 @@ public sealed class ConfigurationTests
                 { "id": "Contoso.Json", "version": "2.1.0" },
               ],
               "products": [
-                { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "contoso.data.sqlite" ], "readmePackage": "Contoso.Data.Sqlite", "landingPage": "docs/data.md" },
+                { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "contoso.data.sqlite" ] },
                 { "id": "json", "packages": [ "Contoso.Json" ] },
               ],
             }
@@ -63,8 +63,6 @@ public sealed class ConfigurationTests
                 Assert.Equal("data", product.Id);
                 Assert.Equal("Contoso Data", product.Name);
                 Assert.Equal(["Contoso.Data", "Contoso.Data.Sqlite"], product.Packages);
-                Assert.Equal("Contoso.Data.Sqlite", product.ReadmePackage);
-                Assert.Equal(temp.FullPath / "docs" / "data.md", product.LandingPage);
                 Assert.False(product.IsImplicit);
             },
             product =>
@@ -115,39 +113,39 @@ public sealed class ConfigurationTests
     }
 
     [Fact]
-    public async Task LocalReadmeOverride_CustomToc_Assets()
+    public async Task ContentAssets()
     {
         await using var temp = TemporaryDirectory.Create();
-        temp.CreateTextFile("README.local.md", "# Local");
-        temp.CreateTextFile("content/nav/toc.yml", "- name: Home");
         temp.CreateTextFile("content/images/logo.png", "png");
         temp.CreateTextFile("content/CNAME", "docs.example.com");
         var (configuration, diagnostics) = Load(temp, """
             {
               "version": 1,
-              "packages": [ { "id": "Contoso.Json", "version": "2.1.0", "readme": "README.local.md" } ],
-              "content": { "root": "content", "toc": "nav/toc.yml", "assets": [ "images", "CNAME" ] }
+              "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ],
+              "content": { "root": "content", "assets": [ "images", "CNAME" ] }
             }
             """);
 
         Assert.Empty(diagnostics);
         Assert.NotNull(configuration);
-        Assert.Equal(temp.FullPath / "README.local.md", configuration.Packages[0].ReadmeOverride);
         Assert.NotNull(configuration.Content);
         Assert.Equal(temp.FullPath / "content", configuration.Content.Root);
-        Assert.Equal(temp.FullPath / "content" / "nav" / "toc.yml", configuration.Content.Toc);
         Assert.Equal(["images", "CNAME"], configuration.Content.Assets);
     }
 
-    [Fact]
-    public async Task DefaultToc_IsUsedWhenPresent()
+    [Theory]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "readme": "README.md" } ] }""", "$.packages[0].readme")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ], "landingPage": "docs/index.md" } ] }""", "$.products[0].landingPage")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ], "readmePackage": "A" } ] }""", "$.products[0].readmePackage")]
+    [InlineData("""{ "version": 1, "content": { "root": "docs", "toc": "toc.yml" } }""", "$.content.toc")]
+    public async Task RemovedOptions_AreUnknownProperties(string json, string jsonPath)
     {
         await using var temp = TemporaryDirectory.Create();
-        temp.CreateTextFile("docs/toc.yml", "- name: Home");
-        var (configuration, diagnostics) = Load(temp, """{ "version": 1, "content": { "root": "docs" } }""");
+        temp.CreateTextFile("docs/index.md", "# Home");
+        var (configuration, diagnostics) = Load(temp, json);
 
-        Assert.Empty(diagnostics);
-        Assert.Equal(temp.FullPath / "docs" / "toc.yml", configuration?.Content?.Toc);
+        Assert.Null(configuration);
+        Assert.Equal(jsonPath, Assert.Single(diagnostics, d => d.Code == "DG1002").Location?.JsonPath);
     }
 
     [Fact]
@@ -276,7 +274,6 @@ public sealed class ConfigurationTests
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "source": "https://user:secret@example.com/v3/index.json" } ] }""", "DG1011")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "B" ] } ] }""", "DG1012")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "Invalid Id", "packages": [ "A" ] } ] }""", "DG1012")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ], "readmePackage": "B" } ] }""", "DG1012")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ] }, { "id": "p", "packages": [ ] } ] }""", "DG1008")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "output": "." }""", "DG1009")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "api": { "exclude": [ "X:Foo" ] } }""", "DG1014")]

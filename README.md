@@ -1,7 +1,7 @@
 # Meziantou.DocumentationGenerator
 
 Meziantou.DocumentationGenerator is a .NET tool that generates a fully static documentation site from NuGet packages and Markdown
-pages organized with DocFX-style `toc.yml` files.
+pages whose folder structure defines the navigation.
 
 - API reference generated from the public API of the packages (read as metadata, package code is never executed),
   with one page per type, member anchors, C# declarations, XML documentation, inherited documentation and links to the
@@ -64,14 +64,14 @@ To install the tool globally instead, use `dotnet tool install --global Mezianto
 }
 ```
 
-Each package becomes a product with a landing page (the package README) and an API reference. The `docs` directory
-contains Markdown pages; `docs/index.md` is the home page and `docs/toc.yml`, when present, defines the navigation.
+Each package becomes a product with an API reference. The `docs` directory contains Markdown pages; `docs/index.md` is
+the home page and the folder structure of `docs` defines the navigation.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `Meziantou.DocumentationGenerator init [directory]` | Creates `docgen.json`, `docs/index.md` and `docs/toc.yml`. Existing Markdown files are never overwritten; `--force` overwrites `docgen.json`. Options: `--package`, `--package-version`, `--title`. |
+| `Meziantou.DocumentationGenerator init [directory]` | Creates `docgen.json` and `docs/index.md`. Existing Markdown files are never overwritten; `--force` overwrites `docgen.json`. Options: `--package`, `--package-version`, `--title`. |
 | `Meziantou.DocumentationGenerator build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`. |
 | `Meziantou.DocumentationGenerator --version`, `--help` | Displays the version or the help. |
 
@@ -80,11 +80,11 @@ Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid co
 ## Documentation
 
 - [Configuration reference](docs/configuration.md): every option, path rules and examples (grouped products,
-  multiple target frameworks, local README, private feeds, `/docs/` deployment).
-- [Authoring content](docs/content.md): Markdown, front matter, `cref:` links, assets, `toc.yml`, XML documentation tags,
+  multiple target frameworks, private feeds, `/docs/` deployment).
+- [Authoring content](docs/content.md): Markdown, front matter, `cref:` links, assets, navigation, XML documentation tags,
   `inheritdoc` and `include`.
 - [API reference](docs/api-reference.md): `ref/` versus `lib/`, target frameworks, visibility, URLs and anchors, source
-  links, missing README, XML or PDB.
+  links, missing XML or PDB.
 - [Deployment](docs/deployment.md): static hosts, GitHub Pages, base path, 404 page, canonical URLs, sitemap and robots.
 - [Diagnostics](docs/diagnostics.md) and [troubleshooting](docs/troubleshooting.md).
 - [Architecture and contracts](docs/architecture.md), [performance budgets](docs/performance.md) and

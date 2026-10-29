@@ -6,202 +6,165 @@ namespace Meziantou.DocumentationGenerator.Tests;
 
 public sealed class NavigationTests
 {
+    // Shaped like meziantou.framework/docs: numbered files and folders, _folder.yml, an images folder and an AGENTS.md
     private static readonly Dictionary<string, string> Pages = new()
     {
-        ["docs/index.md"] = "# Home",
-        ["docs/intro.md"] = "---\ntitle: Front matter title\nuid: intro-page\n---\n# Heading",
-        ["docs/guides/first.md"] = "# First guide",
-        ["docs/guides/second.md"] = "No heading here.",
-        ["docs/guides/toc.yml"] = "- href: first.md\n- href: second.md\n- name: Back\n  href: ../intro.md#section",
-        ["docs/orphan.md"] = "# Orphan",
+        ["docs/AGENTS.md"] = "Instructions, not a page.",
+        ["docs/01-Imaging/_folder.yml"] = "title: Imaging\ndescription: Read and write images.",
+        ["docs/01-Imaging/01-Introduction.md"] = "---\ntitle: Introduction\ndescription: What the library does.\n---\nText.",
+        ["docs/01-Imaging/02-GettingStarted.md"] = "# Getting started\n\nText.",
+        ["docs/01-Imaging/10-Formats/_folder.yml"] = "title: Supported formats",
+        ["docs/01-Imaging/10-Formats/01-Overview.md"] = "---\ntitle: Formats\n---\nText.",
+        ["docs/01-Imaging/10-Formats/02-Png.md"] = "---\ntitle: PNG\n---\nText.",
+        ["docs/01-Imaging/03-Guides/_folder.yml"] = "title: Guides",
+        ["docs/01-Imaging/03-Guides/01-Overview.md"] = "---\ntitle: Guides\n---\nText.",
+        ["docs/01-Imaging/03-Guides/images/logo.txt"] = "not a page",
+        ["docs/01-Imaging/11-Limitations.md"] = "No title.",
+        ["docs/02-Other/_folder.yml"] = "title: Other\ndescription: Other things.",
+        ["docs/02-Other/01-Page.md"] = "---\ntitle: Other page\n---\nText.",
     };
 
     [Fact]
-    public async Task SequenceRoot_NestedTocsAndTitles()
+    public async Task FoldersAndFiles_AreSortedByName()
     {
-        await using var build = await BuildAsync("""
-            - name: Home
-              href: index.md
-            - href: intro.md
-            - name: Guides
-              href: guides/
-            - name: Group
-              expanded: true
-              items:
-                - name: External
-                  href: https://example.com/
-                - uid: intro-page
-            """);
+        await using var build = await BuildAsync();
 
         var root = build.Context.Navigation.Root;
-        Assert.Equal(["Home", "Front matter title", "Guides", "Group"], root.Select(n => n.Title));
-        var guides = root[2];
-        Assert.Equal("/docs/guides/first.html", guides.Url);
-        Assert.Null(guides.PagePath);
-        Assert.Equal(["First guide", "second", "Back"], guides.Children.Select(n => n.Title));
-        Assert.Equal("/docs/intro.html#section", guides.Children[2].Url);
-
-        var group = root[3];
-        Assert.Null(group.Url);
-        Assert.True(group.IsExpanded);
-        Assert.True(group.Children[0].IsExternal);
-        Assert.Equal("Front matter title", group.Children[1].Title);
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG5005" && d.Location?.FilePath == "docs/orphan.md");
+        Assert.Equal(["Imaging", "Other"], root.Select(n => n.Title));
+        var imaging = root[0];
+        Assert.Null(imaging.Url);
+        Assert.Equal(["Introduction", "Getting started", "Guides", "Supported formats", "Limitations"], imaging.Children.Select(n => n.Title));
+        Assert.Equal(["Formats", "PNG"], imaging.Children[3].Children.Select(n => n.Title));
+        Assert.Equal(["Guides"], imaging.Children[2].Children.Select(n => n.Title));
+        Assert.DoesNotContain(build.Context.Content.Pages, p => p.Id.EndsWith("AGENTS", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task ItemsRoot_DirectoryReferenceWithoutName()
+    public async Task Routes_AreComputedFromTitlesAndSlugs()
     {
-        await using var build = await BuildAsync("""
-            items:
-              - href: guides/toc.yml
-            """);
-
-        Assert.Equal(["First guide", "second", "Back"], build.Context.Navigation.Root.Select(n => n.Title));
-    }
-
-    [Fact]
-    public async Task ApiInsertionPoints()
-    {
-        await using var build = await BuildAsync("""
-            - name: Reference
-              href: api:contoso.library
-            - href: api:contoso.library
-            """, packages: [ApiModelTests.CreateKitchenSinkPackage()]);
-
-        var reference = build.Context.Navigation.Root[0];
-        Assert.Equal("/docs/contoso.library/api/", reference.Url);
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.Children.Select(n => n.Title));
-        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], reference.Children[1].Children.Select(n => n.Title));
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], build.Context.Navigation.Root.Skip(1).Select(n => n.Title));
-    }
-
-    [Fact]
-    public async Task ApiUid()
-    {
-        await using var build = await BuildAsync("- uid: T:Contoso.Library.Client\n- name: Custom\n  uid: Contoso.Library.Message", packages: [ApiModelTests.CreateKitchenSinkPackage()]);
-
-        Assert.Equal(["Client", "Custom"], build.Context.Navigation.Root.Select(n => n.Title));
-        Assert.Equal("/docs/contoso.library/api/Contoso.Library.Client.html", build.Context.Navigation.Root[0].Url);
-    }
-
-    [Fact]
-    public async Task PageInSeveralTocs_UsesTheFirstOccurrence()
-    {
-        await using var build = await BuildAsync("""
-            - name: A
-              items:
-                - href: intro.md
-            - name: B
-              items:
-                - href: intro.md
-            """);
-
-        var navigation = build.Context.Navigation.GetPageNavigation("intro.html", productId: null);
-        Assert.Equal(["A", "Front matter title"], navigation.ActiveTrail.Select(n => n.Title));
-        Assert.Same(build.Context.Navigation.Root[0], navigation.ActiveTrail[0]);
-        Assert.Equal(["Home", "A"], navigation.Breadcrumbs.Select(n => n.Title));
-    }
-
-    [Fact]
-    public async Task PreviousAndNext()
-    {
-        await using var build = await BuildAsync("- href: index.md\n- href: intro.md\n- href: guides/toc.yml");
-
-        var navigation = build.Context.Navigation.GetPageNavigation("intro.html", productId: null);
-        Assert.Equal("Home", navigation.Previous?.Title);
-        Assert.Equal("First guide", navigation.Next?.Title);
-    }
-
-    [Fact]
-    public async Task ProductPages_UseTheGeneratedTreeWhenNotInTheToc()
-    {
-        await using var build = await BuildAsync("- href: intro.md", packages: [ApiModelTests.CreateKitchenSinkPackage()]);
-        var navigation = build.Context.Navigation.GetPageNavigation("contoso.library/api/Contoso.Library.Client.html", "contoso.library");
-
-        Assert.Equal(["Overview", "API reference"], navigation.Sidebar.Select(n => n.Title));
-        Assert.Equal(["API reference", "Contoso.Library", "Client"], navigation.ActiveTrail.Select(n => n.Title));
-        Assert.Equal(["Home", "API reference", "Contoso.Library"], navigation.Breadcrumbs.Select(n => n.Title));
-        Assert.Equal(["Contoso.Library"], build.Context.Navigation.Header.Select(n => n.Title));
-    }
-
-    [Fact]
-    public async Task InvalidTocs_AreReportedWithLocations()
-    {
-        await using var build = await BuildAsync("""
-            - name: Missing
-              href: missing.md
-            - name: Script
-              href: javascript:alert(1)
-            - name: Product
-              href: api:unknown
-            - name: Unknown key
-              href: intro.md
-              displayName: ignored
-            - name: Outside
-              href: ../secret.md
-            - uid: does-not-exist
-            """, expectSuccess: false);
-
-        var diagnostics = build.Diagnostics;
-        Assert.Contains(diagnostics, d => d.Code == "DG5006" && d.Location?.FilePath == "docs/toc.yml" && d.Location.Line == 1);
-        Assert.Contains(diagnostics, d => d.Code == "DG5003" && d.Message.Contains("javascript", StringComparison.Ordinal));
-        Assert.Contains(diagnostics, d => d.Code == "DG5006" && d.Message.Contains("unknown", StringComparison.Ordinal));
-        Assert.Contains(diagnostics, d => d.Code == "DG5007" && d.Message.Contains("displayName", StringComparison.Ordinal));
-        Assert.Contains(diagnostics, d => d.Code == "DG5009");
-        Assert.Contains(diagnostics, d => d.Code == "DG5006" && d.Message.Contains("does-not-exist", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task Cycles_AreDetected()
-    {
-        await using var build = await BuildAsync("- href: a/toc.yml", expectSuccess: false, extraFiles: new()
+        await using var build = await BuildAsync(extraFiles: new()
         {
-            ["docs/a/toc.yml"] = "- href: ../b/toc.yml",
-            ["docs/b/toc.yml"] = "- href: ../a/toc.yml",
+            ["docs/01-Imaging/12-Custom.md"] = "---\ntitle: Ignored for the URL\nslug: my-page\n---\nText.",
+            ["docs/01-Imaging/13-Accents.md"] = "---\ntitle: Créer des miniatures & co.\n---\nText.",
         });
 
-        var diagnostic = Assert.Single(build.Diagnostics, d => d.Code == "DG5004");
-        Assert.Contains("docs/a/toc.yml -> docs/b/toc.yml -> docs/a/toc.yml", diagnostic.Message);
+        string Route(string id) => build.Context.Content.Pages.Single(p => p.Id == id).Route.FilePath;
+        Assert.Equal("imaging/introduction.html", Route("01-Imaging/01-Introduction"));
+        Assert.Equal("imaging/getting-started.html", Route("01-Imaging/02-GettingStarted"));
+        Assert.Equal("imaging/supported-formats/png.html", Route("01-Imaging/10-Formats/02-Png"));
+        Assert.Equal("imaging/limitations.html", Route("01-Imaging/11-Limitations"));
+        Assert.Equal("imaging/my-page.html", Route("01-Imaging/12-Custom"));
+        Assert.Equal("imaging/creer-des-miniatures-co.html", Route("01-Imaging/13-Accents"));
     }
 
     [Fact]
-    public async Task AliasesAreRejected()
+    public async Task FolderSlug_ReplacesTheTitle()
     {
-        await using var build = await BuildAsync("- &a\n  name: A\n  href: intro.md\n- *a", expectSuccess: false);
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/02-Other/_folder.yml"] = "title: Other\nslug: misc" });
 
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG5003");
+        Assert.Equal("misc/other-page.html", build.Context.Content.Pages.Single(p => p.Id == "02-Other/01-Page").Route.FilePath);
     }
 
     [Fact]
-    public async Task WithoutToc_DefaultNavigation()
+    public async Task InvalidSlug_IsReportedAndTheTitleIsUsed()
     {
-        await using var build = await BuildAsync(toc: null, packages: [ApiModelTests.CreateKitchenSinkPackage()]);
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/02-Other/01-Page.md"] = "---\ntitle: Other page\nslug: a/b\n---\nText." });
 
-        Assert.Equal(["Home", "First guide", "second", "Front matter title", "Orphan", "Contoso.Library"], build.Context.Navigation.Root.Select(n => n.Title).ToArray()[..6]);
-        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG5005");
+        Assert.Equal("other/other-page.html", build.Context.Content.Pages.Single(p => p.Id == "02-Other/01-Page").Route.FilePath);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG5002" && d.Message.Contains("a/b", StringComparison.Ordinal));
     }
 
-    private static async Task<TestBuild> BuildAsync(string? toc, IReadOnlyList<TestPackageBuilder>? packages = null, bool expectSuccess = true, Dictionary<string, string>? extraFiles = null)
+    [Fact]
+    public async Task MissingFolderMetadata_UsesTheFolderNameWithoutPrefix()
+    {
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/03-MoreThings/01-Page.md"] = "---\ntitle: Page\n---\nText." });
+
+        Assert.Equal("MoreThings", build.Context.Navigation.Root[2].Title);
+        Assert.Equal("morethings/page.html", build.Context.Content.Pages.Single(p => p.Id == "03-MoreThings/01-Page").Route.FilePath);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG5011" && d.Location?.FilePath == "docs/03-MoreThings/_folder.yml");
+    }
+
+    [Fact]
+    public async Task SameRoute_IsAnError()
+    {
+        await using var build = await BuildAsync(expectSuccess: false, extraFiles: new() { ["docs/02-Other/02-Copy.md"] = "---\ntitle: Other page\n---\nText." });
+
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4005");
+    }
+
+    [Fact]
+    public async Task RootIndex_IsTheHomePageAndComesFirst()
+    {
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/index.md"] = "# Welcome" });
+
+        var root = build.Context.Navigation.Root;
+        Assert.Equal(["Welcome", "Imaging", "Other"], root.Select(n => n.Title));
+        Assert.Equal("index.html", root[0].PagePath);
+    }
+
+    [Fact]
+    public async Task ApiReference_IsTheLastSection()
+    {
+        await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
+
+        var api = build.Context.Navigation.Root[^1];
+        Assert.Equal("API reference", api.Title);
+        Assert.Null(api.Url);
+        var product = Assert.Single(api.Children);
+        Assert.Equal("Contoso.Library", product.Title);
+        Assert.Equal("/docs/contoso.library/api/", product.Url);
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], product.Children.Select(n => n.Title));
+        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], product.Children[1].Children.Select(n => n.Title));
+    }
+
+    [Fact]
+    public async Task ApiPages_UseTheSiteNavigation()
+    {
+        await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
+        var navigation = build.Context.Navigation.GetPageNavigation("contoso.library/api/Contoso.Library.Client.html");
+
+        Assert.Equal(["Imaging", "Other", "API reference"], navigation.Sidebar.Select(n => n.Title));
+        Assert.Equal(["API reference", "Contoso.Library", "Contoso.Library", "Client"], navigation.ActiveTrail.Select(n => n.Title));
+        Assert.Equal(["Documentation", "API reference", "Contoso.Library", "Contoso.Library"], navigation.Breadcrumbs.Select(n => n.Title));
+        Assert.Null(navigation.Previous);
+        Assert.Null(navigation.Next);
+    }
+
+    [Fact]
+    public async Task PreviousAndNext_FollowTheAuthoredPages()
+    {
+        await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
+
+        var guides = build.Context.Navigation.GetPageNavigation("imaging/guides/guides.html");
+        Assert.Equal("Getting started", guides.Previous?.Title);
+        Assert.Equal("Formats", guides.Next?.Title);
+        Assert.Equal(["Documentation", "Imaging", "Guides"], guides.Breadcrumbs.Select(n => n.Title));
+
+        var last = build.Context.Navigation.GetPageNavigation("other/other-page.html");
+        Assert.Null(last.Next);
+    }
+
+    private static async Task<TestBuild> BuildAsync(IReadOnlyList<TestPackageBuilder>? packages = null, bool expectSuccess = true, Dictionary<string, string>? extraFiles = null)
     {
         packages ??= [];
+        var files = new Dictionary<string, string>(Pages, StringComparer.Ordinal);
+        foreach (var (path, text) in extraFiles ?? [])
+        {
+            files[path] = text;
+        }
+
         var build = TestBuild.Create($$"""
             {
               "version": 1,
               "site": { "basePath": "/docs/" },
-              "content": { "root": "docs" },
+              "content": { "root": "docs", "exclude": [ "**/AGENTS.md" ] },
               "packages": [ {{string.Join(", ", packages.Select(p => TestBuild.PackageReference(p)))}} ]
             }
             """, packages, directory =>
         {
-            foreach (var (path, text) in Pages.Concat(extraFiles ?? []))
+            foreach (var (path, text) in files)
             {
                 directory.CreateTextFile(path, text);
-            }
-
-            if (toc is not null)
-            {
-                directory.CreateTextFile("docs/toc.yml", toc);
             }
         });
 

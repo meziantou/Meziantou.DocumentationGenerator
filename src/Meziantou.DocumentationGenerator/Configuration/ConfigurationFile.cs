@@ -101,9 +101,6 @@ internal sealed class ConfigurationFile
 
         [Description("Assembly file names to document, such as Contoso.dll. Default: all managed assemblies.")]
         public List<string>? Assemblies { get; set; }
-
-        [Description("Local Markdown file used instead of the package README, relative to the configuration file.")]
-        public string? Readme { get; set; }
     }
 
     internal sealed class ProductSection
@@ -114,26 +111,17 @@ internal sealed class ConfigurationFile
         [Description("Display name. Default: the first package identifier.")]
         public string? Name { get; set; }
 
-        [Description("Short description displayed in the product catalogue. Default: the package description.")]
+        [Description("Short description displayed on the API reference page of the product. Default: the package description.")]
         public string? Description { get; set; }
 
         [Description("Identifiers of the packages of the product.")]
         public List<string>? Packages { get; set; }
-
-        [Description("Local Markdown file used as the product landing page, relative to the configuration file.")]
-        public string? LandingPage { get; set; }
-
-        [Description("Package whose README is used as landing page. Default: the first package.")]
-        public string? ReadmePackage { get; set; }
     }
 
     internal sealed class ContentSection
     {
         [Description("Directory containing the Markdown pages, relative to the configuration file.")]
         public string? Root { get; set; }
-
-        [Description("Root table of contents, relative to the content root. Default: toc.yml when it exists.")]
-        public string? Toc { get; set; }
 
         [Description("Additional files or directories copied as-is, relative to the content root.")]
         public List<string>? Assets { get; set; }

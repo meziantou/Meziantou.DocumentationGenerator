@@ -1,7 +1,6 @@
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
-using Meziantou.DocumentationGenerator.Packages;
 using Meziantou.DocumentationGenerator.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -107,29 +106,11 @@ internal sealed class RenderStage : IBuildStage
         if (context.Assets is null)
             return;
 
-        foreach (var asset in context.Assets.Assets.Where(a => a.LocalPath is not null))
+        foreach (var asset in context.Assets.Assets)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            staging.CopyFile(asset.OutputPath, asset.LocalPath!.Value);
+            staging.CopyFile(asset.OutputPath, asset.LocalPath);
             validator.AddFile(asset.OutputPath, [], []);
-        }
-
-        foreach (var group in context.Assets.Assets.Where(a => a.PackagePath is not null).GroupBy(a => a.PackagePath!.Value))
-        {
-            try
-            {
-                using var archive = PackageArchive.Open(group.Key);
-                foreach (var asset in group)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    staging.WriteBytes(asset.OutputPath, archive.ReadAllBytes(asset.PackageEntry!));
-                    validator.AddFile(asset.OutputPath, [], []);
-                }
-            }
-            catch (PackageArchiveException ex)
-            {
-                context.Diagnostics.Report(DiagnosticDescriptors.AssetNotFound, ex.Message);
-            }
         }
     }
 }

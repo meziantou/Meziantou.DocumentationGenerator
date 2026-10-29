@@ -107,21 +107,7 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
 
         if (assets.Count == 0 && configuredFrameworks.IsEmpty && package.Configuration.Assemblies.IsEmpty && !package.Configuration.IsReference)
         {
-            diagnostics.Report(DiagnosticDescriptors.NoDocumentableAssembly, "The package contains no compile-time managed assembly (dependency-only, native or tool package); only its README and metadata are published", location);
-        }
-
-        string? readmeEntry = null;
-        if (package.Metadata.ReadmePath is { } readmePath)
-        {
-            readmeEntry = archive.FindEntry(PackageArchive.NormalizeEntryName(readmePath, out _) ?? readmePath);
-            if (readmeEntry is null && package.Configuration.ReadmeOverride is null)
-            {
-                diagnostics.Report(DiagnosticDescriptors.MissingReadme, $"The manifest declares the README '{readmePath}' but the package does not contain it", location);
-            }
-        }
-        else if (package.Configuration.ReadmeOverride is null && !package.Configuration.IsReference)
-        {
-            diagnostics.Report(DiagnosticDescriptors.MissingReadme, "The package has no README; a page listing the package metadata and namespaces is generated instead", location);
+            diagnostics.Report(DiagnosticDescriptors.NoDocumentableAssembly, "The package contains no compile-time managed assembly (dependency-only, native or tool package); it has no API reference", location);
         }
 
         return new DiscoveredPackage
@@ -129,8 +115,6 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
             Package = package,
             Assets = [.. assets.OrderBy(a => a.AssemblyName, StringComparer.OrdinalIgnoreCase).ThenBy(a => a.TargetFramework, StringComparer.Ordinal)],
             PlaceholderFrameworks = placeholders.ToImmutable(),
-            ReadmeEntry = readmeEntry,
-            ReadmeOverride = package.Configuration.ReadmeOverride,
             Dependencies = package.Metadata.DependencyGroups,
         };
     }

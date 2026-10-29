@@ -36,13 +36,11 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor AssetSelected = new("DG2011", "Selected API asset", DiagnosticSeverity.Info);
 
     // DG3xxx: missing optional content
-    public static readonly DiagnosticDescriptor MissingReadme = new("DG3001", "The package has no README", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor MissingXmlDocumentation = new("DG3002", "No XML documentation for an assembly", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor MissingDebugInformation = new("DG3003", "No usable PDB or Source Link information", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor MismatchedDebugInformation = new("DG3005", "The PDB does not match the assembly", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor UnsupportedSourceHost = new("DG3006", "Unsupported source host", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor AmbiguousImplementation = new("DG3007", "Ambiguous implementation for a reference assembly", DiagnosticSeverity.Info);
-    public static readonly DiagnosticDescriptor MissingRepositoryMetadata = new("DG3004", "A README link cannot be resolved without repository metadata", DiagnosticSeverity.Warning);
 
     // DG4xxx: links and routes
     public static readonly DiagnosticDescriptor UnresolvedReference = new("DG4001", "Unresolved reference", DiagnosticSeverity.Warning);
@@ -57,16 +55,12 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor ExternalReferenceWithoutMapping = new("DG4009", "Reference to a symbol outside the configured packages without xrefs mapping", DiagnosticSeverity.Info);
 
     // DG5xxx: authored content and navigation
-    public static readonly DiagnosticDescriptor ContentFileNotFound = new("DG5001", "Referenced Markdown page not found", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor ContentFileNotFound = new("DG5001", "Referenced Markdown page not found", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidFrontMatter = new("DG5002", "Invalid front matter", DiagnosticSeverity.Warning);
-    public static readonly DiagnosticDescriptor InvalidToc = new("DG5003", "Invalid table of contents", DiagnosticSeverity.Error);
-    public static readonly DiagnosticDescriptor TocCycle = new("DG5004", "Cycle in nested tables of contents", DiagnosticSeverity.Error);
-    public static readonly DiagnosticDescriptor PageNotInToc = new("DG5005", "Page not referenced by the table of contents", DiagnosticSeverity.Warning);
-    public static readonly DiagnosticDescriptor TocTargetNotFound = new("DG5006", "Table of contents target not found", DiagnosticSeverity.Error);
-    public static readonly DiagnosticDescriptor UnsupportedTocKey = new("DG5007", "Unsupported table of contents key", DiagnosticSeverity.Info);
-    public static readonly DiagnosticDescriptor AssetNotFound = new("DG5008", "Referenced file not found", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor AssetNotFound = new("DG5008", "Referenced file not found", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor PathEscapesRoot = new("DG5009", "Path outside the allowed root", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor UnknownCodeLanguage = new("DG5010", "Unknown code language", DiagnosticSeverity.Info);
+    public static readonly DiagnosticDescriptor InvalidFolderMetadata = new("DG5011", "Invalid or missing folder metadata", DiagnosticSeverity.Warning);
 
     // DG6xxx: XML documentation
     public static readonly DiagnosticDescriptor MalformedXmlDocumentation = new("DG6001", "Malformed XML documentation file", DiagnosticSeverity.Warning);

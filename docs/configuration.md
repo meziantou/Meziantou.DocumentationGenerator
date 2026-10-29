@@ -32,8 +32,8 @@ configuration model, so it cannot drift from what the tool accepts.
 | `output` | path | `_site` | Output directory. It must be a dedicated directory: it cannot contain the configuration file, the content directory, the cache or packages. |
 | `cacheDirectory` | path | `DOCGEN_CACHE`, or a per-user directory | Package cache. |
 | `packages` | array | `[]` | Packages whose APIs are documented. |
-| `references` | array | `[]` | Packages used for inherited documentation and cross-references only; their APIs are not published. Same properties as `packages`, except `readme`. |
-| `products` | array | one product per package | Groups of packages sharing a landing page and an API reference. |
+| `references` | array | `[]` | Packages used for inherited documentation and cross-references only; their APIs are not published. Same properties as `packages`. |
+| `products` | array | one product per package | Groups of packages sharing an API reference and URLs. |
 | `content` | object | | Authored Markdown pages. |
 | `api` | object | all visible APIs | API selection rules. |
 | `xrefs` | array | `[]` | Links to documentation of symbols outside the configured packages. |
@@ -67,7 +67,6 @@ At least one package or a content directory is required.
 | `path` | | Local `.nupkg` file. No feed is queried. Cannot be combined with `source`. |
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
 | `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
-| `readme` | package README | Local Markdown file used instead of the README embedded in the package. |
 
 Dependencies of the documented packages are never downloaded implicitly. To inherit documentation from a
 dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the
@@ -79,10 +78,8 @@ dependencies that are not configured).
 | --- | --- | --- |
 | `id` | required | Identifier used in URLs: lowercase letters, digits, `-` and `.`. |
 | `name` | first package ID | Display name. |
-| `description` | package description | Text shown in the product catalogue. |
+| `description` | package description | Lead paragraph of the API reference page of the product. |
 | `packages` | required | Package identifiers. A package belongs to exactly one product. |
-| `landingPage` | | Local Markdown file used as the landing page. |
-| `readmePackage` | first package | Package whose README is the landing page when `landingPage` is not set. |
 
 When `products` is omitted, each package is a product whose `id` is the lowercase package ID.
 
@@ -90,10 +87,9 @@ When `products` is omitted, each package is a product whose `id` is the lowercas
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `root` | required | Directory containing Markdown pages. Every `.md` file is a page. |
-| `toc` | `toc.yml` when it exists | Root table of contents, relative to `root`. |
+| `root` | required | Directory containing Markdown pages. Every `.md` file is a page; the folder structure defines the navigation (see [content.md](content.md#navigation)). |
 | `assets` | `[]` | Files or directories, relative to `root`, copied as-is (for example `CNAME`). Files referenced by Markdown links and images are copied automatically. |
-| `exclude` | `[]` | Glob patterns of Markdown files to ignore. |
+| `exclude` | `[]` | Glob patterns of Markdown files to ignore. Files such as `AGENTS.md` are not skipped automatically: `"exclude": ["**/AGENTS.md"]`. |
 
 ## `api`
 
@@ -131,7 +127,7 @@ matching namespace wins.
 ```json
 "diagnostics": {
   "warningsAsErrors": true,
-  "severity": { "DG3003": "none", "DG5005": "error" }
+  "severity": { "DG3003": "none", "DG5010": "warning" }
 }
 ```
 
@@ -157,7 +153,7 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
 }
 ```
 
-### Grouped product with a local landing page
+### Grouped product
 
 ```json
 {
@@ -172,15 +168,14 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
       "id": "data",
       "name": "Contoso Data",
       "description": "Data access libraries.",
-      "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ],
-      "landingPage": "docs/data/overview.md"
+      "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ]
     }
   ],
   "content": { "root": "docs" }
 }
 ```
 
-### Multiple target frameworks and a local README
+### Multiple target frameworks
 
 ```json
 {
@@ -189,8 +184,7 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
     {
       "id": "Contoso.Json",
       "version": "2.1.0",
-      "targetFrameworks": [ "net8.0", "netstandard2.0" ],
-      "readme": "README.md"
+      "targetFrameworks": [ "net8.0", "netstandard2.0" ]
     }
   ]
 }

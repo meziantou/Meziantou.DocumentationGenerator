@@ -104,20 +104,23 @@ internal static class FixturePackages
             { "id": "Contoso.Undocumented", "version": "1.0.0", "path": "packages/contoso.undocumented.1.0.0.nupkg" }
           ],
           "products": [
-            { "id": "contoso", "name": "Contoso", "packages": [ "Contoso.Library", "Contoso.Extensions" ], "readmePackage": "Contoso.Library" },
+            { "id": "contoso", "name": "Contoso", "packages": [ "Contoso.Library", "Contoso.Extensions" ] },
             { "id": "meta", "name": "Contoso Meta", "packages": [ "Contoso.Meta" ] },
             { "id": "undocumented", "name": "Undocumented", "packages": [ "Contoso.Undocumented" ] }
           ],
-          "content": { "root": "docs" },
+          "content": { "root": "docs", "exclude": [ "**/AGENTS.md" ] },
           "xrefs": [ { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" } ]
         }
         """;
 
     public static readonly Dictionary<string, string> Content = new()
     {
-        ["docs/index.md"] = "# Contoso documentation\n\nStart with the [guide](guides/getting-started.md) or the [API](cref:T:Contoso.Library.Client).",
-        ["docs/guides/getting-started.md"] = "---\ndescription: Install and use Contoso.\n---\n# Getting started\n\n## Install\n\n```bash\ndotnet add package Contoso.Library\n```\n\n## Next\n\nSee [extensions](extensions.md#usage).",
-        ["docs/guides/extensions.md"] = "# Extensions\n\n## Usage\n\nUse [](cref:T:Contoso.Extensions.SmartClient) and [](cref:Contoso.Extensions!T:Utils.Guard).",
-        ["docs/toc.yml"] = "- href: index.md\n- name: Guides\n  items:\n    - href: guides/getting-started.md\n    - href: guides/extensions.md\n- name: API\n  href: api:contoso\n",
+        // Shaped like meziantou.framework/docs: numbered folders and files, _folder.yml, images, an excluded AGENTS.md
+        ["docs/index.md"] = "# Contoso documentation\n\nStart with the [guides](01-Guides/) or the [API](cref:T:Contoso.Library.Client).",
+        ["docs/AGENTS.md"] = "Instructions for agents, not a page.",
+        ["docs/01-Guides/_folder.yml"] = "title: Guides\ndescription: Install and use Contoso.",
+        ["docs/01-Guides/01-GettingStarted.md"] = "---\ntitle: Getting started\ndescription: Install and use Contoso.\n---\n## Install\n\n```bash\ndotnet add package Contoso.Library\n```\n\n![diagram](images/diagram.png)\n\n## Next\n\nSee [extensions](02-Extensions.md#usage).",
+        ["docs/01-Guides/02-Extensions.md"] = "# Extensions\n\n## Usage\n\nUse [](cref:T:Contoso.Extensions.SmartClient) and [](cref:Contoso.Extensions!T:Utils.Guard). Back to [getting started](01-GettingStarted.md#install).",
+        ["docs/01-Guides/images/diagram.png"] = "png",
     };
 }

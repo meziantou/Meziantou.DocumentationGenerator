@@ -36,11 +36,6 @@ internal sealed partial class LinkService
 
         Register(new SiteRoute(HomePath, PageKind.Home, "site home"));
         Register(new SiteRoute(NotFoundPath, PageKind.NotFound, "404 page"));
-        foreach (var product in configuration.Products)
-        {
-            Register(new SiteRoute(RouteNames.GetProductPath(product.Id), PageKind.Product, "product " + product.Id));
-        }
-
         foreach (var product in catalog.Products)
         {
             if (product.Namespaces.IsEmpty)
@@ -66,8 +61,6 @@ internal sealed partial class LinkService
     public string NotFoundUrl => Urls.GetUrl(NotFoundPath);
 
     public string GetAssetUrl(string fileName) => Urls.GetUrl(AssetsDirectory + "/" + fileName);
-
-    public string GetProductUrl(string productId) => Urls.GetUrl(RouteNames.GetProductPath(productId));
 
     public string GetApiReferenceUrl(string productId) => Urls.GetUrl(RouteNames.GetApiReferencePath(productId));
 

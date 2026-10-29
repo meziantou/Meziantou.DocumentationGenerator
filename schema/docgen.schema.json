@@ -109,10 +109,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "readme": {
-            "description": "Local Markdown file used instead of the package README, relative to the configuration file.",
-            "type": "string"
           }
         },
         "additionalProperties": false
@@ -140,7 +136,7 @@
             "type": "string"
           },
           "description": {
-            "description": "Short description displayed in the product catalogue. Default: the package description.",
+            "description": "Short description displayed on the API reference page of the product. Default: the package description.",
             "type": "string"
           },
           "packages": {
@@ -149,14 +145,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "landingPage": {
-            "description": "Local Markdown file used as the product landing page, relative to the configuration file.",
-            "type": "string"
-          },
-          "readmePackage": {
-            "description": "Package whose README is used as landing page. Default: the first package.",
-            "type": "string"
           }
         },
         "additionalProperties": false
@@ -168,10 +156,6 @@
       "properties": {
         "root": {
           "description": "Directory containing the Markdown pages, relative to the configuration file.",
-          "type": "string"
-        },
-        "toc": {
-          "description": "Root table of contents, relative to the content root. Default: toc.yml when it exists.",
           "type": "string"
         },
         "assets": {

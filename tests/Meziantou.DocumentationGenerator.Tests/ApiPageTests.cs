@@ -16,7 +16,6 @@ public sealed class ApiPageTests
         string[] expected =
         [
             "index.html",
-            "contoso.library/index.html",
             "contoso.library/api/index.html",
             "contoso.library/api/namespaces/Contoso.Library.html",
             "contoso.library/api/namespaces/Contoso.Library.Collections.html",
@@ -28,6 +27,7 @@ public sealed class ApiPageTests
             "contoso.library/api/Contoso.Library.Collections.Tree-1.Node.Child-1.html",
         ];
         Assert.All(expected, file => Assert.True(File.Exists(site.Output / file), file));
+        Assert.False(File.Exists(site.Output / "contoso.library" / "index.html"));
     }
 
     [Fact]
@@ -156,21 +156,20 @@ public sealed class ApiPageTests
     }
 
     [Fact]
-    public async Task MissingReadmeAndDocumentation_HaveIntentionalOutput()
+    public async Task MissingDocumentation_HasIntentionalOutput()
     {
         var assembly = TestCompiler.Compile("Contoso.Bare", "namespace Contoso.Bare { public class Thing { public void Run() { } } }");
         var package = new TestPackageBuilder("Contoso.Bare", "2.0.0").AddFile("lib/net8.0/Contoso.Bare.dll", assembly.Assembly);
         await using var site = await SiteBuilder.BuildAsync([package]);
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
-        var product = Load(site, "contoso.bare/index.html");
-        Assert.Contains("does not provide a README", product.QuerySelector(".notice")!.TextContent);
-        Assert.Contains("dotnet add package Contoso.Bare --version 2.0.0", product.QuerySelector("pre")!.TextContent);
-        Assert.Equal("/contoso.bare/api/namespaces/Contoso.Bare.html", product.QuerySelector(".namespace-list a")!.GetAttribute("href"));
+        Assert.False(File.Exists(site.Output / "contoso.bare" / "index.html"));
+        var reference = Load(site, "contoso.bare/api/index.html");
+        Assert.Equal("/contoso.bare/api/namespaces/Contoso.Bare.html", reference.QuerySelector(".api-table a")!.GetAttribute("href"));
 
         var type = Load(site, "contoso.bare/api/Contoso.Bare.Thing.html");
         Assert.Equal("No documentation is available.", type.GetElementById("Run")!.QuerySelector(".no-documentation")!.TextContent);
-        Assert.Contains("DG3001", site.Result.AllOutput);
+        Assert.DoesNotContain("DG3001", site.Result.AllOutput);
         Assert.Contains("DG3002", site.Result.AllOutput);
     }
 
@@ -183,11 +182,13 @@ public sealed class ApiPageTests
         await using var site = await SiteBuilder.BuildAsync([first, second], extraConfiguration: """ "products": [ { "id": "contoso", "name": "Contoso", "description": "Everything Contoso.", "packages": [ "Contoso.First", "Contoso.Second" ] } ], """);
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
-        var product = Load(site, "contoso/index.html");
-        Assert.Equal(["Contoso.First", "Contoso.Second"], product.QuerySelectorAll<Element>("table.packages tbody td:first-child").Select(c => c.TextContent));
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], product.QuerySelectorAll<Element>(".namespace-list a").Select(a => a.TextContent));
-        var home = Load(site, "index.html");
-        Assert.Equal("Everything Contoso.", home.QuerySelector(".product-card p")!.TextContent);
+        var reference = Load(site, "contoso/api/index.html");
+        Assert.Equal("Everything Contoso.", reference.QuerySelector("p.lead")!.TextContent);
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], reference.QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
+        var items = reference.QuerySelectorAll<Element>(".sidebar > ul > li");
+        var api = items[items.Count - 1];
+        Assert.Equal("API reference", api.QuerySelector(".nav-group")!.TextContent);
+        Assert.Equal(["Contoso"], api.QuerySelectorAll<Element>("details > ul > li > a").Where(a => a.GetAttribute("href") == "/contoso/api/").Select(a => a.TextContent));
     }
 
     [Fact]

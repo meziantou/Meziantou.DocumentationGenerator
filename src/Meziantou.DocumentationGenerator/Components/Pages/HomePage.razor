@@ -5,18 +5,18 @@
     {
         <p class="lead">@Site.Configuration.Site.Description</p>
     }
-    @if (Site.Configuration.Products.IsEmpty)
+    @if (Sections.Count == 0)
     {
-        <p>This site has no product.</p>
+        <p>This site has no page.</p>
     }
     else
     {
         <ul class="product-catalog">
-            @foreach (var product in Site.Configuration.Products)
+            @foreach (var (title, url, description) in Sections)
             {
                 <li class="product-card">
-                    <h2><a href="@Site.Links.GetProductUrl(product.Id)">@product.Name</a></h2>
-                    @if (Site.GetProductDescription(product) is { } description)
+                    <h2><a href="@url">@title</a></h2>
+                    @if (description is not null)
                     {
                         <p>@description</p>
                     }
@@ -25,3 +25,28 @@
         </ul>
     }
 </SiteLayout>
+
+@code {
+    /// <summary>Top-level folders and pages of the content directory, in name order. Folders link to their first page.</summary>
+    private IReadOnlyList<(string Title, string Url, string? Description)> Sections
+    {
+        get
+        {
+            var result = new List<(string, string, string?)>();
+            foreach (var entry in Site.Content.Root?.Entries ?? [])
+            {
+                switch (entry)
+                {
+                    case AuthoredPage page:
+                        result.Add((page.Title, page.Url, page.Description));
+                        break;
+                    case ContentFolder { FirstPage: { } first } folder:
+                        result.Add((folder.Title, first.Url, folder.Description));
+                        break;
+                }
+            }
+
+            return result;
+        }
+    }
+}

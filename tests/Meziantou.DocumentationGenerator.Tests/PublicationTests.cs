@@ -66,11 +66,11 @@ public sealed class PublicationTests
         Assert.Equal(ExitCodes.Success, (await BuildAsync(temp)).ExitCode);
         var before = GetFiles(temp.FullPath / "_site");
 
-        temp.CreateTextFile("docs/toc.yml", "- href: missing.md");
+        temp.CreateTextFile("docs/broken.md", "[missing](missing.md)");
         var result = await BuildAsync(temp);
 
         Assert.Equal(ExitCodes.BuildFailed, result.ExitCode);
-        Assert.Contains("DG5006", result.Error);
+        Assert.Contains("DG5001", result.Error);
         Assert.Equal(before, GetFiles(temp.FullPath / "_site"));
         AssertNoStagingDirectory(temp);
     }
@@ -84,6 +84,7 @@ public sealed class PublicationTests
         temp.CreateTextFile("_site/custom/keep.txt", "keep");
 
         File.Delete(temp.FullPath / "docs" / "guide.md");
+        temp.CreateTextFile("docs/index.md", "# Home");
         var result = await BuildAsync(temp);
 
         Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
@@ -159,7 +160,7 @@ public sealed class PublicationTests
         var temp = TemporaryDirectory.Create();
         temp.CreateTextFile("docgen.json", """{ "version": 1, "site": { "title": "Test site" }, "content": { "root": "docs" } }""");
         temp.CreateTextFile("docs/index.md", "# Home\n\nRead the [guide](guide.md).");
-        temp.CreateTextFile("docs/guide.md", "---\ntitle: <script>alert(1)</script>\n---\n\nSome **bold** text.");
+        temp.CreateTextFile("docs/guide.md", "---\ntitle: <script>alert(1)</script>\nslug: guide\n---\n\nSome **bold** text.");
         return temp;
     }
 

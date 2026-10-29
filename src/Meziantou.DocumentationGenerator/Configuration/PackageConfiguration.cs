@@ -15,7 +15,6 @@ internal sealed class PackageConfiguration
     public FullPath? LocalPath { get; init; }
     public required ImmutableArray<NuGetFramework> TargetFrameworks { get; init; }
     public required ImmutableArray<string> Assemblies { get; init; }
-    public FullPath? ReadmeOverride { get; init; }
 
     /// <summary>Index of the package in the configuration, used to locate diagnostics.</summary>
     public required int Index { get; init; }

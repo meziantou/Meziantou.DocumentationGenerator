@@ -17,12 +17,6 @@ internal sealed class DiscoveredPackage
     /// <summary>Target frameworks whose folder only contains the <c>_._</c> placeholder.</summary>
     public required ImmutableArray<NuGetFramework> PlaceholderFrameworks { get; init; }
 
-    /// <summary>README entry declared in the manifest, when it exists in the package.</summary>
-    public string? ReadmeEntry { get; init; }
-
-    /// <summary>Local README configured instead of the package README.</summary>
-    public FullPath? ReadmeOverride { get; init; }
-
     public required ImmutableArray<PackageDependencyGroup> Dependencies { get; init; }
 
     public string Id => Package.Id;

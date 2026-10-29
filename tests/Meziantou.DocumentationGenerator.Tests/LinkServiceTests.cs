@@ -88,7 +88,6 @@ public sealed class LinkServiceTests
         Assert.Equal("/docs/", docs.Context.Links!.HomeUrl);
         Assert.Equal("/404.html", root.Context.Links.NotFoundUrl);
         Assert.Equal("/docs/404.html", docs.Context.Links.NotFoundUrl);
-        Assert.Equal("/docs/contoso.library/", docs.Context.Links.GetProductUrl("contoso.library"));
         Assert.Equal("/docs/contoso.library/api/", docs.Context.Links.GetApiReferenceUrl("contoso.library"));
         Assert.Equal("/docs/contoso.library/api/namespaces/Contoso.Library.Collections.html", docs.Context.Links.GetNamespaceUrl("contoso.library", "Contoso.Library.Collections"));
         Assert.Equal("/docs/contoso.library/api/namespaces/_global.html", docs.Context.Links.GetNamespaceUrl("contoso.library", ""));
