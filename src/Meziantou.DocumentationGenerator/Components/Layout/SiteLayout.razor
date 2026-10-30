@@ -51,7 +51,7 @@
     <header class="site-header">
         @if (!Navigation.Sidebar.IsEmpty)
         {
-            <button type="button" class="menu-button" aria-controls="sidebar" aria-expanded="false" hidden>Menu</button>
+            <button type="button" class="menu-button" aria-controls="sidebar" aria-expanded="false" hidden>Table of contents</button>
         }
         <a class="site-title" href="@Site.Links.HomeUrl">
             @if (Site.LogoUrl is not null)
@@ -82,9 +82,20 @@
     <div class="site-body">
         @if (!Navigation.Sidebar.IsEmpty)
         {
-            <nav class="sidebar" id="sidebar" aria-label="Table of contents">
-                @RenderTree(Navigation.Sidebar)
-            </nav>
+            <div class="sidebar-panel">
+                <div class="sidebar-tools">
+                    <button type="button" class="sidebar-collapse-button" aria-controls="sidebar" aria-expanded="true" aria-label="Collapse table of contents" title="Collapse table of contents" hidden>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M9 4v16" />
+                            <path class="sidebar-collapse-arrow" d="m16 9-3 3 3 3" />
+                        </svg>
+                    </button>
+                </div>
+                <nav class="sidebar" id="sidebar" aria-label="Table of contents">
+                    @RenderTree(Navigation.Sidebar)
+                </nav>
+            </div>
         }
         <main id="main" class="content" tabindex="-1">
             @if (TargetFrameworks is { Count: > 1 })

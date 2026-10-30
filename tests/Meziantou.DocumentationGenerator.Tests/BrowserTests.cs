@@ -46,6 +46,23 @@ public sealed class BrowserTests(BrowserFixture fixture)
     }
 
     [Fact]
+    public async Task Breadcrumbs_UseMutedColorsInBothThemes()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
+
+        foreach (var theme in new[] { "light", "dark" })
+        {
+            await page.SelectOptionAsync("#theme-select", theme);
+            Assert.Equal(theme == "light" ? "rgb(87, 96, 106)" : "rgb(145, 152, 161)",
+                await page.Locator(".breadcrumbs a").First.EvaluateAsync<string>("e => getComputedStyle(e).color"));
+            await page.Locator(".breadcrumbs a").First.HoverAsync();
+            Assert.Contains("underline", await page.Locator(".breadcrumbs a").First.EvaluateAsync<string>("e => getComputedStyle(e).textDecorationLine"));
+        }
+    }
+
+    [Fact]
     public async Task BlockedStorage_DoesNotBreakThePage()
     {
         await using var context = await fixture.Browser.NewContextAsync();
@@ -57,6 +74,10 @@ public sealed class BrowserTests(BrowserFixture fixture)
 
         await page.SelectOptionAsync("#theme-select", "dark");
         Assert.Equal("dark", await page.EvaluateAsync<string>("document.documentElement.getAttribute('data-theme')"));
+        await page.ClickAsync(".sidebar-collapse-button");
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        await page.ClickAsync(".sidebar-collapse-button");
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
         Assert.Empty(errors);
     }
 
@@ -70,6 +91,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.True(await page.IsVisibleAsync("#sidebar"));
         Assert.False(await page.IsVisibleAsync("[data-search]"));
         Assert.False(await page.IsVisibleAsync(".menu-button"));
+        Assert.False(await page.IsVisibleAsync(".sidebar-collapse-button"));
         await page.ClickAsync("#sidebar >> text=Guide");
         Assert.EndsWith("/guide.html", page.Url);
         Assert.Equal("Guide", await page.TextContentAsync("h1"));
@@ -159,6 +181,96 @@ public sealed class BrowserTests(BrowserFixture fixture)
         await page.FillAsync("#search-input", "Client");
         await page.WaitForFunctionAsync("document.getElementById('search-status').textContent.includes('cannot be loaded')");
         Assert.Equal(0, await page.Locator("#search-results [role=option]").CountAsync());
+    }
+
+    [Fact]
+    public async Task Sidebar_FoldersAndPagesUseTheSameColorAndLargeChevrons()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl);
+
+        foreach (var theme in new[] { "light", "dark" })
+        {
+            await page.SelectOptionAsync("#theme-select", theme);
+            Assert.True(await page.EvaluateAsync<bool>("""
+                () => getComputedStyle(document.querySelector('#sidebar .nav-group')).color ===
+                      getComputedStyle(document.querySelector('#sidebar a[href$="guide.html"]')).color
+                """));
+        }
+
+        var toggle = page.Locator(".nav-api-reference > details > .nav-toggle");
+        var bounds = await toggle.BoundingBoxAsync();
+        Assert.NotNull(bounds);
+        Assert.True(bounds.Width >= 28 && bounds.Height >= 28);
+        Assert.True(await toggle.EvaluateAsync<bool>("e => parseFloat(getComputedStyle(e, '::before').width) >= 8 && getComputedStyle(e, '::before').borderTopWidth === '2px'"));
+        var details = page.Locator(".nav-api-reference > details");
+        var wasOpen = await details.EvaluateAsync<bool>("e => e.open");
+        await toggle.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        Assert.Equal(!wasOpen, await details.EvaluateAsync<bool>("e => e.open"));
+        await page.Keyboard.PressAsync("Space");
+        Assert.Equal(wasOpen, await details.EvaluateAsync<bool>("e => e.open"));
+    }
+
+    [Theory]
+    [InlineData(1100)]
+    [InlineData(1600)]
+    public async Task Sidebar_CollapsesToARailAndRemembersAcrossPages(int width)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = width, Height = 900 } });
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
+
+        Assert.False(await page.IsVisibleAsync(".menu-button"));
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
+        var contentWidth = (await page.Locator("main").BoundingBoxAsync())!.Width;
+        var button = page.Locator(".sidebar-collapse-button");
+        Assert.Equal("true", await button.GetAttributeAsync("aria-expanded"));
+        await button.ClickAsync();
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        Assert.Equal("false", await button.GetAttributeAsync("aria-expanded"));
+        Assert.Equal("Expand table of contents", await button.GetAttributeAsync("aria-label"));
+        Assert.True((await page.Locator("main").BoundingBoxAsync())!.Width >= contentWidth + 200);
+        Assert.Equal(48, (await page.Locator(".sidebar-panel").BoundingBoxAsync())!.Width);
+
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        await button.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
+        Assert.Equal("true", await button.GetAttributeAsync("aria-expanded"));
+        Assert.Equal("Collapse table of contents", await button.GetAttributeAsync("aria-label"));
+        Assert.True(await button.EvaluateAsync<bool>("e => document.activeElement === e"));
+        await page.ReloadAsync();
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
+    }
+
+    [Fact]
+    public async Task Sidebar_DesktopPreferenceDoesNotPreventTheMobileMenuOpening()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 1600, Height = 900 } });
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
+        await page.ClickAsync(".sidebar-collapse-button");
+
+        await page.SetViewportSizeAsync(360, 740);
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        Assert.False(await page.IsVisibleAsync(".sidebar-collapse-button"));
+        await page.ClickAsync(".menu-button");
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
+        Assert.Equal("true", await page.GetAttributeAsync(".menu-button", "aria-expanded"));
+        await page.Keyboard.PressAsync("Escape");
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        Assert.Equal("false", await page.GetAttributeAsync(".menu-button", "aria-expanded"));
+        Assert.True(await page.Locator(".menu-button").EvaluateAsync<bool>("e => document.activeElement === e"));
+
+        await page.ClickAsync(".menu-button");
+        await page.SetViewportSizeAsync(1600, 900);
+        Assert.False(await page.IsVisibleAsync("#sidebar"));
+        Assert.Equal("false", await page.GetAttributeAsync(".sidebar-collapse-button", "aria-expanded"));
+        await page.ClickAsync(".sidebar-collapse-button");
+        Assert.True(await page.IsVisibleAsync("#sidebar"));
     }
 
     [Fact]
