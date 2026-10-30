@@ -188,7 +188,8 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
                     Unlink(link);
                     break;
                 default:
-                    diagnostics.Report(DiagnosticDescriptors.UnresolvedReference, $"Cannot resolve '{cref}'", location);
+                    var hint = links.HasApiReference ? "" : "; no package is configured, so the site has no API reference to link to";
+                    diagnostics.Report(DiagnosticDescriptors.UnresolvedReference, $"Cannot resolve '{cref}'{hint}", location);
                     Unlink(link);
                     break;
             }

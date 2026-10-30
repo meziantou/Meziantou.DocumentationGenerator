@@ -153,6 +153,33 @@ public sealed partial class MarkdownTests
     }
 
     [Fact]
+    public async Task AmbiguousNamespaceCref_IsReportedAsAmbiguous()
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
+        await using var build = await BuildAsync(packages: [first, second], files: new()
+        {
+            ["docs/index.md"] = "[](cref:Utils) [qualified](cref:Contoso.Guard!Utils)",
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Contains("""<a href="/docs/contoso.guard/api/namespaces/Utils.html">qualified</a>""", html);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Message.Contains("'Utils' is ambiguous", StringComparison.Ordinal));
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG4001");
+    }
+
+    [Fact]
+    public async Task CrefWithoutPackages_ExplainsThereIsNoApiReference()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = "[](cref:Contoso.Library)",
+        });
+
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4001" && d.Message.Contains("no package is configured", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task UnsafeContent_IsRemoved()
     {
         await using var build = await BuildAsync(files: new()

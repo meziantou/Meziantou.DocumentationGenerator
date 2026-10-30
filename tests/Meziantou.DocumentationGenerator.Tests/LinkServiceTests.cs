@@ -140,6 +140,26 @@ public sealed class LinkServiceTests
         Assert.Equal("/contoso.otherguard/api/Utils.Guard.html", links.Resolve("Contoso.OtherGuard!T:Utils.Guard", LinkContext.None).Url);
     }
 
+    [Theory]
+    [InlineData("Utils")]
+    [InlineData("N:Utils")]
+    public async Task NamespaceInTwoProducts_IsAmbiguousUntilQualified(string cref)
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", OtherGuard.Value.Assembly);
+        await using var build = await BuildAsync([first, second]);
+        var links = build.Context.Links!;
+
+        var ambiguous = links.Resolve(cref, LinkContext.None);
+        Assert.Equal(CrefResolutionKind.Ambiguous, ambiguous.Kind);
+        Assert.Equal(["contoso.guard!N:Utils", "contoso.otherguard!N:Utils"], ambiguous.Candidates);
+
+        Assert.Equal("/contoso.guard/api/namespaces/Utils.html", links.Resolve(cref, new LinkContext(null, "contoso.guard")).Url);
+        Assert.Equal("/contoso.otherguard/api/namespaces/Utils.html", links.Resolve("Contoso.OtherGuard!" + cref, LinkContext.None).Url);
+        Assert.Equal("/contoso.otherguard/api/namespaces/Utils.html", links.Resolve("contoso.otherguard!" + cref, LinkContext.None).Url);
+        Assert.Equal(CrefResolutionKind.Unresolved, links.Resolve("Contoso.Missing!" + cref, LinkContext.None).Kind);
+    }
+
     [Fact]
     public async Task CaseOnlyCollisionsAndReservedNames()
     {
