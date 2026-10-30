@@ -68,6 +68,26 @@ var client = new Client();
 Common aliases are supported (`cs`, `c#`, `sh`, `ps1`, `yml`, `js`, `ts`...). `text`, `console` and `output` are
 displayed as plain text. Unknown languages are displayed as plain text with the info diagnostic `DG5010`.
 
+### Components
+
+These elements are replaced when the site is generated. Names and attributes are case-insensitive.
+
+| Element | Output |
+|---|---|
+| `<InstallNuGetPackage Id="Contoso.Client" />` | `dotnet package add Contoso.Client` |
+| `<InstallDotnetTool Id="Contoso.Tool" />` | `dotnet tool install --global Contoso.Tool` |
+| `<NuGetReference Id="Contoso.Client" />` | A link to `https://www.nuget.org/packages/Contoso.Client`, with the NuGet icon |
+
+Attributes:
+
+- `Id` (required): the package identifier.
+- `Version` (optional): adds `--version <version>` to the command, or links to that version on nuget.org.
+- `Local="true"` (`InstallDotnetTool` only): installs the tool in the local tool manifest (`dotnet tool install Contoso.Tool`).
+
+Put `InstallNuGetPackage` and `InstallDotnetTool` on their own line, separated from other text by a blank line, to get a
+code block with a copy button. Inside a paragraph, they render as inline code. `NuGetReference` can be used anywhere in
+text. An invalid element (missing or invalid `Id` or `Version`, unknown attribute) is removed and reported as `DG5013`.
+
 ### Links
 
 | Link | Result |

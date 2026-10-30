@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Meziantou.DocumentationGenerator.Build;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
@@ -5,7 +6,7 @@ using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
-public sealed class MarkdownTests
+public sealed partial class MarkdownTests
 {
     [Fact]
     public async Task AuthoredPages_RoutesTitlesAndRelativeLinks()
@@ -195,6 +196,128 @@ public sealed class MarkdownTests
     }
 
     [Fact]
+    public async Task InstallComponents_AreReplacedByCommands()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = """
+                Install:
+
+                <InstallNuGetPackage Id="Meziantou.Framework" />
+
+                <InstallNuGetPackage Id="Meziantou.Framework" Version="1.2.3" />
+                <installdotnettool id='Meziantou.Tool' />
+                <InstallDotnetTool Id="Meziantou.Tool" Version="2.0.0-beta.1" Local="true" />
+
+                Or run <InstallNuGetPackage Id="Inline.Package" /> in a terminal.
+
+                <details>
+                <summary>More</summary>
+                </details>
+                """,
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Equal(4, Regex.Count(html, """<pre><code class="hljs language-bash">"""));
+        var text = HtmlTagRegex().Replace(html, "");
+        Assert.Contains("dotnet package add Meziantou.Framework\n", text);
+        Assert.Contains("dotnet package add Meziantou.Framework --version 1.2.3\n", text);
+        Assert.Contains("dotnet tool install --global Meziantou.Tool\n", text);
+        Assert.Contains("dotnet tool install Meziantou.Tool --version 2.0.0-beta.1\n", text);
+        Assert.Contains("Or run <code>dotnet package add Inline.Package</code> in a terminal.", html);
+        Assert.Contains("<details>", html);
+        Assert.DoesNotContain("<InstallNuGetPackage", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<InstallDotnetTool", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG5013");
+    }
+
+    [Fact]
+    public async Task Components_FollowMarkdownStructure()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = """
+                - Step one:
+
+                  <InstallNuGetPackage Id="In.List" />
+
+                > <NuGetReference Id="In.Quote" />
+
+                Literal `<InstallNuGetPackage Id="In.Code" />` text.
+
+                <!-- <InstallNuGetPackage Id="In.Comment" /> -->
+
+                ```markdown
+                <InstallNuGetPackage Id="In.Fence" />
+                ```
+                """,
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Matches("""<li>\s*<p>Step one:</p>\s*<pre><code class="hljs language-bash">dotnet package add In.List""", html);
+        Assert.Matches("""<blockquote>\s*<p><a href="https://www.nuget.org/packages/In.Quote" class="nuget-reference">In.Quote</a></p>""", html);
+        Assert.Contains("""<code>&lt;InstallNuGetPackage Id="In.Code" /&gt;</code>""", html);
+        Assert.DoesNotContain("In.Comment", html);
+        Assert.Contains("In.Fence", html);
+        Assert.DoesNotContain("dotnet package add In.Fence", html);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG5013");
+    }
+
+    [Fact]
+    public async Task NuGetReference_IsALinkToNuGetOrg()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = """
+                See <NuGetReference Id="Meziantou.Framework" /> for details.
+
+                <NuGetReference Id="Meziantou.Framework" Version="1.2.3" />
+                <NuGetReference Id="Other.Package" />
+                """,
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Contains("""<p>See <a href="https://www.nuget.org/packages/Meziantou.Framework" class="nuget-reference">Meziantou.Framework</a> for details.</p>""", html);
+        Assert.Contains("""<p><a href="https://www.nuget.org/packages/Meziantou.Framework/1.2.3" class="nuget-reference">Meziantou.Framework</a></p>""", html);
+        Assert.Contains("""<p><a href="https://www.nuget.org/packages/Other.Package" class="nuget-reference">Other.Package</a></p>""", html);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG5013");
+    }
+
+    [Fact]
+    public async Task InvalidComponents_AreErrors()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = """
+                <InstallNuGetPackage />
+
+                <InstallNuGetPackage Id="a b" />
+
+                <InstallNuGetPackage Id="Valid" Foo="bar" />
+
+                <InstallNuGetPackage Id="Valid" Version="not-a-version" />
+
+                <InstallDotnetTool Id="Valid" Local="maybe" />
+
+                Text <NuGetReference Version="1.0.0" /> here.
+                """,
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.DoesNotContain("<pre", html);
+        Assert.DoesNotContain("nuget-reference", html);
+        Assert.Contains("<p>Text  here.</p>", html);
+        var errors = build.Diagnostics.Where(d => d.Code == "DG5013").ToList();
+        Assert.All(errors, d => Assert.Equal(DiagnosticSeverity.Error, d.Severity));
+        Assert.Equal([1, 3, 5, 7, 9, 11], errors.Select(d => d.Location!.Line));
+        Assert.Contains(errors, d => d.Message.Contains("requires the 'Id' attribute", StringComparison.Ordinal));
+        Assert.Contains(errors, d => d.Message.Contains("invalid package identifier 'a b'", StringComparison.Ordinal));
+        Assert.Contains(errors, d => d.Message.Contains("does not support the attribute 'Foo'", StringComparison.Ordinal));
+        Assert.Contains(errors, d => d.Message.Contains("invalid version 'not-a-version'", StringComparison.Ordinal));
+        Assert.All(errors, d => Assert.Equal("docs/index.md", d.Location!.FilePath));
+    }
+
+    [Fact]
     public async Task LocalAssets_AreTrackedAndCopied()
     {
         await using var build = await BuildAsync(files: new()
@@ -358,4 +481,7 @@ public sealed class MarkdownTests
         await build.RunAsync(new AcquisitionStage(), new DiscoveryStage(), new ApiModelStage(), new ApiAggregationStage(), new LinkIndexStage(), new ContentStage());
         return build;
     }
+
+    [GeneratedRegex("<[^>]+>", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex HtmlTagRegex();
 }

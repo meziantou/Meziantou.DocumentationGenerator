@@ -7,6 +7,7 @@ using Meziantou.DocumentationGenerator.Links;
 using Meziantou.Framework.Markdown;
 using Meziantou.Framework.Markdown.Extensions.AutoIdentifiers;
 using Meziantou.Framework.Markdown.Extensions.Yaml;
+using Meziantou.Framework.Markdown.Helpers;
 using Meziantou.Framework.Markdown.Renderers;
 using Meziantou.Framework.Markdown.Renderers.Html;
 using Meziantou.Framework.Markdown.Syntax;
@@ -17,7 +18,8 @@ namespace Meziantou.DocumentationGenerator.Content;
 
 /// <summary>
 /// Renders authored Markdown at build time: resolves <c>cref:</c> links through the link service,
-/// rewrites links to Markdown pages and local files, highlights code, and sanitizes the result.
+/// rewrites links to Markdown pages and local files, expands components (<see cref="MarkdownComponents"/>), highlights
+/// code, and sanitizes the result.
 /// Supported extensions: CommonMark, pipe tables, task lists, heading identifiers (GitHub rules), YAML front matter,
 /// GitHub alerts, auto links, footnotes and emphasis extras.
 /// </summary>
@@ -35,6 +37,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         .UseFootnotes()
         .UseEmphasisExtras()
         .UsePreciseSourceLocation()
+        .Use<MarkdownComponentExtension>()
         .Build();
 
     /// <summary>Parses a document and reads its front matter, without resolving links.</summary>
@@ -98,6 +101,8 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
             block.Parent?.Remove(block);
         }
 
+        RemoveInvalidComponents(document, source);
+
         foreach (var link in document.Descendants<LinkInline>().ToList())
         {
             RewriteLink(link, source);
@@ -111,7 +116,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         foreach (var block in document.Descendants<HtmlBlock>().ToList())
         {
             var text = RewriteRawHtml(block.Lines.ToString(), source, block.Line + 1);
-            block.Lines = new Meziantou.Framework.Markdown.Helpers.StringLineGroup(text);
+            block.Lines = new StringLineGroup(text);
         }
 
         var headings = document.Descendants<HeadingBlock>()
@@ -134,6 +139,27 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
 
         var description = frontMatter.Description ?? GetDescription(document);
         return new RenderedMarkdown(ContentSanitizer.Sanitize(writer.ToString()), title, description, headings);
+    }
+
+    /// <summary>Reports and removes component elements that the parser recognized but could not create.</summary>
+    private void RemoveInvalidComponents(MarkdownDocument document, MarkdownSource source)
+    {
+        foreach (var block in document.Descendants<MarkdownComponentBlock>().Where(b => b.Component is null).ToList())
+        {
+            ReportInvalidComponent(block.Error, source, block.Line, column: null);
+            block.Parent?.Remove(block);
+        }
+
+        foreach (var inline in document.Descendants<MarkdownComponentInline>().Where(i => i.Component is null).ToList())
+        {
+            ReportInvalidComponent(inline.Error, source, inline.Line, inline.Column);
+            inline.Remove();
+        }
+    }
+
+    private void ReportInvalidComponent(string? message, MarkdownSource source, int line, int? column)
+    {
+        diagnostics.Report(DiagnosticDescriptors.InvalidMarkdownComponent, message ?? "Invalid component", new DiagnosticLocation { FilePath = source.DisplayPath, Line = line + 1, Column = column + 1 });
     }
 
     private void RewriteLink(LinkInline link, MarkdownSource source)
@@ -300,6 +326,9 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
                     break;
                 case LineBreakInline:
                     builder.Append(' ');
+                    break;
+                case MarkdownComponentInline { Component: { } component }:
+                    builder.Append(component.Text);
                     break;
                 case HtmlEntityInline entity:
                     builder.Append(entity.Transcoded.ToString());

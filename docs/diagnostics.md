@@ -74,6 +74,7 @@ input and cannot be lowered.
 | `DG5010` | info | Unknown code language; the code is displayed without highlighting |
 | `DG5011` | warning | A folder has no `_folder.yml` or its `_folder.yml` has no `title`; the folder name without its number prefix is used |
 | `DG5012` | error | Invalid `slug` in front matter or `_folder.yml`: it must be a single URL segment without `/` or extension |
+| `DG5013` | error | Invalid Markdown component (such as `<InstallNuGetPackage />`): missing or invalid `Id` or `Version`, or unknown attribute; the element is removed |
 | `DG6001` | warning | Malformed XML documentation file; API pages are generated without documentation |
 | `DG6002` | info | XML documentation entries that match no public symbol (usually internal members) |
 | `DG6003` | warning | `<inheritdoc>` cannot be resolved (missing or ambiguous target, or dependency not configured in `references`); a note is displayed |

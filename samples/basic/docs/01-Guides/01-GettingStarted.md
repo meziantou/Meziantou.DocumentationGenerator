@@ -5,9 +5,9 @@ description: Install the package and greet someone.
 
 ## Install the package
 
-```bash
-dotnet add package Sample.Library
-```
+Install <NuGetReference Id="Sample.Library" />:
+
+<InstallNuGetPackage Id="Sample.Library" />
 
 ## Greet someone
 
