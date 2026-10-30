@@ -71,10 +71,10 @@ At least one package or a content directory is required.
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `id` | required | Package identifier. |
+| `id` | required except for folders | Package identifier. Omit when `path` is a folder to discover all packages in it. |
 | `version` | latest stable | Exact version (`1.2.3`, `1.2.3-beta.1`), [version range](https://learn.microsoft.com/nuget/concepts/package-versioning#version-ranges) (`[1.0,2.0)`) or floating version (`1.*`, `*`, `*-*`). See [package versions](#package-versions). |
 | `source` | NuGet.Config sources | Source URL or the name of a source defined in `NuGet.Config`. |
-| `path` | | Local `.nupkg` file, or folder containing `.nupkg` files (the highest version matching `version` is used). No feed is queried. Cannot be combined with `source`. |
+| `path` | | Local `.nupkg` file, or folder containing `.nupkg` files (the highest version matching `version` is used for each package ID). No feed is queried. Cannot be combined with `source`. |
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
 | `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
 | `defineConstants` | none | Preprocessor symbols defined when compiling a [source package](api-reference.md#source-packages), in addition to those of the target framework. Use it for the symbols the package's MSBuild targets define in the consuming project (`"ROSLYN_4_12_OR_GREATER"`). |
@@ -278,6 +278,24 @@ folder whose name starts with the package identifier (`Contoso.Http.*.nupkg`, ex
 the highest version matching `version` is used, following the [package versions](#package-versions) rules. Use
 `*-*` to accept the prerelease versions produced by CI builds. A `.nupkg` file only needs its version to be in the
 range.
+
+To discover all package IDs automatically, omit `id`:
+
+```json
+{
+  "version": 1,
+  "packages": [
+    { "path": "artifacts/packages", "version": "*-*" }
+  ]
+}
+```
+
+Discovery reads the identities from the `.nuspec` metadata of every `.nupkg` at the root of the folder, regardless
+of its file name. It does not search subdirectories, and ignores `.symbols.nupkg` and `.snupkg` symbol packages.
+The highest matching version of each ID is selected; an empty folder or an ID with no matching version is an error
+(`DG2001`), and invalid archives are reported rather than silently ignored. The same syntax works in `references`.
+`targetFrameworks`, `assemblies`, and `defineConstants` apply to every discovered package. A package ID must still
+appear only once across `packages` and `references`, including discovered packages (`DG1008`).
 
 Local packages are used in place, are available in offline mode, and their identity is verified. Remote packages are cached; `--offline` uses only the
 cache and fails when a package is missing (`DG2006`). In offline mode, a version range resolves to the highest

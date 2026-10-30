@@ -75,7 +75,7 @@ internal sealed class DiscoveryStage : IBuildStage
     /// </summary>
     private static void ReportUnconfiguredDependencies(BuildContext context)
     {
-        var configured = new HashSet<string>(context.Configuration.Packages.Concat(context.Configuration.References).Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
+        var configured = new HashSet<string>(context.Packages.Concat(context.References).Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
         foreach (var package in context.DiscoveredPackages)
         {
             var dependencies = package.Dependencies
