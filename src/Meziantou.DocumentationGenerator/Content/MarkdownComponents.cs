@@ -19,11 +19,11 @@ internal static class MarkdownComponents
 
     private static readonly FrozenDictionary<string, Definition> Definitions = new Definition[]
     {
-        new("InstallNuGetPackage", ["Id", "Version"], (id, version, _) =>
-            new MarkdownComponent(MarkdownComponentKind.Command, $"dotnet package add {id}{FormatVersionOption(version)}")),
-        new("InstallDotnetTool", ["Id", "Version", "Local"], CreateInstallDotnetTool),
-        new("NuGetReference", ["Id", "Version"], (id, version, _) =>
-            new MarkdownComponent(MarkdownComponentKind.PackageLink, id, "https://www.nuget.org/packages/" + Uri.EscapeDataString(id) + (version is null ? "" : "/" + Uri.EscapeDataString(version.ToNormalizedString())))),
+        new("InstallNuGetPackage", ["Id", "Ids", "Version"], (ids, version, _) =>
+            new MarkdownComponent(MarkdownComponentKind.Command, string.Join("\n", ids.Select(id => $"dotnet package add {id}{FormatVersionOption(version)}")))),
+        new("InstallDotnetTool", ["Id", "Version", "Local"], (ids, version, attributes) => CreateInstallDotnetTool(ids[0], version, attributes)),
+        new("NuGetReference", ["Id", "Version"], (ids, version, _) =>
+            new MarkdownComponent(MarkdownComponentKind.PackageLink, ids[0], "https://www.nuget.org/packages/" + Uri.EscapeDataString(ids[0]) + (version is null ? "" : "/" + Uri.EscapeDataString(version.ToNormalizedString())))),
     }.ToFrozenDictionary(d => d.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -97,16 +97,35 @@ internal static class MarkdownComponents
             }
         }
 
-        if (!attributes.TryGetValue("Id", out var id) || id.Length == 0)
+        string[] ids;
+        if (attributes.TryGetValue("Ids", out var idsText))
         {
-            error = $"<{definition.Name}> requires the 'Id' attribute";
-            return true;
+            if (attributes.ContainsKey("Id"))
+            {
+                error = $"<{definition.Name}> cannot declare both 'Id' and 'Ids'";
+                return true;
+            }
+
+            ids = idsText.Split(',', StringSplitOptions.TrimEntries);
+        }
+        else
+        {
+            if (!attributes.TryGetValue("Id", out var id) || id.Length == 0)
+            {
+                error = $"<{definition.Name}> requires the 'Id' attribute";
+                return true;
+            }
+
+            ids = [id];
         }
 
-        if (!PackageIdValidator.IsValidPackageId(id))
+        foreach (var id in ids)
         {
-            error = $"<{definition.Name}> has an invalid package identifier '{id}'";
-            return true;
+            if (!PackageIdValidator.IsValidPackageId(id))
+            {
+                error = $"<{definition.Name}> has an invalid package identifier '{id}'";
+                return true;
+            }
         }
 
         NuGetVersion? version = null;
@@ -116,7 +135,7 @@ internal static class MarkdownComponents
             return true;
         }
 
-        component = definition.Create(id, version, attributes);
+        component = definition.Create(ids, version, attributes);
         if (component is null)
         {
             error = $"<{definition.Name}> has an invalid attribute value";
@@ -136,5 +155,5 @@ internal static class MarkdownComponents
 
     private static string FormatVersionOption(NuGetVersion? version) => version is null ? "" : " --version " + version.ToNormalizedString();
 
-    private sealed record Definition(string Name, string[] Attributes, Func<string, NuGetVersion?, Dictionary<string, string>, MarkdownComponent?> Create);
+    private sealed record Definition(string Name, string[] Attributes, Func<string[], NuGetVersion?, Dictionary<string, string>, MarkdownComponent?> Create);
 }

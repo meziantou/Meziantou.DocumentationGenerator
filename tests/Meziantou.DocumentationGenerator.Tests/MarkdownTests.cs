@@ -259,6 +259,60 @@ public sealed partial class MarkdownTests
     }
 
     [Fact]
+    public async Task InstallNuGetPackage_CollectionsAreReplacedByCommands()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/index.md"] = """
+                <InstallNuGetPackage Ids="First.Package, Second.Package" />
+
+                <installnugetpackage ids=' Second.Package , First.Package ' version="2.0.0-beta.1" />
+
+                <InstallNuGetPackage Ids="Single.Package" />
+
+                Or run <InstallNuGetPackage Ids="First.Package,Second.Package" /> in a terminal.
+                """,
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Equal(3, Regex.Count(html, """<pre><code class="hljs language-bash">"""));
+        var text = HtmlTagRegex().Replace(html, "");
+        Assert.Contains("dotnet package add First.Package\ndotnet package add Second.Package\n", text);
+        Assert.Contains("dotnet package add Second.Package --version 2.0.0-beta.1\ndotnet package add First.Package --version 2.0.0-beta.1\n", text);
+        Assert.Contains("dotnet package add Single.Package\n", text);
+        Assert.Contains("Or run <code>dotnet package add First.Package; dotnet package add Second.Package</code> in a terminal.", html);
+        Assert.DoesNotContain("<InstallNuGetPackage", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG5013");
+    }
+
+    [Theory]
+    [InlineData("""<InstallNuGetPackage Ids="" />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Ids=" " />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Ids=",Valid" />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid," />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid,,Other" />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid,a b" />""", "invalid package identifier 'a b'")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid,Other;echo" />""", "invalid package identifier 'Other;echo'")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid,Other" Version="invalid" />""", "invalid version 'invalid'")]
+    [InlineData("""<InstallNuGetPackage Id="Valid" Ids="Other" />""", "cannot declare both 'Id' and 'Ids'")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid" ids="Other" />""", "declares the attribute 'ids' more than once")]
+    [InlineData("""<InstallDotnetTool Ids="Valid,Other" />""", "does not support the attribute 'Ids'")]
+    [InlineData("""<NuGetReference Ids="Valid,Other" />""", "does not support the attribute 'Ids'")]
+    public async Task InvalidPackageCollections_AreErrors(string markdown, string message)
+    {
+        await using var build = await BuildAsync(files: new() { ["docs/index.md"] = markdown });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.DoesNotContain("<pre", html);
+        Assert.DoesNotContain("dotnet package add", html);
+        var error = Assert.Single(build.Diagnostics, d => d.Code == "DG5013");
+        Assert.Equal(DiagnosticSeverity.Error, error.Severity);
+        Assert.Contains(message, error.Message, StringComparison.Ordinal);
+        Assert.Equal("docs/index.md", error.Location!.FilePath);
+        Assert.Equal(1, error.Location.Line);
+    }
+
+    [Fact]
     public async Task Components_FollowMarkdownStructure()
     {
         await using var build = await BuildAsync(files: new()
