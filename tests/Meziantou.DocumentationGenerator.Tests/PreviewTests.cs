@@ -38,7 +38,13 @@ public sealed partial class PreviewTests
             Assert.Equal("/docs/", response.Headers.Location?.OriginalString);
         }
 
-        using (var response = await client.GetAsync(url + "missing", TestContext.Current.CancellationToken))
+        using (var response = await client.GetAsync(url + "a/b/missing", TestContext.Current.CancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.Equal("/docs/404.html", response.Headers.Location?.OriginalString);
+        }
+
+        using (var response = await client.GetAsync(url + "404.html", TestContext.Current.CancellationToken))
         {
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
@@ -46,12 +52,12 @@ public sealed partial class PreviewTests
 
         using (var response = await client.GetAsync(url + "%2e%2e/docgen.json", TestContext.Current.CancellationToken))
         {
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         }
 
         using (var response = await client.GetAsync(origin + PreviewServer.LiveReloadScriptPath.TrimStart('/'), TestContext.Current.CancellationToken))
         {
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         }
 
         var exitCode = await session.StopAsync();

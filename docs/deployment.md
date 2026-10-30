@@ -6,26 +6,29 @@ needed.
 
 ## Base path
 
-Set `site.basePath` (or `--base-path`) to the URL path where the site is served:
+Internal links, images, stylesheets, scripts and search URLs are relative to the HTML file containing them.
+The same generated files can be deployed at the root of a domain or under any subpath without rebuilding or
+setting `site.basePath`.
 
-| Deployment | `basePath` | Home page | Type page | Search index |
-| --- | --- | --- | --- | --- |
-| `https://docs.example.com/` | `/` | `/` | `/json/api/Contoso.Json.JsonReader.html` | `/_assets/search-index.json` |
-| `https://example.com/docs/` | `/docs/` | `/docs/` | `/docs/json/api/Contoso.Json.JsonReader.html` | `/docs/_assets/search-index.json` |
+For example, `api/contoso.json/Contoso.Json.JsonReader.html` links to `../../_assets/site.css` and to its
+sibling type as `Contoso.Json.JsonWriter.html`. Both work at `https://docs.example.com/` and at
+`https://meziantou.github.io/Meziantou.Framework/`.
 
-Links are root-relative and include the base path, so the files must be published at that path. Directory URLs
-(`/docs/json/`) rely on the host serving `index.html` for directories, which every static host does. Opening the files
-with `file://` is not supported.
+Set `site.basePath` (or `--base-path`) when generating absolute canonical/social URLs and a sitemap with `site.url`,
+or to choose the local preview server's path. These absolute metadata URLs describe one deployment and must be
+regenerated if that deployment changes. External links remain unchanged.
+
+Directory URLs (`api/contoso.json/`) rely on the host serving `index.html` for directories, which every static host
+does. Opening the files with `file://` is not supported.
 
 ## 404 page
 
-`404.html` is generated at the root of the output directory. Its links work whatever URL triggered it. Configure the host
-to serve it for missing files:
+`404.html` is generated at the root of the output directory. Its links and assets are relative too, so configure the host
+to **redirect** missing-page requests to its actual URL (for example `/Meziantou.Framework/404.html`), not rewrite
+the response while retaining the missing URL. The local preview server does this automatically.
 
-- GitHub Pages, Netlify, Cloudflare Pages: automatic for `404.html` at the root of the published directory.
-- Azure Static Web Apps: `"responseOverrides": { "404": { "rewrite": "/docs/404.html" } }` in `staticwebapp.config.json`.
-- nginx: `error_page 404 /docs/404.html;`.
-- IIS: `<httpErrors><error statusCode="404" path="/docs/404.html" responseMode="ExecuteURL" /></httpErrors>`.
+Hosts such as GitHub Pages that automatically serve `404.html` at the missing URL can show the error text, but
+its navigation and assets cannot reliably resolve for nested missing URLs without a host-level redirect.
 
 ## Canonical URLs, sitemap and robots
 
@@ -38,7 +41,8 @@ to serve it for missing files:
 
 ## GitHub Pages
 
-A project site is served at `https://{owner}.github.io/{repository}/`, so use the repository name as base path:
+A project site is served at `https://{owner}.github.io/{repository}/`. Relative links work there without a base path;
+the example sets it to generate correct canonical URLs and a sitemap:
 
 ```yaml
 name: Documentation
@@ -78,7 +82,7 @@ jobs:
         uses: actions/deploy-pages@v4
 ```
 
-GitHub Pages serves `404.html` automatically. Add `.nojekyll` to the content assets if a path starts with `_` and
+See the [404 page limitation](#404-page) above for GitHub Pages' automatic error responses. Add `.nojekyll` to the content assets if a path starts with `_` and
 Jekyll processing is enabled for the branch (artifact deployments are not processed by Jekyll).
 
 ## Output ownership

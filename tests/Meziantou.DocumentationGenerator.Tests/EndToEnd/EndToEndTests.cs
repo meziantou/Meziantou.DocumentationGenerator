@@ -38,7 +38,7 @@ public sealed class EndToEndTests(InstalledToolFixture fixture)
         Assert.Equal(["Contoso documentation", "Guides", "API reference"], home.QuerySelectorAll<Meziantou.Framework.WebPlatform.Dom.Element>(".sidebar > ul > li > a, .sidebar > ul > li > .nav-group").Select(e => e.TextContent));
         var guidesLink = home.QuerySelector(".article a")!;
         Assert.Equal("guides", guidesLink.TextContent);
-        Assert.Equal("/guides/getting-started.html", guidesLink.GetAttribute("href"));
+        Assert.Equal("guides/getting-started.html", guidesLink.GetAttribute("href"));
 
         // Inherited documentation across packages and source links pinned to the commit
         var smartClient = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "contoso.extensions" / "Contoso.Extensions.SmartClient.html", TestContext.Current.CancellationToken));

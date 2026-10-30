@@ -116,10 +116,10 @@ public sealed class SearchTests
         Assert.Single(items, i => i.Title == "Client.Send");
         Assert.Equal(items.Select(i => i.Url).Order(StringComparer.Ordinal), items.Select(i => i.Url));
 
-        // Every URL targets an emitted file and anchor (the build validates them); the page loads the index under the base path
+        // Every URL targets an emitted file and anchor; the page loads the index relative to itself.
         var search = HtmlDocumentLoader.Parse(site.ReadFile("index.html")).QuerySelector("[data-search]")!;
-        Assert.Equal("/docs/_assets/search-index.json", search.GetAttribute("data-index"));
-        Assert.Equal("/docs/", search.GetAttribute("data-base-path"));
+        Assert.Equal("_assets/search-index.json", search.GetAttribute("data-index"));
+        Assert.Equal("./", search.GetAttribute("data-base-path"));
 
         using var host = new SearchEngineHost(json);
         Assert.Equal("api/contoso.library/Contoso.Library.Client.html", host.SearchDetailed("Client")[0].Url);

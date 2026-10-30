@@ -2,7 +2,7 @@ using Microsoft.Playwright;
 
 namespace Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
-/// <summary>Starts Chromium once for the browser tests, and builds a representative site served at '/' and '/docs/'.</summary>
+/// <summary>Starts Chromium once for the browser tests, and serves representative sites at the root and a relocated subpath.</summary>
 public sealed class BrowserFixture : IAsyncLifetime
 {
     private IPlaywright? _playwright;
@@ -26,7 +26,8 @@ public sealed class BrowserFixture : IAsyncLifetime
         _rootSite = await UiSite.BuildAsync([]);
         _docsSite = await UiSite.BuildAsync(["--base-path", "/docs/"]);
         RootServer = await StaticSiteServer.StartAsync(_rootSite.Output, "/");
-        DocsServer = await StaticSiteServer.StartAsync(_docsSite.Output, "/docs/");
+        // Serve the same files at a different path from the one configured at build time.
+        DocsServer = await StaticSiteServer.StartAsync(_docsSite.Output, "/Meziantou.Framework/");
     }
 
     public async ValueTask DisposeAsync()

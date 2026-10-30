@@ -12,7 +12,8 @@ pages whose folder structure defines the navigation.
   variants when frameworks differ.
 - Authored Markdown pages with front matter, tables, alerts, syntax highlighting and `cref:` links to APIs.
 - Plain HTML files that work on any static host, at the root of a domain or under a path such as `/docs/`. No .NET
-  runtime, server or CDN is needed to browse the site; JavaScript only adds search, theme selection and conveniences.
+  runtime, server or CDN is needed to browse the site; internal URLs are file-relative, so moving the site requires
+  no rebuild. JavaScript only adds search, theme selection and conveniences.
 - Light, dark and system themes, responsive and accessible layout, collapsible table of contents (with the desktop
   preference remembered across pages), client-side search.
 

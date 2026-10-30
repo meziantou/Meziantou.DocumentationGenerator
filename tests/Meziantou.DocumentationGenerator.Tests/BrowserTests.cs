@@ -12,7 +12,6 @@ public sealed class BrowserTests(BrowserFixture fixture)
     [
         "",
         "guide.html",
-        "contoso.library/",
         "api/contoso.library/",
         "api/contoso.library/namespaces/Contoso.Library.html",
         "api/contoso.library/Contoso.Library.Client.html",
@@ -35,7 +34,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Equal("rgb(13, 17, 23)", await GetBackgroundAsync(page));
 
         // The explicit choice survives navigation and is applied before the stylesheet is used
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/");
         Assert.Equal("dark", await page.EvaluateAsync<string>("document.documentElement.getAttribute('data-theme')"));
         Assert.Equal("dark", await page.InputValueAsync("#theme-select"));
 
@@ -132,12 +131,15 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Equal("main", focused);
     }
 
-    [Fact]
-    public async Task Search_KeyboardNavigation()
+    [Theory]
+    [InlineData("guide.html")]
+    [InlineData("api/contoso.library/")]
+    [InlineData("api/contoso.library/namespaces/Contoso.Library.html")]
+    public async Task Search_KeyboardNavigation(string path)
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.DocsServer.BaseUrl + "guide.html");
+        await page.GotoAsync(fixture.DocsServer.BaseUrl + path);
 
         await page.FocusAsync("#search-input");
         await page.Keyboard.TypeAsync("Client");
@@ -417,7 +419,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         await page.FillAsync("#search-input", "Client");
         await page.WaitForSelectorAsync("#search-results [role=option]");
 
-        Assert.All(requests, url => Assert.StartsWith(fixture.DocsServer.Origin, url));
+        Assert.All(requests, url => Assert.StartsWith(fixture.DocsServer.BaseUrl, url));
         Assert.DoesNotContain(requests, url => url.Contains("_framework", StringComparison.Ordinal) || url.EndsWith(".wasm", StringComparison.Ordinal) || url.EndsWith(".dll", StringComparison.Ordinal));
     }
 
@@ -429,6 +431,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         var response = await page.GotoAsync(fixture.DocsServer.BaseUrl + "a/b/c/missing-page.html");
 
         Assert.Equal(404, response!.Status);
+        Assert.Equal(fixture.DocsServer.BaseUrl + "404.html", page.Url);
         Assert.Equal("Page not found", await page.TextContentAsync("h1"));
         await page.ClickAsync("main >> text=Go to the home page");
         Assert.Equal(fixture.DocsServer.BaseUrl, page.Url);

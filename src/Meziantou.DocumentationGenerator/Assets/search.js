@@ -152,7 +152,7 @@
         var input = root.querySelector('input[type=search]');
         var list = root.querySelector('[role=listbox]');
         var status = root.querySelector('[role=status]');
-        var basePath = root.getAttribute('data-base-path') || '/';
+        var basePath = root.getAttribute('data-base-path') || './';
         var indexUrl = root.getAttribute('data-index');
         var engine = null;
         var loading = null;

@@ -85,12 +85,12 @@ internal sealed class RenderStage : IBuildStage
 
                 // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
                 var extractionStarted = Stopwatch.GetTimestamp();
-                validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(htmlPages[i]), HtmlLinkExtractor.GetLinks(htmlPages[i]), sourcePaths.GetValueOrDefault(page.FilePath));
+                validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(htmlPages[i]), HtmlLinkExtractor.GetLinks(htmlPages[i]).Select(url => links.Urls.GetRelativeUrl(page.FilePath, url)), sourcePaths.GetValueOrDefault(page.FilePath));
                 linkExtractionTime += Stopwatch.GetElapsedTime(extractionStarted);
             }
 
             var started = Stopwatch.GetTimestamp();
-            Parallel.For(0, pages.Length, parallelOptions, i => htmlPages[i] = minifier.Minify(htmlPages[i]));
+            Parallel.For(0, pages.Length, parallelOptions, i => htmlPages[i] = minifier.Minify(htmlPages[i], url => links.Urls.GetRelativeUrl(pages[i].FilePath, url)));
             minificationTime += Stopwatch.GetElapsedTime(started);
             started = Stopwatch.GetTimestamp();
             for (var i = 0; i < pages.Length; i++)
