@@ -15,3 +15,14 @@ search is checked interactively in a browser.
 
 API navigation only lists the types of the current namespace, so the size of a page does not grow with the number of
 namespaces of a package.
+
+## Page rendering
+
+Components are rendered sequentially to keep access to shared site services and diagnostic ordering deterministic.
+Each page's Razor renderer is disposed after its HTML is captured, so component trees do not accumulate for the entire
+site. HTML minification runs in batches of at most four pages (limited by the available processor count). Link extraction
+and output writes remain sequential, and the number of HTML documents being minified at once is bounded.
+
+Run `Meziantou.DocumentationGenerator build --verbosity detailed` to see stage durations and the page-rendering breakdown:
+component rendering, link extraction, minification, and file writing. Minification time is elapsed time for the batches,
+not the sum of worker times.
