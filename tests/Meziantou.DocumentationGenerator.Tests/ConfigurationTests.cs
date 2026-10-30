@@ -408,6 +408,20 @@ public sealed class ConfigurationTests
     }
 
     [Theory]
+    [InlineData("missing-folder", "DG1007")]
+    [InlineData("", "DG1013")]
+    public async Task PackagePath_WithoutIdAndInvalidPathReportsOnlyPathError(string path, string expectedCode)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, $$"""{ "version": 1, "packages": [ { "path": "{{path}}" } ] }""");
+
+        Assert.Null(configuration);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        Assert.Equal("$.packages[0].path", diagnostic.Location?.JsonPath);
+    }
+
+    [Theory]
     [InlineData("""{}""")]
     [InlineData("""{ "source": "feed" }""")]
     [InlineData("""{ "path": "a.nupkg" }""")]

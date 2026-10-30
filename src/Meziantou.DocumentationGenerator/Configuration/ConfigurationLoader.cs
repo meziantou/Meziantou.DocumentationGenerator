@@ -446,7 +446,7 @@ internal static partial class ConfigurationLoader
                     }
                 }
 
-                if (section.Id is null && !isLocalFolder)
+                if (section.Id is null && (section.Path is null || (localPath is not null && !isLocalFolder)))
                 {
                     Error(DiagnosticDescriptors.InvalidPackageReference, "A package identifier is required unless 'path' is a local directory", path + ".id");
                     isValid = false;
