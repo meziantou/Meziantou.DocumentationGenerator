@@ -5,13 +5,14 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 using Meziantou.DocumentationGenerator.Configuration;
+using Meziantou.DocumentationGenerator.Links;
 using Meziantou.Framework;
 
 namespace Meziantou.DocumentationGenerator.Preview;
 
 /// <summary>
 /// Local web server used to preview the generated site. It behaves like an ordinary static host: files are served under
-/// the base path, directory URLs serve <c>index.html</c> and missing files return the site's <c>404.html</c>.
+/// the base path, directory URLs serve <c>index.html</c> and missing files redirect to the site's <c>404.html</c>.
 /// When live reload is enabled, a script is injected in HTML responses (the files on disk are not modified) and open
 /// pages reload when <see cref="NotifyReload"/> is called.
 /// </summary>
@@ -235,6 +236,11 @@ internal sealed class PreviewServer : IAsyncDisposable
             return;
         }
 
+        if (relativePath == LinkService.NotFoundPath)
+        {
+            response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+
         if (!await TryWriteFileAsync(response, filePath, isHead))
         {
             await WriteNotFoundAsync(response, site, isHead);
@@ -244,7 +250,11 @@ internal sealed class PreviewServer : IAsyncDisposable
     private async Task WriteNotFoundAsync(HttpListenerResponse response, Site site, bool isHead)
     {
         response.StatusCode = (int)HttpStatusCode.NotFound;
-        if (!await TryWriteFileAsync(response, site.Root / "404.html", isHead))
+        if (File.Exists(site.Root / LinkService.NotFoundPath))
+        {
+            response.Redirect(new UrlBuilder(site.BasePath).GetUrl(LinkService.NotFoundPath));
+        }
+        else
         {
             await WriteAsync(response, "text/plain; charset=utf-8", "Not found"u8.ToArray(), isHead);
         }

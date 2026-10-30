@@ -60,7 +60,7 @@ public sealed class ApiPageTests
         Assert.Equal("public void Send(Message message, int retryCount = 3)", declaration.TextContent);
         // Framework types link to Microsoft Learn by default; void is never a link
         Assert.Equal(["Message", "int"], declaration.QuerySelectorAll<Element>("a").Select(a => a.TextContent));
-        Assert.Equal(["/api/contoso.library/Contoso.Library.Message.html", "https://learn.microsoft.com/dotnet/api/system.int32"], declaration.QuerySelectorAll<Element>("a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["Contoso.Library.Message.html", "https://learn.microsoft.com/dotnet/api/system.int32"], declaration.QuerySelectorAll<Element>("a").Select(a => a.GetAttribute("href")));
         Assert.DoesNotContain("throw null", document.DocumentElement!.OuterHtml);
 
         // Documentation sections
@@ -92,7 +92,7 @@ public sealed class ApiPageTests
         Assert.Contains("The message.", delegatePage.QuerySelector("dl.parameters")!.TextContent);
 
         var sealedPage = Load(site, "api/contoso.library/Contoso.Library.Sealed.html");
-        Assert.Equal("/api/contoso.library/Contoso.Library.Base.html", sealedPage.QuerySelector("dl.api-relations a")!.GetAttribute("href"));
+        Assert.Equal("Contoso.Library.Base.html", sealedPage.QuerySelector("dl.api-relations a")!.GetAttribute("href"));
         Assert.Null(sealedPage.GetElementById("Protected"));
 
         var legacy = Load(site, "api/contoso.library/Contoso.Library.Legacy.html");
@@ -100,7 +100,7 @@ public sealed class ApiPageTests
 
         var nested = Load(site, "api/contoso.library/Contoso.Library.Collections.Tree-1.Node.Child-1.html");
         Assert.Equal("Tree<T>.Node.Child<TKey> Class", nested.QuerySelector("h1")!.TextContent);
-        Assert.Equal("/api/contoso.library/Contoso.Library.Collections.Tree-1.Node.html", nested.QuerySelectorAll<Element>("dl.api-metadata a")[^1].GetAttribute("href"));
+        Assert.Equal("Contoso.Library.Collections.Tree-1.Node.html", nested.QuerySelectorAll<Element>("dl.api-metadata a")[^1].GetAttribute("href"));
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class ApiPageTests
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
         Assert.False(File.Exists(site.Output / "contoso.bare" / "index.html"));
         var reference = Load(site, "api/contoso.bare/index.html");
-        Assert.Equal("/api/contoso.bare/namespaces/Contoso.Bare.html", reference.QuerySelector(".api-table a")!.GetAttribute("href"));
+        Assert.Equal("namespaces/Contoso.Bare.html", reference.QuerySelector(".api-table a")!.GetAttribute("href"));
 
         var type = Load(site, "api/contoso.bare/Contoso.Bare.Thing.html");
         Assert.Equal("No documentation is available.", type.GetElementById("Run")!.QuerySelector(".no-documentation")!.TextContent);
@@ -192,7 +192,7 @@ public sealed class ApiPageTests
         var api = items[items.Count - 1];
         Assert.Equal("API reference", api.QuerySelector(".nav-group")!.TextContent);
         Assert.Contains("nav-api-reference", api.GetAttribute("class")!.Split(' '));
-        Assert.Equal(["Contoso.First", "Contoso.Second"], api.QuerySelectorAll<Element>("details > ul > li > a").Where(a => a.GetAttribute("href") is "/api/contoso.first/" or "/api/contoso.second/").Select(a => a.TextContent));
+        Assert.Equal(["Contoso.First", "Contoso.Second"], api.QuerySelectorAll<Element>("details > ul > li > a").Where(a => a.GetAttribute("href") is "./" or "../contoso.second/").Select(a => a.TextContent));
     }
 
     [Fact]
@@ -215,13 +215,13 @@ public sealed class ApiPageTests
     }
 
     [Fact]
-    public async Task Subpath_LinksIncludeTheBasePath()
+    public async Task Subpath_LinksAreRelativeToThePage()
     {
         await using var site = await BuildKitchenSinkAsync(arguments: ["--base-path", "/docs/"]);
         var document = Load(site, "api/contoso.library/Contoso.Library.Client.html");
 
-        Assert.All(document.QuerySelectorAll<Element>("a[href^='/']"), a => Assert.StartsWith("/docs/", a.GetAttribute("href")));
-        Assert.Equal("/docs/_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
+        Assert.Empty(document.QuerySelectorAll<Element>("[href^='/'], [src^='/']"));
+        Assert.Equal("../../_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
     }
 
     [Fact]

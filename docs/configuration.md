@@ -48,7 +48,7 @@ At least one package or a content directory is required.
 | `title` | `Documentation` | Site title, used in the header and page titles. |
 | `description` | | Default page description. |
 | `language` | `en` | Language of the content (`<html lang>`). |
-| `basePath` | `/` | URL path where the site is deployed. `docs`, `/docs` and `/docs/` are equivalent. |
+| `basePath` | `/` | Deployment path used for absolute metadata URLs and the local preview server. Internal HTML links are file-relative and do not require it. `docs`, `/docs` and `/docs/` are equivalent. |
 | `url` | | Absolute origin (`https://example.com`) used for canonical URLs, the sitemap and social previews. It must not contain a path: canonical URLs are `url` + `basePath` + page path. Without `url`, no canonical URL and no sitemap are generated. |
 | `logo` | | Logo image file. |
 | `favicon` | | Favicon file. |

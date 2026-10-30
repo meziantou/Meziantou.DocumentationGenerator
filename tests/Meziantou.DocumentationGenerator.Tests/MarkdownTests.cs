@@ -464,7 +464,7 @@ public sealed partial class MarkdownTests
         });
 
         Assert.Equal(1, site.Result.ExitCode);
-        Assert.Contains("docs/index.md: error DG4003: Broken link '/other.html#missing' in 'index.html': 'other.html' has no element with the identifier 'missing'", site.Result.AllOutput, StringComparison.Ordinal);
+        Assert.Contains("docs/index.md: error DG4003: Broken link 'other.html#missing' in 'index.html': 'other.html' has no element with the identifier 'missing'", site.Result.AllOutput, StringComparison.Ordinal);
         Assert.Contains("docs/index.md: error DG4003: Broken link '#nope' in 'index.html'", site.Result.AllOutput, StringComparison.Ordinal);
     }
 

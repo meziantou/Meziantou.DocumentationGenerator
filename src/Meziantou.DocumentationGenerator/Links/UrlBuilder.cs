@@ -4,8 +4,8 @@ using Meziantou.DocumentationGenerator.Configuration;
 namespace Meziantou.DocumentationGenerator.Links;
 
 /// <summary>
-/// Converts output file paths to root-relative URLs. The base path is applied exactly once, <c>index.html</c> files are
-/// linked by their directory URL, and path segments and fragments are percent-encoded.
+/// Converts output file paths to site URLs and makes them file-relative when emitting HTML. The base path is applied
+/// exactly once, <c>index.html</c> files are linked by their directory URL, and paths and fragments are percent-encoded.
 /// </summary>
 internal sealed class UrlBuilder(UrlBasePath basePath)
 {
@@ -35,6 +35,36 @@ internal sealed class UrlBuilder(UrlBasePath basePath)
         }
 
         return url;
+    }
+
+    /// <summary>Converts a site URL to a URL relative to the output file, leaving external URLs and fragments unchanged.</summary>
+    public string GetRelativeUrl(string filePath, string url)
+    {
+        if (!url.StartsWith(BasePath.Value, StringComparison.Ordinal) || url.StartsWith("//", StringComparison.Ordinal))
+            return url;
+
+        var target = url[BasePath.Value.Length..];
+        var suffixIndex = target.IndexOfAny(['?', '#']);
+        var suffix = suffixIndex < 0 ? "" : target[suffixIndex..];
+        var targetPath = suffixIndex < 0 ? target : target[..suffixIndex];
+        var directoryEnd = filePath.LastIndexOf('/', StringComparison.Ordinal);
+        var directory = directoryEnd < 0 ? "" : EncodePath(filePath[..(directoryEnd + 1)]);
+        var commonLength = 0;
+        for (var i = 0; i < Math.Min(directory.Length, targetPath.Length) && directory[i] == targetPath[i]; i++)
+        {
+            if (directory[i] == '/')
+            {
+                commonLength = i + 1;
+            }
+        }
+
+        var relative = string.Concat(Enumerable.Repeat("../", directory[commonLength..].Count(c => c == '/'))) + targetPath[commonLength..];
+        if (relative.Length == 0)
+        {
+            relative = "./";
+        }
+
+        return relative + suffix;
     }
 
     /// <summary>Returns the absolute URL of a page, or <see langword="null"/> when no site URL is configured.</summary>

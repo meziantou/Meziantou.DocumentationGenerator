@@ -10,7 +10,7 @@ namespace Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
 /// <summary>
 /// An ordinary static file server: files are served from a directory under a base path, directory URLs serve index.html,
-/// and missing files return 404 with the site's 404.html, as configured on static hosts. There is no SPA fallback.
+/// and missing files redirect to the site's 404.html. There is no SPA fallback.
 /// </summary>
 internal sealed class StaticSiteServer : IAsyncDisposable
 {
@@ -41,6 +41,11 @@ internal sealed class StaticSiteServer : IAsyncDisposable
             var file = Resolve(root, basePath, path);
             if (file is not null)
             {
+                if (path == basePath + "404.html")
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                }
+
                 context.Response.ContentType = ContentTypes.TryGetContentType(file, out var contentType) ? contentType : "application/octet-stream";
                 await context.Response.SendFileAsync(file);
             }
@@ -50,8 +55,7 @@ internal sealed class StaticSiteServer : IAsyncDisposable
                 var notFound = root / "404.html";
                 if (File.Exists(notFound))
                 {
-                    context.Response.ContentType = "text/html; charset=utf-8";
-                    await context.Response.SendFileAsync(notFound);
+                    context.Response.Redirect(basePath + "404.html");
                 }
             }
 

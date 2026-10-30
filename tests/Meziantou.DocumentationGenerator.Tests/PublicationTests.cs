@@ -1,5 +1,8 @@
 using Meziantou.DocumentationGenerator.Cli;
+using Meziantou.DocumentationGenerator.Configuration;
+using Meziantou.DocumentationGenerator.Links;
 using Meziantou.DocumentationGenerator.Rendering;
+using Meziantou.DocumentationGenerator.Tests.EndToEnd;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.Framework;
 
@@ -7,6 +10,34 @@ namespace Meziantou.DocumentationGenerator.Tests;
 
 public sealed class PublicationTests
 {
+    [Fact]
+    public void Minification_RewritesUrlAttributesWithoutChangingTextOrExternalUrls()
+    {
+        var minifier = new HtmlMinifier("");
+        var urls = new UrlBuilder(UrlBasePath.Parse("/docs/"));
+        var html = minifier.Minify("""
+            <!DOCTYPE html><html><head><link rel="canonical" href="https://example.com/docs/guide.html"></head><body>
+            <a href="/docs/guide.html?x=1&amp;y=2#section">/docs/guide.html</a>
+            <a href="#main">Skip</a><a href="//example.com/docs/">External</a>
+            <img src="/docs/images/a%20b.png">
+            <script src="/docs/_assets/site.js"></script>
+            <div data-index="/docs/_assets/search-index.json" data-base-path="/docs/"></div>
+            <pre>&lt;a href="/docs/guide.html"&gt;</pre>
+            </body></html>
+            """, url => urls.GetRelativeUrl("guides/install.html", url));
+        var document = HtmlDocumentLoader.Parse(html);
+        Assert.Equal("https://example.com/docs/guide.html", document.QuerySelector("link")!.GetAttribute("href"));
+        Assert.Equal("../guide.html?x=1&y=2#section", document.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/docs/guide.html", document.QuerySelector("a")!.TextContent);
+        Assert.NotNull(document.QuerySelector("a[href='#main']"));
+        Assert.NotNull(document.QuerySelector("a[href='//example.com/docs/']"));
+        Assert.Equal("../images/a%20b.png", document.QuerySelector("img")!.GetAttribute("src"));
+        Assert.Equal("../_assets/site.js", document.QuerySelector("script")!.GetAttribute("src"));
+        Assert.Equal("../_assets/search-index.json", document.QuerySelector("div")!.GetAttribute("data-index"));
+        Assert.Equal("../", document.QuerySelector("div")!.GetAttribute("data-base-path"));
+        Assert.Equal("<a href=\"/docs/guide.html\">", document.QuerySelector("pre")!.TextContent);
+    }
+
     [Fact]
     public void ParallelMinification_IsByteIdenticalToSequentialMinification()
     {
@@ -54,7 +85,7 @@ public sealed class PublicationTests
         Assert.Equal("<script>alert(1)</script> | Test site", document.Title);
         Assert.Equal("<script>alert(1)</script>", document.QuerySelector("h1")!.TextContent);
         Assert.Equal("bold", document.QuerySelector("strong")!.TextContent);
-        Assert.Equal("/_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
+        Assert.Equal("_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
         Assert.DoesNotContain("blazor", html, ignoreCase: true);
         Assert.DoesNotContain("_framework", html);
         Assert.DoesNotContain("<!--!-->", html);
@@ -72,8 +103,60 @@ public sealed class PublicationTests
         var rootFiles = GetFiles(root.FullPath / "_site");
         var docsFiles = GetFiles(docs.FullPath / "_site");
         Assert.Equal(rootFiles.Keys, docsFiles.Keys);
-        Assert.NotNull(HtmlDocumentLoader.Parse(docsFiles["index.html"]).QuerySelector("a[href='/docs/guide.html']"));
-        Assert.Equal(rootFiles["guide.html"], docsFiles["guide.html"].Replace("=/docs/", "=/", StringComparison.Ordinal).Replace("\"/docs/", "\"/", StringComparison.Ordinal));
+        Assert.NotNull(HtmlDocumentLoader.Parse(docsFiles["index.html"]).QuerySelector("a[href='guide.html']"));
+        foreach (var file in rootFiles.Keys.Where(f => f.EndsWith(".html", StringComparison.Ordinal)))
+        {
+            Assert.Equal(rootFiles[file], docsFiles[file]);
+        }
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/build/path/")]
+    public async Task GeneratedSite_CanBeRelocatedWithoutRebuilding(string basePath)
+    {
+        await using var site = await SiteBuilder.BuildAsync(
+            [ApiModelTests.CreateKitchenSinkPackage()],
+            files: new()
+            {
+                ["docs/index.md"] = "# Home\n\n[Install](Guides/install.md) or [browse the API](cref:T:Contoso.Library.Client).",
+                ["docs/Guides/_folder.yml"] = "title: Guides\nslug: guides\n",
+                ["docs/Guides/install.md"] = """
+                    # Install
+
+                    ## Setup
+
+                    [This section](install.md?tab=cli#setup), [home](../index.md), [next](Deep/next.md),
+                    or [the API member](cref:M:Contoso.Library.Client.Send(System.String)).
+
+                    ![Diagram](images/a%20b.svg)
+                    """,
+                ["docs/Guides/Deep/next.md"] = "# Next\n\n[Previous](../install.md#setup)",
+                ["docs/Guides/images/a b.svg"] = "<svg/>",
+                ["logo.svg"] = "<svg/>",
+                ["favicon.ico"] = "ico",
+            },
+            extraConfiguration: $$""" "site": { "title": "Portable site", "basePath": "{{basePath}}", "logo": "logo.svg", "favicon": "favicon.ico" }, """);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+
+        foreach (var deploymentPath in new[] { "/", "/Meziantou.Framework/", "/another/nested/path/" })
+        {
+            Assert.Empty(SiteCrawler.Crawl(site.Output, deploymentPath, siteUrl: null));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(site.Output, "*.html", SearchOption.AllDirectories))
+        {
+            var document = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken));
+            Assert.Empty(document.QuerySelectorAll<Meziantou.Framework.WebPlatform.Dom.Element>("[href^='/'], [src^='/'], [data-index^='/'], [data-base-path^='/']"));
+        }
+
+        var install = HtmlDocumentLoader.Parse(site.ReadFile("guides/install.html"));
+        Assert.NotNull(install.QuerySelector("a[href='install.html?tab=cli#setup']"));
+        Assert.Equal("images/a%20b.svg", install.QuerySelector("article img")!.GetAttribute("src"));
+        Assert.Equal("../_assets/logo.svg", install.QuerySelector(".site-logo")!.GetAttribute("src"));
+        var search = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.library/namespaces/Contoso.Library.html")).QuerySelector("[data-search]")!;
+        Assert.Equal("../../../_assets/search-index.json", search.GetAttribute("data-index"));
+        Assert.Equal("../../../", search.GetAttribute("data-base-path"));
     }
 
     [Fact]

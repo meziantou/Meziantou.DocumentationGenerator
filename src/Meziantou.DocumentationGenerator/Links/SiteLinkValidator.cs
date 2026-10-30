@@ -72,7 +72,13 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
         }
 
         if (!href.StartsWith('/', StringComparison.Ordinal))
-            return "internal links must be root-relative";
+        {
+            var pageUrl = new Uri("https://docgen.invalid" + urls.GetUrl(page));
+            if (!Uri.TryCreate(pageUrl, href, out var resolved))
+                return "invalid relative URL";
+
+            href = resolved.PathAndQuery + resolved.Fragment;
+        }
 
         if (href.StartsWith("//", StringComparison.Ordinal))
             return null;

@@ -108,6 +108,43 @@ public sealed class LinkServiceTests
         Assert.Equal("/docs/page.html#a%25b%23c", urls.GetUrl("page.html", "a%b#c"));
     }
 
+    [Theory]
+    [InlineData("index.html", "/docs/", "./")]
+    [InlineData("index.html", "/docs/guide.html", "guide.html")]
+    [InlineData("guides/index.html", "/docs/guides/", "./")]
+    [InlineData("guides/install.html", "/docs/guides/install.html", "install.html")]
+    [InlineData("guides/install.html", "/docs/guides/start.html?q=1&x=2#install", "start.html?q=1&x=2#install")]
+    [InlineData("guides/install.html", "/docs/guide.html", "../guide.html")]
+    [InlineData("api/p/namespaces/N.html", "/docs/_assets/site.css", "../../../_assets/site.css")]
+    [InlineData("api/p/Type.html", "/docs/api/p/Other.html#M%60%601", "Other.html#M%60%601")]
+    [InlineData("api/p/Type.html", "/docs/api/other/", "../other/")]
+    [InlineData("guides/install.html", "/docs/", "../")]
+    [InlineData("a b/été.html", "/docs/a%20b/autre.html", "autre.html")]
+    [InlineData("guide.html", "/docs/a%20b/%C3%A9t%C3%A9.html#x%25y", "a%20b/%C3%A9t%C3%A9.html#x%25y")]
+    [InlineData("guide.html", "#main", "#main")]
+    [InlineData("guide.html", "https://example.com/docs/", "https://example.com/docs/")]
+    [InlineData("guide.html", "//cdn.example.com/image.png", "//cdn.example.com/image.png")]
+    [InlineData("guide.html", "mailto:docs@example.com", "mailto:docs@example.com")]
+    [InlineData("guide.html", "/outside/page.html", "/outside/page.html")]
+    public void UrlBuilder_MakesSiteUrlsRelativeToTheOutputFile(string filePath, string url, string expected)
+    {
+        var urls = new UrlBuilder(UrlBasePath.Parse("/docs/"));
+        Assert.Equal(expected, urls.GetRelativeUrl(filePath, url));
+    }
+
+    [Fact]
+    public void LinkValidator_ResolvesFileRelativeUrls()
+    {
+        var diagnostics = new DiagnosticBag();
+        var validator = new SiteLinkValidator(new UrlBuilder(UrlBasePath.Parse("/docs/")), diagnostics);
+        validator.AddFile("index.html", [], ["guides/", "guides/install.html?q=1#install"]);
+        validator.AddFile("guides/index.html", [], ["../", "./", "install.html#install"]);
+        validator.AddFile("guides/install.html", ["install"], ["../", "?tab=cli#install", "../_assets/site.css"]);
+        validator.AddFile("_assets/site.css", [], []);
+        validator.Validate();
+        Assert.Empty(diagnostics.GetDiagnostics());
+    }
+
     [Fact]
     public async Task SameTypeInTwoAssembliesOfAPackage_IsDisambiguated()
     {

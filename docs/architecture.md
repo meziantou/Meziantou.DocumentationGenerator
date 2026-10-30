@@ -157,9 +157,13 @@ Authored page URLs are computed from folder and page titles unless a `slug` is s
 - Every page is an `.html` file. The site never requires an SPA fallback or URL rewriting.
 - A page named `index.html` is linked by its directory URL (`/docs/foo/`); every other page is linked by its
   file URL (`/docs/foo/api/Foo.Bar.html`). Static hosts serve `index.html` for directory URLs.
-- Links are root-relative and include the base path, so a page renders correctly whatever URL served it
-  (including the 404 page).
+- Shared models use site URLs with the configured base path. When writing HTML, every internal URL is made
+  relative to that output file, including navigation, content, assets and search. Absolute external and metadata
+  URLs are unchanged, so relocating a site does not require rebuilding unless its absolute metadata must change.
+- The 404 page is file-relative too: hosts must redirect to its actual URL rather than serving it at a nested missing URL.
 - Opening the site from `file://` is **Unsupported**.
+
+The following table shows deployment URLs, not the relative attribute values emitted in HTML:
 
 | Page | File | URL with `basePath: /` | URL with `basePath: /docs/` |
 | --- | --- | --- | --- |
@@ -331,8 +335,8 @@ their first method. Fields and members without bodies get no line number.
   the next change triggers a new build. When the configuration cannot be loaded, the inputs of the last valid
   configuration stay watched.
 - `--serve` serves the output directory on `http://localhost:<port>` under `site.basePath`, like an ordinary static
-  host: directory URLs serve `index.html`, missing files return `404.html` with status 404, and `/` redirects to the
-  base path. It uses `HttpListener`, so the tool does not require the ASP.NET Core shared framework.
+  host: directory URLs serve `index.html`, missing files redirect to `404.html` (which returns status 404), and `/`
+  redirects to the base path. It uses `HttpListener`, so the tool does not require the ASP.NET Core shared framework.
 - With both options, HTML responses get a `<script src="/__docgen/livereload.js">` tag inserted before `</body>` by the
   server; the generated files are not modified. The script listens to server-sent events on `/__docgen/livereload` and
   reloads the page after each successful build.

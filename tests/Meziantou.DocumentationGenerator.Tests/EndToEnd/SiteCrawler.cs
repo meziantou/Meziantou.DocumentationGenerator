@@ -99,6 +99,12 @@ internal static class SiteCrawler
         if (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && !url.StartsWith('/', StringComparison.Ordinal))
             return absolute.Scheme is "https" or "http" or "mailto" ? null : "uses an unsafe scheme";
 
+        if (!url.StartsWith('/', StringComparison.Ordinal))
+        {
+            var resolved = new Uri(new Uri("https://crawler.invalid" + basePath + page), url);
+            url = resolved.PathAndQuery + resolved.Fragment;
+        }
+
         if (!url.StartsWith(basePath, StringComparison.Ordinal))
             return "is outside the base path";
 
@@ -108,6 +114,12 @@ internal static class SiteCrawler
         {
             fragment = Uri.UnescapeDataString(url[(hash + 1)..]);
             url = url[..hash];
+        }
+
+        var query = url.IndexOf('?', StringComparison.Ordinal);
+        if (query >= 0)
+        {
+            url = url[..query];
         }
 
         var path = Uri.UnescapeDataString(url[basePath.Length..]);

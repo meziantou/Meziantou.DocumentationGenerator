@@ -22,7 +22,7 @@ public sealed class SiteMetadataTests
 
         var notFound = HtmlDocumentLoader.Parse(site.ReadFile("404.html"));
         Assert.Equal("noindex", notFound.QuerySelector("meta[name=robots]")!.GetAttribute("content"));
-        Assert.Equal("/", notFound.QuerySelector("main a")!.GetAttribute("href"));
+        Assert.Equal("./", notFound.QuerySelector("main a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public sealed class SiteMetadataTests
         Assert.Equal("Résumé — 日本語 & <tags> \"quoted\"", document.QuerySelector("meta[property='og:title']")!.GetAttribute("content"));
         Assert.Equal("https://example.com/_assets/social.png", document.QuerySelector("meta[property='og:image']")!.GetAttribute("content"));
         Assert.Equal("summary_large_image", document.QuerySelector("meta[name='twitter:card']")!.GetAttribute("content"));
-        Assert.Equal("/_assets/favicon.ico", document.QuerySelector("link[rel=icon]")!.GetAttribute("href"));
-        Assert.Equal("/_assets/logo.svg", document.QuerySelector(".site-logo")!.GetAttribute("src"));
+        Assert.Equal("_assets/favicon.ico", document.QuerySelector("link[rel=icon]")!.GetAttribute("href"));
+        Assert.Equal("_assets/logo.svg", document.QuerySelector(".site-logo")!.GetAttribute("src"));
         Assert.Equal("fr", document.DocumentElement!.GetAttribute("lang"));
         Assert.True(File.Exists(site.Output / "_assets" / "social.png"));
     }

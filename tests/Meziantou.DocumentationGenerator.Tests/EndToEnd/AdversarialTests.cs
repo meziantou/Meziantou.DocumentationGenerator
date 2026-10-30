@@ -47,7 +47,7 @@ public sealed class AdversarialTests
         foreach (var file in Directory.EnumerateFiles(site.Output, "*.html", SearchOption.AllDirectories))
         {
             var document = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken));
-            var scripts = document.QuerySelectorAll<Element>("script").Where(s => !(s.GetAttribute("src")?.Contains("/_assets/", StringComparison.Ordinal) ?? false) && !s.TextContent!.StartsWith("document.documentElement.classList.add('js')", StringComparison.Ordinal)).ToList();
+            var scripts = document.QuerySelectorAll<Element>("script").Where(s => !(s.GetAttribute("src")?.Contains("_assets/", StringComparison.Ordinal) ?? false) && !s.TextContent!.StartsWith("document.documentElement.classList.add('js')", StringComparison.Ordinal)).ToList();
             Assert.Empty(scripts);
             Assert.Empty(document.QuerySelectorAll<Element>("iframe, style, object, embed"));
             Assert.DoesNotContain(document.All.SelectMany(e => e.Attributes), a => a.Name.StartsWith("on", StringComparison.OrdinalIgnoreCase));
