@@ -47,6 +47,58 @@ public sealed class ConfigurationTests
     }
 
     [Fact]
+    public async Task SiteHeaderLinks_AreConfigured()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, """
+            {
+              "version": 1,
+              "packages": [ { "id": "A", "version": "1.0.0" } ],
+              "site": {
+                "headerLinks": [
+                  { "text": "Reference", "url": "https://example.com/reference", "icon": "📖" },
+                  { "text": "GitHub", "url": "https://github.com/example/project" }
+                ]
+              }
+            }
+            """);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(configuration);
+        Assert.Collection(configuration.Site.HeaderLinks,
+            link =>
+            {
+                Assert.Equal("Reference", link.Text);
+                Assert.Equal("https://example.com/reference", link.Url);
+                Assert.Equal("📖", link.Icon);
+            },
+            link =>
+            {
+                Assert.Equal("GitHub", link.Text);
+                Assert.Equal("https://github.com/example/project", link.Url);
+                Assert.Null(link.Icon);
+            });
+    }
+
+    [Fact]
+    public async Task SiteHeaderLinks_RejectUnsafeUrls()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, """
+            {
+              "version": 1,
+              "packages": [ { "id": "A", "version": "1.0.0" } ],
+              "site": { "headerLinks": [ { "text": "Unsafe", "url": "javascript:alert(1)" } ] }
+            }
+            """);
+
+        Assert.Null(configuration);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG1013", diagnostic.Code);
+        Assert.Equal("$.site.headerLinks[0].url", diagnostic.Location?.JsonPath);
+    }
+
+    [Fact]
     public async Task MultiplePackages()
     {
         await using var temp = TemporaryDirectory.Create();

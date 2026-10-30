@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.Framework;
@@ -20,6 +21,7 @@ internal static partial class ConfigurationLoader
 
     internal static JsonSerializerOptions SerializerOptions { get; } = new()
     {
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
@@ -290,7 +292,42 @@ internal static partial class ConfigurationLoader
                 SocialImage = socialImage,
                 Robots = robots,
                 Footer = section.Footer,
+                HeaderLinks = ValidateHeaderLinks(section.HeaderLinks),
             };
+        }
+
+        private ImmutableArray<SiteHeaderLink> ValidateHeaderLinks(List<ConfigurationFile.HeaderLinkSection>? sections)
+        {
+            if (sections is null)
+                return [];
+
+            var result = ImmutableArray.CreateBuilder<SiteHeaderLink>();
+            for (var i = 0; i < sections.Count; i++)
+            {
+                var path = $"$.site.headerLinks[{i.ToString(CultureInfo.InvariantCulture)}]";
+                var section = sections[i];
+                if (section is null || string.IsNullOrWhiteSpace(section.Text))
+                {
+                    Error(DiagnosticDescriptors.InvalidConfigurationValue, "A header link requires text", path + ".text");
+                    continue;
+                }
+
+                if (section.Url is null || !Uri.TryCreate(section.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
+                {
+                    Error(DiagnosticDescriptors.InvalidConfigurationValue, "A header link URL must be an absolute http or https URL", path + ".url");
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    Error(DiagnosticDescriptors.CredentialsInConfiguration, "A header link URL must not contain credentials", path + ".url");
+                    continue;
+                }
+
+                result.Add(new SiteHeaderLink(section.Text.Trim(), uri.AbsoluteUri, string.IsNullOrWhiteSpace(section.Icon) ? null : section.Icon.Trim()));
+            }
+
+            return result.ToImmutable();
         }
 
         private FullPath? ValidateOutput(string? output)

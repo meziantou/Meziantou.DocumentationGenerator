@@ -55,6 +55,17 @@ At least one package or a content directory is required.
 | `socialImage` | | Image used by social previews. Requires `url`. |
 | `robots` | `none` | `none`: no `robots.txt` and no robots meta tag. `allow`: `robots.txt` allowing crawlers and referencing the sitemap. `disallow`: `robots.txt` disallowing crawlers and a `noindex` meta tag on every page. `robots.txt` is only generated when `basePath` is `/` because crawlers only read it at the origin root (`DG1010`). |
 | `footer` | | Text displayed in the footer. |
+| `headerLinks` | `[]` | Links displayed on the right side of the header. Each entry has required `text` and absolute `url` properties, and an optional `icon` emoji or text glyph. |
+
+```json
+"site": {
+  "headerLinks": [
+    { "text": "Reference", "url": "https://example.com/reference", "icon": "📖" },
+    { "text": "Sponsors", "url": "https://github.com/sponsors/contoso", "icon": "💖" },
+    { "text": "GitHub", "url": "https://github.com/contoso/project" }
+  ]
+}
+```
 
 ## `packages[]`
 
