@@ -62,6 +62,7 @@ internal sealed class RenderStage : IBuildStage
         // A single renderer is used sequentially: HtmlRenderer has dispatcher affinity, and sequential rendering keeps the output deterministic
         await using var renderer = new RazorRenderer(services => services.AddSingleton(site));
         var minifier = new HtmlMinifier(styleSheet);
+        var sourcePaths = context.Content.Pages.ToDictionary(p => p.Route.FilePath, p => p.DisplayPath, StringComparer.Ordinal);
         foreach (var page in SitePageCatalog.GetPages(site))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -69,7 +70,7 @@ internal sealed class RenderStage : IBuildStage
             html = html.ReplaceLineEndings("\n");
 
             // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
-            validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html));
+            validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html), sourcePaths.GetValueOrDefault(page.FilePath));
             staging.WriteText(page.FilePath, minifier.Minify(html));
         }
 

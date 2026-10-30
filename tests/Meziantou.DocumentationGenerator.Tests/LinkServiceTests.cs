@@ -9,7 +9,7 @@ namespace Meziantou.DocumentationGenerator.Tests;
 
 public sealed class LinkServiceTests
 {
-    private static readonly Lazy<CompiledAssembly> Guard = new(() => TestCompiler.Compile("Contoso.Guard", """
+    internal static readonly Lazy<CompiledAssembly> Guard = new(() => TestCompiler.Compile("Contoso.Guard", """
         namespace Utils
         {
             /// <summary>Guard.</summary>
@@ -21,7 +21,7 @@ public sealed class LinkServiceTests
         }
         """));
 
-    private static readonly Lazy<CompiledAssembly> OtherGuard = new(() => TestCompiler.Compile("Contoso.OtherGuard", """
+    internal static readonly Lazy<CompiledAssembly> OtherGuard = new(() => TestCompiler.Compile("Contoso.OtherGuard", """
         namespace Utils
         {
             /// <summary>Another guard.</summary>

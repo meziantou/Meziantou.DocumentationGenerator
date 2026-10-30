@@ -10,7 +10,8 @@ The output path is computed from titles, not from the source path. Each folder c
 its slugified title. With the titles "Imaging", "Loading and saving" and "Loading images",
 `01-Imaging/05-LoadingAndSaving/02-LoadingImages.md` becomes `imaging/loading-and-saving/loading-images.html`.
 Slugifying removes accents, lowercases, replaces runs of characters other than ASCII letters and digits with `-`, and
-trims `-`. Two pages with the same output path are an error (`DG4005`).
+trims `-`. Two pages, or two folders, with the same output path are an error (`DG4005`), and only the root `index.md`
+can map to `index.html`.
 
 The page title is the front matter `title`, then a leading level-1 heading, then the file name without its number
 prefix (`02-LoadingImages.md` → `LoadingImages`).
@@ -33,7 +34,7 @@ slug: start
 | --- | --- |
 | `title` | Page title. Default: the first level-1 heading, then the file name. A leading level-1 heading is not repeated in the page. |
 | `description` | Meta description and social preview text. Default: the first paragraph. |
-| `slug` | Last segment of the output path, instead of the slugified title (`start` produces `{folders}/start.html`). A single segment: no `/` and no `.html`. Use it to keep URLs stable when the title changes. An invalid slug is reported (`DG5002`) and the title is used. |
+| `slug` | Last segment of the output path, instead of the slugified title (`start` produces `{folders}/start.html`). A single segment: no `/` and no `.html`. Use it to keep URLs stable when the title changes. An invalid slug is an error (`DG5012`). |
 
 Other keys are ignored. Front matter is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 
@@ -96,7 +97,7 @@ generated HTML is validated afterwards: every internal `href`, `src` and fragmen
 - `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol.
 
 References are resolved first in the current assembly, then in the current product, then in every package. Several
-matches at the same level are ambiguous (`DG4002`); unresolved references are displayed as code (`DG4001`). Symbols
+matches at the same level are ambiguous (`DG4002`); unresolved references are an error (`DG4001`). Symbols
 outside the configured packages are linked only through [`xrefs`](configuration.md#xrefs) (by default, `System` and
 `Microsoft` namespaces to Microsoft Learn).
 

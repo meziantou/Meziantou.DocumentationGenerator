@@ -58,14 +58,14 @@ input and cannot be lowered.
 | `DG3005` | warning | A PDB does not match its assembly (PDB identifier and timestamp); it is not used |
 | `DG3006` | info | Source Link points to a host other than GitHub; no source link is generated |
 | `DG3007` | info | Several implementation assemblies give different locations for a reference assembly symbol; no source link is generated |
-| `DG4001` | warning | Unresolved reference: no page and no `xrefs` mapping; the name is displayed without a link |
-| `DG4002` | warning | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!` |
-| `DG4003` | error | Broken link in the generated site (missing page or anchor) |
+| `DG4001` | error | Unresolved reference: a Markdown `cref:` link or an XML reference the compiler could not resolve (`!:`) matches no page and no `xrefs` mapping |
+| `DG4002` | error | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!` |
+| `DG4003` | error | Broken link in the generated site (missing page or anchor); reported on the Markdown file of authored pages |
 | `DG4004` | warning | Several types map to the same page; URLs are disambiguated with the assembly name or a hash |
-| `DG4005` | error | Several files map to the same output path (compared case-insensitively) |
+| `DG4005` | error | Several files or content folders map to the same output path (compared case-insensitively), or a page other than the root `index.md` maps to `index.html` |
 | `DG4006` | error | Duplicate anchor in a page |
 | `DG4007` | error (safety) | Unsafe output path |
-| `DG4008` | warning | A URL with a scheme other than http, https or mailto was removed |
+| `DG4008` | error | A URL with a scheme other than http, https or mailto was removed |
 | `DG4009` | info | A documentation reference targets a symbol outside the configured packages and no `xrefs` mapping matches; it is displayed as code |
 | `DG5001` | error | A link targets a Markdown file that is not a page of the content directory (missing or excluded by `content.exclude`), or a folder without pages; the link is removed |
 | `DG5002` | warning | Invalid front matter or Markdown file |
@@ -73,6 +73,7 @@ input and cannot be lowered.
 | `DG5009` | error (safety) | A link or include targets a path outside the allowed directory |
 | `DG5010` | info | Unknown code language; the code is displayed without highlighting |
 | `DG5011` | warning | A folder has no `_folder.yml` or its `_folder.yml` has no `title`; the folder name without its number prefix is used |
+| `DG5012` | error | Invalid `slug` in front matter or `_folder.yml`: it must be a single URL segment without `/` or extension |
 | `DG6001` | warning | Malformed XML documentation file; API pages are generated without documentation |
 | `DG6002` | info | XML documentation entries that match no public symbol (usually internal members) |
 | `DG6003` | warning | `<inheritdoc>` cannot be resolved (missing or ambiguous target, or dependency not configured in `references`); a note is displayed |

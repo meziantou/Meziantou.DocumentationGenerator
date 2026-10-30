@@ -131,7 +131,7 @@ public sealed class XmlDocumentationTests
         Assert.Contains(diagnostics, d => d.Code == "DG6007" && d.Message.Contains("'missing'", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6007" && d.Message.Contains("'nope'", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6008" && d.Message.Contains("<summary>", StringComparison.Ordinal));
-        Assert.Contains(diagnostics, d => d.Code == "DG4008" && d.Message.Contains("javascript:", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, d => d.Code == "DG4008" && d.Severity == Diagnostics.DiagnosticSeverity.Error && d.Message.Contains("javascript:", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6006" && d.Message.Contains("<unknowntag>", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6002" && d.Message.Contains("M:Contoso.Docs.Widget.Internal", StringComparison.Ordinal));
     }

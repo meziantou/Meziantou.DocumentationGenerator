@@ -264,7 +264,7 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
   `{ "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }` where `{uid}` is the
   lowercase documentation ID without its prefix and generic arity markers replaced by `-N`. Without a matching
   mapping the reference is displayed as code without a link. Markdown `cref:` links and XML references the compiler
-  could not resolve (`!:`) are reported with warning `DG4001`; compiler-resolved XML references and signature types
+  could not resolve (`!:`) are reported with error `DG4001`; compiler-resolved XML references and signature types
   outside the configured packages are reported with info `DG4009`. The generator never guesses
   that every unresolved type is a valid Microsoft Learn URL.
 
@@ -273,7 +273,7 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
 **Guaranteed.**
 
 - Markdown pages use YAML front matter with `title`, `description` and `slug` (optional single URL segment
-  replacing the slugified title: no `/`, no `.html`; an invalid slug is `DG5002` and the title is used). Unknown
+  replacing the slugified title: no `/`, no `.html`; an invalid slug is error `DG5012`). Unknown
   front matter keys, including the former `uid`, are ignored.
 - The page title is, in order: front matter `title`, leading level-1 heading, file name without its number prefix.
 - `AGENTS.md`-style files are not skipped automatically; use `content.exclude`.
@@ -306,8 +306,8 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
   front matter `slug`, otherwise its slugified title. `01-Imaging/05-LoadingAndSaving/02-LoadingImages.md` titled
   "Imaging" / "Loading and saving" / "Loading images" → `imaging/loading-and-saving/loading-images.html`. Slugify
   removes accents, lowercases, replaces runs of characters other than ASCII letters and digits with `-`, and trims.
-  The root `index.md` is always `index.html`; other `index.md` files are ordinary pages. Collisions are errors
-  (`DG4005`).
+  The root `index.md` is always `index.html`; other `index.md` files are ordinary pages. Collisions between pages,
+  between folders, and any other page mapping to `index.html` are errors (`DG4005`).
 - The last section is always the generated API reference: a non-clickable `API reference` group, one node per product
   (product name, linking to `{product}/api/index.html`) in configuration order, then namespaces and types sorted
   ordinally.

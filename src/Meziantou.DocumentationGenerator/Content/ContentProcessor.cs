@@ -19,6 +19,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
     private readonly MarkdownRenderer _renderer = new(links, new HighlightingService(diagnostics), diagnostics);
     private readonly Dictionary<FullPath, AuthoredPage> _pagesBySource = [];
     private readonly Dictionary<FullPath, ContentFolder> _foldersByPath = [];
+    private readonly Dictionary<string, ContentFolder> _foldersByRoute = new(StringComparer.OrdinalIgnoreCase);
 
     public ContentModel Process(CancellationToken cancellationToken)
     {
@@ -49,6 +50,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
 
         var root = new ContentFolder { Path = content.Root, RelativePath = "", Title = configuration.Site.Title, RoutePath = "" };
         _foldersByPath.Add(content.Root, root);
+        _foldersByRoute.Add(root.RoutePath, root);
         var entries = new Dictionary<ContentFolder, List<IContentEntry>> { [root] = [] };
 
         var result = ImmutableArray.CreateBuilder<AuthoredPage>();
@@ -67,9 +69,17 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             var (document, frontMatter) = MarkdownRenderer.Parse(text, displayPath, diagnostics);
             var folder = GetFolder(path.Parent, content.Root, entries);
             var title = MarkdownRenderer.GetTitle(document, frontMatter) ?? RouteNames.RemoveOrderPrefix(path.NameWithoutExtension);
-            var routePath = relative.Equals("index.md", StringComparison.OrdinalIgnoreCase)
+            var isHomePage = relative.Equals("index.md", StringComparison.OrdinalIgnoreCase);
+            var routePath = isHomePage
                 ? LinkService.HomePath
-                : CombineRoute(folder.RoutePath, GetSegment(frontMatter.Slug, title, path.NameWithoutExtension, location, DiagnosticDescriptors.InvalidFrontMatter)) + ".html";
+                : CombineRoute(folder.RoutePath, GetSegment(frontMatter.Slug, title, path.NameWithoutExtension, location)) + ".html";
+            if (!isHomePage && routePath.Equals(LinkService.HomePath, StringComparison.OrdinalIgnoreCase))
+            {
+                // Only the index.md file at the root of the content directory can replace the home page
+                diagnostics.Report(DiagnosticDescriptors.PageCollision, $"'{relative}' maps to '{routePath}', which is reserved for the home page (index.md); change its slug or title", location);
+                continue;
+            }
+
             var route = new SiteRoute(routePath, PageKind.Article, "page " + relative);
             if (!links.TryRegister(route, location))
                 continue;
@@ -118,8 +128,14 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             RelativePath = relativePath,
             Title = title,
             Description = description,
-            RoutePath = CombineRoute(parent.RoutePath, GetSegment(slug, title, path.Name, location, DiagnosticDescriptors.InvalidFolderMetadata)),
+            RoutePath = CombineRoute(parent.RoutePath, GetSegment(slug, title, path.Name, location)),
         };
+
+        if (!_foldersByRoute.TryAdd(folder.RoutePath, folder))
+        {
+            var other = _foldersByRoute[folder.RoutePath];
+            diagnostics.Report(DiagnosticDescriptors.PageCollision, $"The folders '{relativePath}' and '{other.RelativePath}' map to the same URL '{folder.RoutePath}/'; set a different 'slug' or 'title' in '{ContentFolder.MetadataFileName}' (paths are compared case-insensitively)", location);
+        }
 
         _foldersByPath.Add(path, folder);
         entries.Add(folder, []);
@@ -159,7 +175,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
     }
 
     /// <summary>URL segment of a page or folder: the slug when valid, otherwise computed from the title, then from the file name.</summary>
-    private string GetSegment(string? slug, string title, string fileName, DiagnosticLocation location, DiagnosticDescriptor descriptor)
+    private string GetSegment(string? slug, string title, string fileName, DiagnosticLocation location)
     {
         if (slug is not null)
         {
@@ -167,7 +183,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             if (normalized.Length > 0 && !normalized.Contains('/', StringComparison.Ordinal) && LinkService.IsSafeRelativePath(normalized) && !normalized.EndsWith(".html", StringComparison.OrdinalIgnoreCase) && RouteNames.SanitizeFileName(normalized) == normalized)
                 return normalized;
 
-            diagnostics.Report(descriptor, $"Invalid slug '{slug}': use a single URL segment without extension, such as getting-started", location);
+            diagnostics.Report(DiagnosticDescriptors.InvalidSlug, $"Invalid slug '{slug}': use a single URL segment without extension, such as getting-started", location);
         }
 
         var segment = RouteNames.Slugify(title);

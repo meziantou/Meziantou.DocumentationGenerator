@@ -133,7 +133,22 @@ public sealed class MarkdownTests
         Assert.Contains("""<a href="/docs/contoso.library/api/Contoso.Library.Client.html#Send(System.String)">the send method</a>""", html);
         Assert.Contains("""<a href="/docs/contoso.library/api/Contoso.Library.Collections.Tree-1.html"><code>Tree&lt;T&gt;</code></a>""", html);
         Assert.Contains("<code>Type</code>", html);
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG4001" && d.Message.Contains("Missing.Type", StringComparison.Ordinal));
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4001" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("Missing.Type", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AmbiguousCref_IsAnError()
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
+        await using var build = await BuildAsync(packages: [first, second], files: new()
+        {
+            ["docs/index.md"] = "[](cref:T:Utils.Guard) [qualified](cref:Contoso.Guard!T:Utils.Guard)",
+        });
+
+        var html = build.Context.Content.Pages.Single().Rendered!.Html;
+        Assert.Contains("""<a href="/docs/contoso.guard/api/Utils.Guard.html">qualified</a>""", html);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'T:Utils.Guard' is ambiguous", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -164,7 +179,7 @@ public sealed class MarkdownTests
         Assert.DoesNotContain("vbscript:", html, ignoreCase: true);
         Assert.DoesNotContain("data:text", html, ignoreCase: true);
         Assert.DoesNotContain("secret.txt", html);
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG4008");
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4008" && d.Severity == DiagnosticSeverity.Error);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG5009" && d.Severity == DiagnosticSeverity.Error);
     }
 
@@ -261,6 +276,46 @@ public sealed class MarkdownTests
         Assert.Contains(errors, d => d.Code == "DG5001" && d.Message.Contains("01-Guides/images/", StringComparison.Ordinal));
         Assert.Contains(errors, d => d.Code == "DG5008" && d.Message.Contains("nope/", StringComparison.Ordinal));
         Assert.Contains(errors, d => d.Code == "DG5008" && d.Message.Contains("missing.png", StringComparison.Ordinal) && d.Location?.Line == 3);
+    }
+
+    [Fact]
+    public async Task FoldersWithTheSameSlug_AreAnError()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/01-Guides/_folder.yml"] = "title: Guides",
+            ["docs/01-Guides/01-First.md"] = "# First",
+            ["docs/02-Guides/_folder.yml"] = "title: guides",
+            ["docs/02-Guides/01-Second.md"] = "# Second",
+        });
+
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4005" && d.Severity == DiagnosticSeverity.Error && d.Location?.FilePath == "docs/02-Guides/_folder.yml" && d.Message.Contains("'02-Guides' and '01-Guides'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PageMappedToTheHomePage_IsAnError()
+    {
+        await using var build = await BuildAsync(files: new()
+        {
+            ["docs/start.md"] = "---\nslug: index\n---\n# Start",
+        });
+
+        Assert.Null(build.Context.Content.HomePage);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG4005" && d.Severity == DiagnosticSeverity.Error && d.Location?.FilePath == "docs/start.md" && d.Message.Contains("reserved for the home page", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MissingFragment_IsReportedOnTheMarkdownFile()
+    {
+        await using var site = await SiteBuilder.BuildAsync([], files: new()
+        {
+            ["docs/index.md"] = "[other](other.md#missing) [self](#nope)",
+            ["docs/other.md"] = "# Other\n\n## Sample",
+        });
+
+        Assert.Equal(1, site.Result.ExitCode);
+        Assert.Contains("docs/index.md: error DG4003: Broken link '/other.html#missing' in 'index.html': 'other.html' has no element with the identifier 'missing'", site.Result.AllOutput, StringComparison.Ordinal);
+        Assert.Contains("docs/index.md: error DG4003: Broken link '#nope' in 'index.html'", site.Result.AllOutput, StringComparison.Ordinal);
     }
 
     [Fact]

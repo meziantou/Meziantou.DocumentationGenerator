@@ -85,12 +85,12 @@ public sealed class NavigationTests
     }
 
     [Fact]
-    public async Task InvalidSlug_IsReportedAndTheTitleIsUsed()
+    public async Task InvalidSlug_IsAnError()
     {
-        await using var build = await BuildAsync(extraFiles: new() { ["docs/02-Other/01-Page.md"] = "---\ntitle: Other page\nslug: a/b\n---\nText." });
+        await using var build = await BuildAsync(expectSuccess: false, extraFiles: new() { ["docs/02-Other/01-Page.md"] = "---\ntitle: Other page\nslug: a/b\n---\nText." });
 
         Assert.Equal("other/other-page.html", build.Context.Content.Pages.Single(p => p.Id == "02-Other/01-Page").Route.FilePath);
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG5002" && d.Message.Contains("a/b", StringComparison.Ordinal));
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG5012" && d.Severity == Diagnostics.DiagnosticSeverity.Error && d.Message.Contains("a/b", StringComparison.Ordinal));
     }
 
     [Fact]

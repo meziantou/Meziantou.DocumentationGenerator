@@ -38,10 +38,12 @@ public sealed class AdversarialTests
             ["docs/index.md"] = "---\ntitle: \"<script>alert(9)</script>\"\n---\n<iframe src=\"https://example.com\"></iframe><style>body{}</style>\n\n```html\n</code></pre><script>alert(10)</script>\n```",
             ["docs/01-Hostile/_folder.yml"] = "title: \"<b>bold</b><script>alert(11)</script>\"\ndescription: \"<img src=x onerror=alert(12)>\"",
             ["docs/01-Hostile/01-Page.md"] = "---\ntitle: \"<a href='javascript:alert(13)'>x</a>\"\n---\nText.",
-        });
+        }, extraConfiguration: """ "diagnostics": { "severity": { "DG4008": "warning" } }, """);
 
-        // The package README is not published, and the authored content contains no active markup once rendered
+        // Unsafe URLs are errors by default; they are lowered to check that the published site contains no active markup.
+        // The package README is not published.
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+        Assert.Contains("warning DG4008", site.Result.AllOutput, StringComparison.Ordinal);
         foreach (var file in Directory.EnumerateFiles(site.Output, "*.html", SearchOption.AllDirectories))
         {
             var document = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken));

@@ -4,24 +4,32 @@ namespace Meziantou.DocumentationGenerator.Links;
 
 /// <summary>
 /// Validates the links of the generated site: every internal link must target a generated file and, when it has a
-/// fragment, an element with that identifier. Anchors must be unique in each page.
+/// fragment, an element with that identifier. Anchors must be unique in each page. Problems in an authored page are
+/// reported on its Markdown file.
 /// </summary>
 internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnostics)
 {
     private readonly Dictionary<string, HashSet<string>> _anchors = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _sourcePaths = new(StringComparer.Ordinal);
     private readonly List<(string Page, string Href)> _links = [];
     private readonly Lock _lock = new();
 
-    public void AddFile(string filePath, IEnumerable<string> anchorIds, IEnumerable<string> hrefs)
+    /// <param name="sourcePath">Display path of the file the page is generated from, such as an authored Markdown file.</param>
+    public void AddFile(string filePath, IEnumerable<string> anchorIds, IEnumerable<string> hrefs, string? sourcePath = null)
     {
         lock (_lock)
         {
+            if (sourcePath is not null)
+            {
+                _sourcePaths[filePath] = sourcePath;
+            }
+
             var anchors = new HashSet<string>(StringComparer.Ordinal);
             foreach (var id in anchorIds)
             {
                 if (!anchors.Add(id))
                 {
-                    diagnostics.Report(DiagnosticDescriptors.DuplicateAnchor, $"The identifier '{id}' is used more than once in '{filePath}'", new DiagnosticLocation { FilePath = filePath });
+                    diagnostics.Report(DiagnosticDescriptors.DuplicateAnchor, $"The identifier '{id}' is used more than once in '{filePath}'", GetLocation(filePath));
                 }
             }
 
@@ -42,11 +50,13 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
                 var error = GetError(page, href);
                 if (error is not null)
                 {
-                    diagnostics.Report(DiagnosticDescriptors.BrokenLink, $"Broken link '{href}' in '{page}': {error}", new DiagnosticLocation { FilePath = page });
+                    diagnostics.Report(DiagnosticDescriptors.BrokenLink, $"Broken link '{href}' in '{page}': {error}", GetLocation(page));
                 }
             }
         }
     }
+
+    private DiagnosticLocation GetLocation(string filePath) => new() { FilePath = _sourcePaths.GetValueOrDefault(filePath, filePath) };
 
     private string? GetError(string page, string href)
     {

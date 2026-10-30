@@ -44,15 +44,15 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor AmbiguousImplementation = new("DG3007", "Ambiguous implementation for a reference assembly", DiagnosticSeverity.Info);
 
     // DG4xxx: links and routes
-    public static readonly DiagnosticDescriptor UnresolvedReference = new("DG4001", "Unresolved reference", DiagnosticSeverity.Warning);
-    public static readonly DiagnosticDescriptor AmbiguousReference = new("DG4002", "Ambiguous reference", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor UnresolvedReference = new("DG4001", "Unresolved reference", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor AmbiguousReference = new("DG4002", "Ambiguous reference", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor BrokenLink = new("DG4003", "Broken link in the generated site", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor RouteCollision = new("DG4004", "Several types map to the same page", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor PageCollision = new("DG4005", "Several files map to the same output path", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor DuplicateAnchor = new("DG4006", "Duplicate anchor in a page", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor UnsafeOutputPath = new("DG4007", "Unsafe output path", DiagnosticSeverity.Error, IsSafetyCritical: true);
 
-    public static readonly DiagnosticDescriptor UnsafeUrl = new("DG4008", "Unsafe URL removed", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor UnsafeUrl = new("DG4008", "Unsafe URL removed", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor ExternalReferenceWithoutMapping = new("DG4009", "Reference to a symbol outside the configured packages without xrefs mapping", DiagnosticSeverity.Info);
 
     // DG5xxx: authored content and navigation
@@ -62,6 +62,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor PathEscapesRoot = new("DG5009", "Path outside the allowed root", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor UnknownCodeLanguage = new("DG5010", "Unknown code language", DiagnosticSeverity.Info);
     public static readonly DiagnosticDescriptor InvalidFolderMetadata = new("DG5011", "Invalid or missing folder metadata", DiagnosticSeverity.Warning);
+    public static readonly DiagnosticDescriptor InvalidSlug = new("DG5012", "Invalid slug", DiagnosticSeverity.Error);
 
     // DG6xxx: XML documentation
     public static readonly DiagnosticDescriptor MalformedXmlDocumentation = new("DG6001", "Malformed XML documentation file", DiagnosticSeverity.Warning);
