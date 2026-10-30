@@ -5,9 +5,10 @@ using NuGet.Versioning;
 
 namespace Meziantou.DocumentationGenerator.Configuration;
 
-internal sealed class PackageConfiguration
+internal sealed record PackageConfiguration
 {
-    public required string Id { get; init; }
+    /// <summary>The package identifier, or <see langword="null"/> to discover all packages in a local folder.</summary>
+    public required string? Id { get; init; }
 
     /// <summary>Versions allowed by the configuration. A version without range syntax (<c>1.2.3</c>) is an exact match.</summary>
     public required VersionRange Version { get; init; }
@@ -41,7 +42,7 @@ internal sealed class PackageConfiguration
     public string JsonPath => (IsReference ? "$.references[" : "$.packages[") + Index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]";
 
     /// <summary>The configured identity, such as <c>Contoso@1.2.3</c> or <c>Contoso@*</c>. Use <c>AcquiredPackage.Identity</c> for the resolved version.</summary>
-    public string Identity => Id + "@" + (ExactVersion?.ToNormalizedString() ?? VersionText);
+    public string Identity => (Id ?? LocalPath?.Value) + "@" + (ExactVersion?.ToNormalizedString() ?? VersionText);
 
     public override string ToString() => Identity;
 }

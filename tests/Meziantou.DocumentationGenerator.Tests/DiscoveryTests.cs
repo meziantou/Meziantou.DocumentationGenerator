@@ -36,6 +36,35 @@ public sealed class DiscoveryTests
     private static readonly Lazy<CompiledAssembly> Extensions = new(() => TestCompiler.Compile("Contoso.Extensions", "namespace Contoso.Extensions; public static class Helpers { }"));
 
     [Fact]
+    public async Task LocalFolders_DiscoverPublishedAndReferencePackagesThroughoutBuild()
+    {
+        var library = new TestPackageBuilder("Contoso.Library", "1.0.0")
+            .WithNuspecMetadata("""<dependencies><group targetFramework="net8.0"><dependency id="Contoso.Extensions" version="1.0.0" /></group></dependencies>""")
+            .AddFile("lib/net8.0/Contoso.Library.dll", Library.Value.Assembly)
+            .AddFile("lib/net8.0/Contoso.Library.xml", Library.Value.Xml);
+        var reference = new TestPackageBuilder("Contoso.Extensions", "1.0.0")
+            .AddFile("lib/net8.0/Contoso.Extensions.dll", Extensions.Value.Assembly)
+            .AddFile("lib/net8.0/Contoso.Extensions.xml", Extensions.Value.Xml);
+        await using var build = TestBuild.Create("""
+            {
+              "version": 1,
+              "packages": [ { "path": "packages" } ],
+              "references": [ { "path": "references" } ],
+              "sourceLinks": { "enabled": false }
+            }
+            """, [library], setup: directory => reference.Save(directory.FullPath / "references"));
+
+        await build.RunSuccessfullyAsync([.. BuildPipeline.CreateStages()]);
+
+        Assert.Equal("Contoso.Library", Assert.Single(build.Context.Packages).Id);
+        Assert.True(Assert.Single(build.Context.References).Configuration.IsReference);
+        Assert.Equal("$.references[0]", build.Context.References[0].Configuration.JsonPath);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code == DiagnosticDescriptors.DependencyNotConfigured.Code);
+        Assert.True(File.Exists(build.Context.Configuration.OutputDirectory / "api/contoso.library/Contoso.Client.html"));
+        Assert.False(Directory.Exists(build.Context.Configuration.OutputDirectory / "api/contoso.extensions"));
+    }
+
+    [Fact]
     public async Task RefAndLib_UsesReferenceAssemblyForApis()
     {
         await using var temp = TemporaryDirectory.Create();

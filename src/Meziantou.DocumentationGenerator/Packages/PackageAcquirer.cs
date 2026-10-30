@@ -45,7 +45,7 @@ internal sealed class PackageAcquirer
 
     public async Task<ImmutableArray<AcquiredPackage>> AcquireAsync(IReadOnlyList<PackageConfiguration> packages, CancellationToken cancellationToken)
     {
-        var results = new AcquiredPackage?[packages.Count];
+        var results = new ImmutableArray<AcquiredPackage>[packages.Count];
         using var semaphore = new SemaphoreSlim(MaxConcurrency);
         Lazy<SourceContext> sources = new(CreateSourceContext, LazyThreadSafetyMode.ExecutionAndPublication);
         var tasks = packages.Select(async (package, index) =>
@@ -53,7 +53,15 @@ internal sealed class PackageAcquirer
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                results[index] = await AcquireAsync(package, sources, cancellationToken);
+                if (package.IsLocalFolder && package.LocalPath is { } folder)
+                {
+                    results[index] = AcquireFromFolder(package, folder, cancellationToken);
+                }
+                else
+                {
+                    var acquired = await AcquireAsync(package, sources, cancellationToken);
+                    results[index] = acquired is null ? [] : [acquired];
+                }
             }
             finally
             {
@@ -62,18 +70,31 @@ internal sealed class PackageAcquirer
         });
 
         await Task.WhenAll(tasks);
-        return [.. results.Where(r => r is not null).Select(r => r!)];
+        var unique = ImmutableArray.CreateBuilder<AcquiredPackage>();
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var package in results.SelectMany(r => r))
+        {
+            if (!ids.Add(package.Id))
+            {
+                Report(DiagnosticDescriptors.DuplicateIdentity, $"Package '{package.Id}' is configured more than once in 'packages' and 'references'", package.Configuration);
+            }
+            else
+            {
+                unique.Add(package);
+            }
+        }
+
+        return unique.ToImmutable();
     }
 
     private async Task<AcquiredPackage?> AcquireAsync(PackageConfiguration package, Lazy<SourceContext> sources, CancellationToken cancellationToken)
     {
         if (package.LocalPath is { } localPath)
         {
-            return package.IsLocalFolder
-                ? AcquireFromFolder(package, localPath)
-                : Verify(package, expectedVersion: null, localPath, "local", reportCorruption: true);
+            return Verify(package, expectedVersion: null, localPath, "local", reportCorruption: true);
         }
 
+        ArgumentNullException.ThrowIfNull(package.Id);
         var version = package.ExactVersion;
         if (version is null)
         {
@@ -128,6 +149,7 @@ internal sealed class PackageAcquirer
 
     private async Task<NuGetVersion?> ResolveFromSourcesAsync(PackageConfiguration package, SourceContext context, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(package.Id);
         var candidates = context.GetSources(package, out var error);
         if (candidates.Count == 0)
         {
@@ -176,32 +198,59 @@ internal sealed class PackageAcquirer
     }
 
     /// <summary>
-    /// Uses the highest matching package of a local folder, in place. Like a NuGet local feed, only the .nupkg files
-    /// at the root of the folder whose name starts with the package identifier are considered.
+    /// Uses the highest matching version of each selected package in a local folder, in place.
+    /// Without an identifier, package identities are discovered from the nuspecs, not from file names.
     /// </summary>
-    private AcquiredPackage? AcquireFromFolder(PackageConfiguration package, FullPath folder)
+    private ImmutableArray<AcquiredPackage> AcquireFromFolder(PackageConfiguration package, FullPath folder, CancellationToken cancellationToken)
     {
-        var candidates = new List<(NuGetVersion Version, FullPath Path)>();
-        foreach (var file in Directory.EnumerateFiles(folder, "*.nupkg").Select(FullPath.FromPath).OrderBy(p => p.Value, StringComparer.Ordinal))
+        var candidates = new List<(string Id, NuGetVersion Version, FullPath Path)>();
+        foreach (var file in Directory.EnumerateFiles(folder).Select(FullPath.FromPath).OrderBy(p => p.Value, StringComparer.Ordinal))
         {
-            if (!file.Name.StartsWith(package.Id + ".", StringComparison.OrdinalIgnoreCase) || file.Name.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase))
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!file.Extension.Equals(".nupkg", StringComparison.OrdinalIgnoreCase)
+                || file.Name.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase)
+                || (package.Id is not null && !file.Name.StartsWith(package.Id + ".", StringComparison.OrdinalIgnoreCase)))
                 continue;
 
             try
             {
                 var metadata = ReadMetadata(file);
-                if (string.Equals(metadata.Id, package.Id, StringComparison.OrdinalIgnoreCase))
+                if (package.Id is null || string.Equals(metadata.Id, package.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    candidates.Add((metadata.Version, file));
+                    candidates.Add((metadata.Id, metadata.Version, file));
                 }
             }
             catch (Exception ex) when (IsInvalidPackageException(ex))
             {
                 ReportInvalidPackage(package, $"'{file.Name}' is invalid: {ex.Message}", ex);
-                return null;
+                return [];
             }
         }
 
+        if (candidates.Count == 0)
+        {
+            Report(DiagnosticDescriptors.PackageNotFound, package.Id is null
+                ? $"No packages were found in the folder '{folder}'"
+                : $"{package.Identity} was not found in the folder '{folder}'", package);
+            return [];
+        }
+
+        var result = ImmutableArray.CreateBuilder<AcquiredPackage>();
+        foreach (var group in candidates.GroupBy(c => c.Id, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var configuration = package.Id is null ? package with { Id = group.Key } : package;
+            if (SelectFromFolder(configuration, folder, group.Select(c => (c.Version, c.Path)).ToList()) is { } acquired)
+            {
+                result.Add(acquired);
+            }
+        }
+
+        return result.ToImmutable();
+    }
+
+    private AcquiredPackage? SelectFromFolder(PackageConfiguration package, FullPath folder, List<(NuGetVersion Version, FullPath Path)> candidates)
+    {
         var versions = candidates.Select(c => c.Version).ToList();
         var selected = package.ExactVersion is { } exact ? versions.FirstOrDefault(v => v == exact) : SelectVersion(package.Version, versions);
         if (selected is null)
@@ -224,6 +273,7 @@ internal sealed class PackageAcquirer
 
     private NuGetVersion? ResolveFromCache(PackageConfiguration package)
     {
+        ArgumentNullException.ThrowIfNull(package.Id);
         var versions = new List<NuGetVersion>();
         var packageDirectory = _cacheDirectory / package.Id.ToLowerInvariant();
         if (Directory.Exists(packageDirectory))
@@ -400,7 +450,11 @@ internal sealed class PackageAcquirer
             throw new PackageArchiveException($"the package must contain exactly one .nuspec file at its root (found {nuspecs.Count.ToString(CultureInfo.InvariantCulture)})");
 
         using var nuspecStream = archive.OpenRead(nuspecs[0], maxSize: 10 * 1024 * 1024);
-        return PackageMetadata.Read(new NuspecReader(nuspecStream));
+        var metadata = PackageMetadata.Read(new NuspecReader(nuspecStream));
+        if (!PackageIdValidator.IsValidPackageId(metadata.Id))
+            throw new PackageArchiveException($"invalid package identifier '{metadata.Id}'");
+
+        return metadata;
     }
 
     private static bool IsInvalidPackageException(Exception ex) => ex is PackageArchiveException or InvalidDataException or NuGet.Packaging.Core.PackagingException or System.Xml.XmlException or IOException;
@@ -474,6 +528,7 @@ internal sealed class PackageAcquirer
 
         public List<PackageSource> GetSources(PackageConfiguration package, out string? error)
         {
+            ArgumentNullException.ThrowIfNull(package.Id);
             error = null;
             if (package.Source is not null)
             {

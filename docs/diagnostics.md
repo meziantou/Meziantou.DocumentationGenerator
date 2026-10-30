@@ -38,7 +38,7 @@ input and cannot be lowered.
 | `DG1013` | error | Invalid configuration value |
 | `DG1014` | error | Invalid API filter pattern |
 | `DG1015` | error | Invalid diagnostic severity override |
-| `DG2001` | error | Package not found in the configured sources or local folder, or no version matches the configured version range |
+| `DG2001` | error | Package not found in the configured sources or local folder, no packages discovered in a local folder, or no version matches the configured version range |
 | `DG2002` | error | Package source or authentication failure |
 | `DG2003` | error | Invalid or corrupt package |
 | `DG2004` | error | A target framework or assembly filter matches no asset of the package |

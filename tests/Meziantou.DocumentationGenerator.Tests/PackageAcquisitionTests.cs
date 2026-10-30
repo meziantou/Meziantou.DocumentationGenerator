@@ -226,6 +226,109 @@ public sealed class PackageAcquisitionTests
     }
 
     [Fact]
+    public async Task LocalFolder_DiscoversAllPackageIdsAndPreservesOptions()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0").Save(temp.FullPath / "packages");
+        var latest = new TestPackageBuilder("contoso.json", "2.0.0").Save(temp.FullPath / "packages", "renamed.NUPKG");
+        new TestPackageBuilder("Contoso.Json", "3.0.0-preview").Save(temp.FullPath / "packages");
+        var other = new TestPackageBuilder("Other", "1.0.0").Save(temp.FullPath / "packages", "arbitrary.nupkg");
+        new TestPackageBuilder("Nested", "1.0.0").Save(temp.FullPath / "packages" / "nested");
+        temp.CreateTextFile("packages/ignored.symbols.nupkg", "not a zip");
+        temp.CreateTextFile("packages/ignored.snupkg", "not a zip");
+        temp.CreateTextFile("packages/README.txt", "not a package");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, """
+            {
+              "version": 1,
+              "packages": [
+                { "path": "packages", "targetFrameworks": ["net8.0"], "assemblies": ["Library.dll"], "defineConstants": ["FEATURE"] }
+              ]
+            }
+            """, offline: true);
+
+        Assert.Equal(["Contoso.Json@2.0.0", "Other@1.0.0"], packages.Select(p => p.Identity));
+        Assert.Equal([latest, other], packages.Select(p => p.Path));
+        Assert.All(packages, package =>
+        {
+            Assert.Equal("local", package.Source);
+            Assert.NotNull(package.Configuration.Id);
+            Assert.Equal(["net8.0"], package.Configuration.TargetFrameworks.Select(f => f.GetShortFolderName()));
+            Assert.Equal(["Library.dll"], package.Configuration.Assemblies);
+            Assert.Equal(["FEATURE"], package.Configuration.DefineConstants);
+            Assert.Equal("$.packages[0]", package.Configuration.JsonPath);
+        });
+        Assert.Equal(2, diagnostics.Count);
+        Assert.All(diagnostics, d => Assert.Equal("DG2015", d.Code));
+    }
+
+    [Theory]
+    [InlineData("*-*", "3.0.0-preview")]
+    [InlineData("[1.0,2.0)", "1.0.0")]
+    [InlineData("2.0.0", "2.0.0")]
+    public async Task LocalFolder_DiscoveryUsesVersionFilterForEachId(string version, string expected)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        foreach (var id in new[] { "A", "B" })
+        {
+            foreach (var candidate in new[] { "1.0.0", "2.0.0", "3.0.0-preview" })
+            {
+                new TestPackageBuilder(id, candidate).Save(temp.FullPath / "packages");
+            }
+        }
+
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""{ "version": 1, "packages": [ { "path": "packages", "version": "{{version}}" } ] }""", offline: true);
+
+        Assert.Equal(["A", "B"], packages.Select(p => p.Id));
+        Assert.All(packages, p => Assert.Equal(expected, p.Metadata.Version.ToNormalizedString()));
+        Assert.DoesNotContain(diagnostics, d => d.Severity >= DiagnosticSeverity.Warning);
+    }
+
+    [Theory]
+    [InlineData("empty", "DG2001")]
+    [InlineData("unmatched", "DG2001")]
+    [InlineData("corrupt", "DG2003")]
+    [InlineData("invalid-id", "DG2003")]
+    [InlineData("unsafe", "DG2005")]
+    public async Task LocalFolder_DiscoveryReportsErrors(string scenario, string expectedCode)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        Directory.CreateDirectory(temp.FullPath / "packages");
+        if (scenario == "unmatched")
+            new TestPackageBuilder("A", "1.0.0-preview").Save(temp.FullPath / "packages");
+        if (scenario == "corrupt")
+            temp.CreateTextFile("packages/bad.nupkg", "not a zip");
+        if (scenario == "invalid-id")
+            new TestPackageBuilder("Bad Id", "1.0.0").Save(temp.FullPath / "packages");
+        if (scenario == "unsafe")
+            new TestPackageBuilder("A", "1.0.0").AddFile("../escape.txt", "unsafe").Save(temp.FullPath / "packages");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "path": "packages" } ] }""");
+
+        Assert.Empty(packages);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        Assert.Equal("$.packages[0]", diagnostic.Location?.JsonPath);
+    }
+
+    [Theory]
+    [InlineData("""{ "id": "a", "path": "packages/a.1.0.0.nupkg" }, { "path": "packages" }""", "")]
+    [InlineData("""{ "path": "packages" }, { "id": "a", "path": "packages/a.1.0.0.nupkg" }""", "")]
+    [InlineData("""{ "path": "packages" }, { "path": "packages" }""", "")]
+    [InlineData("""{ "path": "packages" }""", """, "references": [ { "path": "packages" } ]""")]
+    public async Task LocalFolder_DiscoveryRejectsDuplicateIds(string entries, string references)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("A", "1.0.0").Save(temp.FullPath / "packages");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""{ "version": 1, "packages": [ {{entries}} ]{{references}} }""");
+
+        Assert.Single(packages);
+        var diagnostic = Assert.Single(diagnostics, d => d.Code == "DG1008");
+        Assert.Contains("'A'", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LocalFolder_NoMatchingPackage()
     {
         await using var temp = TemporaryDirectory.Create();
@@ -485,7 +588,7 @@ public sealed class PackageAcquisitionTests
         Assert.Empty(diagnostics.GetDiagnostics());
 
         var acquirer = new PackageAcquirer(configuration.CacheDirectory, configuration.BaseDirectory, offline, diagnostics);
-        var packages = await acquirer.AcquireAsync(configuration.Packages, cancellationToken ?? TestContext.Current.CancellationToken);
+        var packages = await acquirer.AcquireAsync([.. configuration.Packages, .. configuration.References], cancellationToken ?? TestContext.Current.CancellationToken);
         return (packages, diagnostics.GetDiagnostics());
     }
 }

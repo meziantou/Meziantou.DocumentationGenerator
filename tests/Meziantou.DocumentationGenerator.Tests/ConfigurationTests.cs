@@ -1,6 +1,7 @@
 using System.Text;
 using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.Diagnostics;
+using Meziantou.DocumentationGenerator.Preview;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.Framework;
 
@@ -387,6 +388,56 @@ public sealed class ConfigurationTests
         Assert.Equal(expectedText, package.VersionText);
         Assert.Equal(expectedExactVersion, package.ExactVersion?.ToNormalizedString());
         Assert.Equal("A@" + (expectedExactVersion ?? expectedText), package.Identity);
+    }
+
+    [Fact]
+    public async Task PackagePath_FolderWithoutId()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        Directory.CreateDirectory(temp.FullPath / "packages");
+        var (configuration, diagnostics) = Load(temp, """{ "version": 1, "packages": [ { "path": "packages" } ] }""");
+
+        Assert.Empty(diagnostics);
+        var package = Assert.Single(configuration!.Packages);
+        Assert.Null(package.Id);
+        Assert.True(package.IsLocalFolder);
+        Assert.Equal(temp.FullPath / "packages", package.LocalPath);
+        Assert.Equal("*", package.VersionText);
+        var inputs = InputWatcher.GetInputs(configuration.ConfigurationFile, configuration);
+        Assert.Contains(temp.FullPath / "packages", inputs.Directories);
+    }
+
+    [Theory]
+    [InlineData("missing-folder", "DG1007")]
+    [InlineData("", "DG1013")]
+    public async Task PackagePath_WithoutIdAndInvalidPathReportsOnlyPathError(string path, string expectedCode)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, $$"""{ "version": 1, "packages": [ { "path": "{{path}}" } ] }""");
+
+        Assert.Null(configuration);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        Assert.Equal("$.packages[0].path", diagnostic.Location?.JsonPath);
+    }
+
+    [Theory]
+    [InlineData("""{}""")]
+    [InlineData("""{ "source": "feed" }""")]
+    [InlineData("""{ "path": "a.nupkg" }""")]
+    [InlineData("""{ "id": "", "path": "packages" }""")]
+    [InlineData("""{ "id": "*", "path": "packages" }""")]
+    public async Task PackagePath_IdIsOnlyOptionalForFolders(string entry)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        Directory.CreateDirectory(temp.FullPath / "packages");
+        temp.CreateTextFile("a.nupkg", "");
+        var (configuration, diagnostics) = Load(temp, $$"""{ "version": 1, "packages": [ {{entry}} ] }""");
+
+        Assert.Null(configuration);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG1004", diagnostic.Code);
+        Assert.Equal("$.packages[0].id", diagnostic.Location?.JsonPath);
     }
 
     [Fact]

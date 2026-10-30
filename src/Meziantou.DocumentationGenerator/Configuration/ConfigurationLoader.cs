@@ -380,12 +380,12 @@ internal static partial class ConfigurationLoader
                 }
 
                 var isValid = true;
-                if (string.IsNullOrWhiteSpace(section.Id) || !PackageIdValidator.IsValidPackageId(section.Id))
+                if (section.Id is not null && (string.IsNullOrWhiteSpace(section.Id) || !PackageIdValidator.IsValidPackageId(section.Id)))
                 {
                     Error(DiagnosticDescriptors.InvalidPackageReference, $"Invalid package identifier '{section.Id}'", path + ".id");
                     isValid = false;
                 }
-                else if (!ids.Add(section.Id))
+                else if (section.Id is not null && !ids.Add(section.Id))
                 {
                     Error(DiagnosticDescriptors.DuplicateIdentity, $"Package '{section.Id}' is configured more than once in 'packages' and 'references'", path + ".id");
                     isValid = false;
@@ -444,6 +444,12 @@ internal static partial class ConfigurationLoader
                             localPath = resolved;
                         }
                     }
+                }
+
+                if (section.Id is null && (section.Path is null || (localPath is not null && !isLocalFolder)))
+                {
+                    Error(DiagnosticDescriptors.InvalidPackageReference, "A package identifier is required unless 'path' is a local directory", path + ".id");
+                    isValid = false;
                 }
 
                 var frameworks = ImmutableArray.CreateBuilder<NuGetFramework>();
@@ -510,7 +516,7 @@ internal static partial class ConfigurationLoader
                 {
                     result.Add(new PackageConfiguration
                     {
-                        Id = section.Id!,
+                        Id = section.Id,
                         Version = version,
                         VersionText = versionText,
                         Source = section.Source,
