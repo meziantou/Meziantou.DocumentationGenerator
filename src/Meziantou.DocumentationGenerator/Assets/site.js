@@ -41,19 +41,42 @@
 
     function initMenu() {
         var button = document.querySelector('.menu-button');
+        var collapseButton = document.querySelector('.sidebar-collapse-button');
         var sidebar = document.getElementById('sidebar');
-        if (!button || !sidebar) return;
+        if (!button || !collapseButton || !sidebar) return;
+        var layout = document.querySelector('.site-body');
+        var narrowScreen = window.matchMedia('(max-width: 56rem)');
+        var collapsed = readStorage('docgen-sidebar-collapsed') === 'true';
+
+        function updateSidebar() {
+            layout.classList.toggle('sidebar-collapsed', collapsed);
+            collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            var label = collapsed ? 'Expand table of contents' : 'Collapse table of contents';
+            collapseButton.setAttribute('aria-label', label);
+            collapseButton.title = label;
+            button.setAttribute('aria-expanded', sidebar.classList.contains('is-open') ? 'true' : 'false');
+            revealCurrentPage();
+        }
+
         button.hidden = false;
+        collapseButton.hidden = false;
+        updateSidebar();
+        collapseButton.addEventListener('click', function () {
+            collapsed = !collapsed;
+            writeStorage('docgen-sidebar-collapsed', collapsed ? 'true' : null);
+            updateSidebar();
+        });
         button.addEventListener('click', function () {
             var open = sidebar.classList.toggle('is-open');
-            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+            updateSidebar();
             if (open) {
                 var current = sidebar.querySelector('[aria-current=page]') || sidebar.querySelector('a');
                 if (current) current.focus();
             }
         });
+        narrowScreen.addEventListener('change', updateSidebar);
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+            if (e.key === 'Escape' && narrowScreen.matches && sidebar.classList.contains('is-open')) {
                 sidebar.classList.remove('is-open');
                 button.setAttribute('aria-expanded', 'false');
                 button.focus();
@@ -64,7 +87,7 @@
     // Scrolls the sidebar, never the page, so the current page is visible in the navigation
     function revealCurrentPage() {
         var sidebar = document.getElementById('sidebar');
-        if (!sidebar || sidebar.scrollHeight <= sidebar.clientHeight) return;
+        if (!sidebar || !sidebar.clientHeight || sidebar.scrollHeight <= sidebar.clientHeight) return;
         var current = sidebar.querySelector('[aria-current=page]');
         if (!current) return;
         var bounds = sidebar.getBoundingClientRect();
