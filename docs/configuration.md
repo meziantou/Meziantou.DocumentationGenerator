@@ -50,11 +50,24 @@ At least one package or a content directory is required.
 | `language` | `en` | Language of the content (`<html lang>`). |
 | `basePath` | `/` | URL path where the site is deployed. `docs`, `/docs` and `/docs/` are equivalent. |
 | `url` | | Absolute origin (`https://example.com`) used for canonical URLs, the sitemap and social previews. It must not contain a path: canonical URLs are `url` + `basePath` + page path. Without `url`, no canonical URL and no sitemap are generated. |
-| `logo` | | Logo image file. |
+| `logo` | | Local image file displayed next to the site title in the header on every page. |
 | `favicon` | | Favicon file. |
 | `socialImage` | | Image used by social previews. Requires `url`. |
 | `robots` | `none` | `none`: no `robots.txt` and no robots meta tag. `allow`: `robots.txt` allowing crawlers and referencing the sitemap. `disallow`: `robots.txt` disallowing crawlers and a `noindex` meta tag on every page. `robots.txt` is only generated when `basePath` is `/` because crawlers only read it at the origin root (`DG1010`). |
 | `footer` | | Text displayed in the footer. |
+
+To display a product icon next to its name in the header, set `site.logo`:
+
+```json
+"site": {
+  "title": "Meziantou.Framework",
+  "logo": "images/icon.png"
+}
+```
+
+The image path is relative to `docgen.json`. The generator copies it into the output and displays it at
+28 x 28 pixels, preserving its aspect ratio. The icon is optional; omitting `logo` leaves the header text-only.
+Use `favicon` separately to set the browser tab icon.
 
 ## `packages[]`
 
