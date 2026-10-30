@@ -54,6 +54,9 @@ internal sealed partial class LinkService
 
     public UrlBuilder Urls { get; }
 
+    /// <summary><see langword="true"/> when at least one package has an API reference that <c>cref:</c> links can target.</summary>
+    public bool HasApiReference => _publishedNamespaces.Count > 0;
+
     public IEnumerable<SiteRoute> Routes => _routesByPath.Values.OrderBy(r => r.FilePath, StringComparer.Ordinal);
 
     public string HomeUrl => Urls.GetUrl(HomePath);
@@ -150,7 +153,7 @@ internal sealed partial class LinkService
         }
 
         if (kind == 'N')
-            return ResolveNamespace(value, context);
+            return ResolveNamespace(value, packageId, context);
 
         var candidates = new List<ApiSymbolModel>();
         foreach (var candidateKind in kind is { } k ? [k] : DocumentationIdKinds)
@@ -174,7 +177,8 @@ internal sealed partial class LinkService
 
         if (candidates.Count == 0)
         {
-            if (kind is null && ResolveNamespace(value, context) is { Kind: CrefResolutionKind.Resolved } namespaceResolution)
+            // An ambiguous namespace is reported as such, so the author knows to qualify it with a package
+            if (kind is null && ResolveNamespace(value, packageId, context) is { Kind: CrefResolutionKind.Resolved or CrefResolutionKind.Ambiguous } namespaceResolution)
                 return namespaceResolution;
 
             // Without prefix, an external symbol is a type, unless it is a value of a framework enum (System.StringComparison.Ordinal)
@@ -349,9 +353,14 @@ internal sealed partial class LinkService
         };
     }
 
-    private CrefResolution ResolveNamespace(string namespaceName, LinkContext context)
+    /// <param name="packageId">Restricts the lookup to the product with this identifier or containing this package.</param>
+    private CrefResolution ResolveNamespace(string namespaceName, string? packageId, LinkContext context)
     {
-        var products = _catalog.Products.Where(p => _publishedNamespaces.Contains(p.Product.Id + "|" + namespaceName)).Select(p => p.Product.Id).ToList();
+        var products = _catalog.Products
+            .Where(p => _publishedNamespaces.Contains(p.Product.Id + "|" + namespaceName))
+            .Where(p => packageId is null || string.Equals(p.Product.Id, packageId, StringComparison.OrdinalIgnoreCase) || p.Product.Packages.Contains(packageId, StringComparer.OrdinalIgnoreCase))
+            .Select(p => p.Product.Id)
+            .ToList();
         if (context.ProductId is not null && products.Contains(context.ProductId, StringComparer.Ordinal))
         {
             products = [context.ProductId];

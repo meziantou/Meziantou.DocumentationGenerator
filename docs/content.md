@@ -114,7 +114,9 @@ generated HTML is validated afterwards: every internal `href`, `src` and fragmen
   namespaces.
 - `cref:M:Contoso.Json.JsonReader.Read`: without parameters, links to the overloads of the method.
 - `cref:Contoso.Collections.Tree{T}` or `cref:Contoso.Collections.Tree<T>.Node`: generic types.
-- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol.
+- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol. For a
+  namespace (`cref:Contoso.Json!N:Contoso` or `cref:Contoso.Json!Contoso`), the qualifier is a package or a product
+  identifier, since namespace pages belong to products.
 
 References are resolved first in the current assembly, then in the current product, then in every package. Several
 matches at the same level are ambiguous (`DG4002`); unresolved references are an error (`DG4001`). Symbols
