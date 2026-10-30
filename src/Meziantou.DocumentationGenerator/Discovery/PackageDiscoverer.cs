@@ -22,7 +22,7 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
     public DiscoveredPackage? Discover(AcquiredPackage package)
     {
         using var archive = PackageArchive.Open(package.Path);
-        var location = new DiagnosticLocation { Package = package.Configuration.Identity, JsonPath = package.Configuration.JsonPath };
+        var location = new DiagnosticLocation { Package = package.Identity, JsonPath = package.Configuration.JsonPath };
 
         var refFolders = GetFrameworkFolders(archive, "ref", location);
         var libFolders = GetFrameworkFolders(archive, "lib", location);

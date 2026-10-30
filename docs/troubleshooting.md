@@ -12,7 +12,7 @@ Diagnostics never contain credentials: URLs with user information and secret que
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `DG2001` package not found | The exact version is not in the configured sources. Versions are never floated and other sources are never tried implicitly. Check `NuGet.Config`, source mapping and `source`. |
+| `DG2001` package not found | The version is not in the configured sources, or no listed version matches the version range. A version without range syntax is an exact match; use `1.*` or `*` to accept other versions. `*` excludes prereleases; use `*-*` to include them. Other sources are never tried implicitly. Check `NuGet.Config`, source mapping and `source`. |
 | `DG2002` authentication failed | Configure credentials in `NuGet.Config` (`packageSourceCredentials`) or install the credential provider of your feed. Prompts are disabled. |
 | `DG2006` in offline mode | Run one build without `--offline` to populate the cache. |
 | `DG2003` corrupt package | A cached package failed its integrity check. It is removed and downloaded again when online. You can also delete the cache directory. |

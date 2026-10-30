@@ -62,12 +62,31 @@ At least one package or a content directory is required.
 | Property | Default | Description |
 | --- | --- | --- |
 | `id` | required | Package identifier. |
-| `version` | required | Exact version (`1.2.3`, `1.2.3-beta.1`). Ranges and floating versions are rejected. |
+| `version` | latest stable | Exact version (`1.2.3`, `1.2.3-beta.1`), [version range](https://learn.microsoft.com/nuget/concepts/package-versioning#version-ranges) (`[1.0,2.0)`) or floating version (`1.*`, `*`, `*-*`). See [package versions](#package-versions). |
 | `source` | NuGet.Config sources | Source URL or the name of a source defined in `NuGet.Config`. |
-| `path` | | Local `.nupkg` file. No feed is queried. Cannot be combined with `source`. |
+| `path` | | Local `.nupkg` file, or folder containing `.nupkg` files (the highest version matching `version` is used). No feed is queried. Cannot be combined with `source`. |
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
 | `assemblies` | all | Assembly file names to document (`Contoso.dll`). |
 | `defineConstants` | none | Preprocessor symbols defined when compiling a [source package](api-reference.md#source-packages), in addition to those of the target framework. Use it for the symbols the package's MSBuild targets define in the consuming project (`"ROSLYN_4_12_OR_GREATER"`). |
+
+### Package versions
+
+| `version` | Package used |
+| --- | --- |
+| omitted, `*` | Latest stable version |
+| `*-*` | Latest version, including prereleases |
+| `1.*`, `1.2.*-*` | Latest version matching the floating version (NuGet rules) |
+| `[1.0,2.0)`, `[1.0,)` | Highest version in the range. Prereleases only match when a bound is a prerelease (`[2.0.0-beta,3.0)`) |
+| `1.2.3` | Exactly `1.2.3`. Unlike in a `PackageReference`, a version without range syntax is not a minimum version |
+
+A version other than an exact version is resolved at each build from the versions listed by the package sources.
+All the sources of the package must respond (`DG2002`), because a failing source could hide a higher version. The
+resolved version is reported as `DG2015` (`--verbosity detailed`) and recorded in the output manifest. With
+`--offline`, it resolves to the highest matching version in the package cache. With `path`, the version of a local
+`.nupkg` file must match `version`, and a [local folder](#local-packages-and-offline-builds) resolves to its highest
+matching package.
+
+Use exact versions for reproducible builds: the site changes when a new matching version is published.
 
 Dependencies of the documented packages are never downloaded implicitly. To inherit documentation from a
 dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the
@@ -251,9 +270,19 @@ Pages are linked as `/docs/...` and canonical URLs are `https://www.example.com/
 ```json
 {
   "version": 1,
-  "packages": [ { "id": "Contoso.Json", "version": "2.1.0", "path": "artifacts/Contoso.Json.2.1.0.nupkg" } ]
+  "packages": [
+    { "id": "Contoso.Json", "version": "2.1.0", "path": "artifacts/Contoso.Json.2.1.0.nupkg" },
+    { "id": "Contoso.Http", "version": "*-*", "path": "artifacts/packages" }
+  ]
 }
 ```
 
-Local packages are used in place and their identity is verified. Remote packages are cached; `--offline` uses only the
-cache and fails when a package is missing (`DG2006`).
+`path` is a `.nupkg` file or a folder. In a folder, like in a NuGet local feed, the `.nupkg` files at the root of the
+folder whose name starts with the package identifier (`Contoso.Http.*.nupkg`, excluding `.symbols.nupkg`) are read, and
+the highest version matching `version` is used, following the [package versions](#package-versions) rules. Use
+`*-*` to accept the prerelease versions produced by CI builds. A `.nupkg` file only needs its version to be in the
+range.
+
+Local packages are used in place, are available in offline mode, and their identity is verified. Remote packages are cached; `--offline` uses only the
+cache and fails when a package is missing (`DG2006`). In offline mode, a version range resolves to the highest
+matching version in the cache.

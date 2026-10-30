@@ -554,6 +554,6 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
 
     private static DiagnosticLocation Location(ApiAssemblyModel model, PublicApiSymbol symbol)
     {
-        return new DiagnosticLocation { Package = model.Package.Package.Configuration.Identity, TargetFramework = model.TargetFramework, Symbol = symbol.DocumentationId };
+        return new DiagnosticLocation { Package = model.Package.Package.Identity, TargetFramework = model.TargetFramework, Symbol = symbol.DocumentationId };
     }
 }

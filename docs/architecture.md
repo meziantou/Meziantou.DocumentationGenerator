@@ -52,7 +52,8 @@ one, never a partial site.
 
 **Guaranteed.**
 
-- A *package* is a NuGet package identified by `id` + exact `version`.
+- A *package* is a NuGet package identified by `id` + `version`. A version range is resolved to one exact version
+  during acquisition; every later stage uses the resolved version.
 - A *product* is a group of packages sharing an API reference and URLs. Its `description` (default: the package
   description) is the lead paragraph of its API reference page.
 - When `products` is omitted, each package becomes its own product (`id` = lowercase package ID).
@@ -94,7 +95,10 @@ Product `contoso.json`, API reference at `/contoso.json/api/`.
   different site than the author expects.
 - Every relative filesystem path is resolved against the directory containing the configuration file,
   never the process working directory.
-- Package versions must be exact NuGet versions (`1.2.3`, `1.2.3-beta.1`). Ranges are rejected (`DG1004`).
+- Package versions are exact NuGet versions (`1.2.3`, `1.2.3-beta.1`), version ranges (`[1.0,2.0)`) or floating
+  versions (`1.*`, `*-*`). An omitted version means `*`, the latest stable version. A version without range syntax
+  is an exact match, not a minimum version as in a `PackageReference`. Ranges resolve to the highest matching version
+  (floating versions follow NuGet rules). Invalid versions are rejected (`DG1004`).
 - Target framework filters use NuGet short folder names (`net8.0`, `netstandard2.0`). A filter that matches
   no asset of the package is an error (`DG2004`).
 - `site.basePath` is a URL path (default `/`). It is normalized to start and end with `/`.

@@ -47,7 +47,14 @@ internal sealed class InputWatcher : IDisposable
             {
                 if (package.LocalPath is { } localPath)
                 {
-                    files.Add(localPath);
+                    if (package.IsLocalFolder)
+                    {
+                        directories.Add(localPath);
+                    }
+                    else
+                    {
+                        files.Add(localPath);
+                    }
                 }
             }
         }

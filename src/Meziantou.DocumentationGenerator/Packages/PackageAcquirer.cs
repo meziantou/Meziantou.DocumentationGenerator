@@ -12,12 +12,14 @@ using NuGet.Credentials;
 using NuGet.Packaging;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 
 namespace Meziantou.DocumentationGenerator.Packages;
 
 /// <summary>
-/// Acquires the configured packages: local .nupkg files are used in place, remote packages are downloaded from the
-/// sources defined in NuGet.Config (honoring source mapping and credentials) into a verified cache.
+/// Acquires the configured packages: local .nupkg files, and the highest matching package of local folders, are used in place, remote packages are downloaded from the
+/// sources defined in NuGet.Config (honoring source mapping and credentials) into a verified cache. A version range is
+/// resolved to the highest matching version listed by the sources, or by the cache in offline mode.
 /// Acquisition only reads package archives; it never runs build targets, tools or assembly code.
 /// </summary>
 internal sealed class PackageAcquirer
@@ -66,17 +68,27 @@ internal sealed class PackageAcquirer
     private async Task<AcquiredPackage?> AcquireAsync(PackageConfiguration package, Lazy<SourceContext> sources, CancellationToken cancellationToken)
     {
         if (package.LocalPath is { } localPath)
-            return Verify(package, localPath, "local", reportCorruption: true);
+        {
+            return package.IsLocalFolder
+                ? AcquireFromFolder(package, localPath)
+                : Verify(package, expectedVersion: null, localPath, "local", reportCorruption: true);
+        }
 
-        var entryDirectory = _cacheDirectory / package.Id.ToLowerInvariant() / package.Version.ToNormalizedString().ToLowerInvariant();
-        var packagePath = entryDirectory / (package.Id.ToLowerInvariant() + "." + package.Version.ToNormalizedString().ToLowerInvariant() + ".nupkg");
-        var metadataPath = entryDirectory / "docgen-cache.json";
+        var version = package.ExactVersion;
+        if (version is null)
+        {
+            version = _offline ? ResolveFromCache(package) : await ResolveFromSourcesAsync(package, sources.Value, cancellationToken);
+            if (version is null)
+                return null;
+        }
+
+        var (entryDirectory, packagePath, metadataPath) = GetCacheEntry(package.Id, version);
         if (File.Exists(packagePath) && File.Exists(metadataPath))
         {
             var cacheEntry = ReadCacheEntry(metadataPath);
             if (cacheEntry is not null && string.Equals(ComputeSha512(packagePath), cacheEntry.Sha512, StringComparison.Ordinal))
             {
-                var cached = Verify(package, packagePath, cacheEntry.Source, reportCorruption: false);
+                var cached = Verify(package, version, packagePath, cacheEntry.Source, reportCorruption: false);
                 if (cached is not null)
                     return cached;
             }
@@ -85,7 +97,7 @@ internal sealed class PackageAcquirer
             DeleteCacheEntry(entryDirectory);
             if (_offline)
             {
-                Report(DiagnosticDescriptors.PackageIntegrity, $"The cached copy of {package.Identity} is corrupt and was removed; it cannot be downloaded again in offline mode", package);
+                Report(DiagnosticDescriptors.PackageIntegrity, $"The cached copy of {package.Id}@{version.ToNormalizedString()} is corrupt and was removed; it cannot be downloaded again in offline mode", package);
                 return null;
             }
         }
@@ -97,10 +109,165 @@ internal sealed class PackageAcquirer
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return await DownloadAsync(package, sources.Value, entryDirectory, packagePath, metadataPath, cancellationToken);
+        return await DownloadAsync(package, version, sources.Value, entryDirectory, packagePath, metadataPath, cancellationToken);
     }
 
-    private async Task<AcquiredPackage?> DownloadAsync(PackageConfiguration package, SourceContext context, FullPath entryDirectory, FullPath packagePath, FullPath metadataPath, CancellationToken cancellationToken)
+    /// <summary>
+    /// Selects the version to use for a range: the best match of a floating range (<c>*</c> is the latest stable
+    /// version, <c>*-*</c> the latest version including prereleases), otherwise the highest version in the range.
+    /// Prerelease versions only match a non-floating range when one of its bounds is a prerelease version.
+    /// </summary>
+    internal static NuGetVersion? SelectVersion(VersionRange range, IEnumerable<NuGetVersion> versions)
+    {
+        if (range.IsFloating)
+            return range.FindBestMatch(versions);
+
+        var allowPrerelease = range.MinVersion?.IsPrerelease == true || range.MaxVersion?.IsPrerelease == true;
+        return versions.Where(v => range.Satisfies(v) && (allowPrerelease || !v.IsPrerelease)).Max();
+    }
+
+    private async Task<NuGetVersion?> ResolveFromSourcesAsync(PackageConfiguration package, SourceContext context, CancellationToken cancellationToken)
+    {
+        var candidates = context.GetSources(package, out var error);
+        if (candidates.Count == 0)
+        {
+            Report(DiagnosticDescriptors.PackageNotFound, error ?? $"No package source is configured for {package.Identity}", package);
+            return null;
+        }
+
+        // Like 'dotnet restore', a failing source is an error: a higher version may be hidden behind it
+        var versions = new HashSet<NuGetVersion>();
+        var failures = new List<string>();
+        foreach (var source in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var repository = Repository.Factory.GetCoreV3(source);
+                var resource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken)
+                    ?? throw new InvalidOperationException($"source '{source.Name}' does not support listing package versions");
+                versions.UnionWith(await resource.GetAllVersionsAsync(package.Id, context.CacheContext, _logger, cancellationToken));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is FatalProtocolException or HttpRequestException or IOException or InvalidOperationException)
+            {
+                failures.Add(DescribeFailure(source, ex));
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            Report(DiagnosticDescriptors.PackageSourceFailure, $"Cannot list the versions of {package.Id}: {string.Join("; ", failures)}", package);
+            return null;
+        }
+
+        var selected = SelectVersion(package.Version, versions);
+        if (selected is null)
+        {
+            Report(DiagnosticDescriptors.PackageNotFound, $"No version of {package.Id} matching '{package.VersionText}' was found in {string.Join(", ", candidates.Select(s => $"'{s.Name}'"))}{DescribeExcludedPrereleases(package, versions)}", package);
+            return null;
+        }
+
+        Report(DiagnosticDescriptors.PackageVersionResolved, $"{package.Identity} resolves to {selected.ToNormalizedString()}", package);
+        return selected;
+    }
+
+    /// <summary>
+    /// Uses the highest matching package of a local folder, in place. Like a NuGet local feed, only the .nupkg files
+    /// at the root of the folder whose name starts with the package identifier are considered.
+    /// </summary>
+    private AcquiredPackage? AcquireFromFolder(PackageConfiguration package, FullPath folder)
+    {
+        var candidates = new List<(NuGetVersion Version, FullPath Path)>();
+        foreach (var file in Directory.EnumerateFiles(folder, "*.nupkg").Select(FullPath.FromPath).OrderBy(p => p.Value, StringComparer.Ordinal))
+        {
+            if (!file.Name.StartsWith(package.Id + ".", StringComparison.OrdinalIgnoreCase) || file.Name.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                var metadata = ReadMetadata(file);
+                if (string.Equals(metadata.Id, package.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    candidates.Add((metadata.Version, file));
+                }
+            }
+            catch (Exception ex) when (IsInvalidPackageException(ex))
+            {
+                ReportInvalidPackage(package, $"'{file.Name}' is invalid: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        var versions = candidates.Select(c => c.Version).ToList();
+        var selected = package.ExactVersion is { } exact ? versions.FirstOrDefault(v => v == exact) : SelectVersion(package.Version, versions);
+        if (selected is null)
+        {
+            var message = package.ExactVersion is null
+                ? $"No version of {package.Id} matching '{package.VersionText}' was found in the folder '{folder}'{DescribeExcludedPrereleases(package, versions)}"
+                : $"{package.Identity} was not found in the folder '{folder}'";
+            Report(DiagnosticDescriptors.PackageNotFound, message, package);
+            return null;
+        }
+
+        var path = candidates.First(c => c.Version == selected).Path;
+        if (package.ExactVersion is null)
+        {
+            Report(DiagnosticDescriptors.PackageVersionResolved, $"{package.Identity} resolves to {selected.ToNormalizedString()} ('{path.Name}')", package);
+        }
+
+        return Verify(package, selected, path, "local", reportCorruption: true);
+    }
+
+    private NuGetVersion? ResolveFromCache(PackageConfiguration package)
+    {
+        var versions = new List<NuGetVersion>();
+        var packageDirectory = _cacheDirectory / package.Id.ToLowerInvariant();
+        if (Directory.Exists(packageDirectory))
+        {
+            foreach (var directory in Directory.EnumerateDirectories(packageDirectory))
+            {
+                if (NuGetVersion.TryParse(System.IO.Path.GetFileName(directory), out var version))
+                {
+                    var entry = GetCacheEntry(package.Id, version);
+                    if (File.Exists(entry.PackagePath) && File.Exists(entry.MetadataPath))
+                    {
+                        versions.Add(version);
+                    }
+                }
+            }
+        }
+
+        var selected = SelectVersion(package.Version, versions);
+        if (selected is null)
+        {
+            Report(DiagnosticDescriptors.OfflineCacheMiss, $"No version of {package.Id} matching '{package.VersionText}' is in the package cache and offline mode is enabled; run once without --offline to populate the cache{DescribeExcludedPrereleases(package, versions)}", package);
+            return null;
+        }
+
+        Report(DiagnosticDescriptors.PackageVersionResolved, $"{package.Identity} resolves to {selected.ToNormalizedString()} (offline: highest matching version in the package cache)", package);
+        return selected;
+    }
+
+    private static string DescribeExcludedPrereleases(PackageConfiguration package, IEnumerable<NuGetVersion> versions)
+    {
+        return versions.Any(v => v.IsPrerelease && package.Version.Satisfies(v))
+            ? "; prerelease versions are excluded, use a floating prerelease version such as *-* to include them"
+            : "";
+    }
+
+    private (FullPath EntryDirectory, FullPath PackagePath, FullPath MetadataPath) GetCacheEntry(string id, NuGetVersion version)
+    {
+        var normalizedId = id.ToLowerInvariant();
+        var normalizedVersion = version.ToNormalizedString().ToLowerInvariant();
+        var entryDirectory = _cacheDirectory / normalizedId / normalizedVersion;
+        return (entryDirectory, entryDirectory / (normalizedId + "." + normalizedVersion + ".nupkg"), entryDirectory / "docgen-cache.json");
+    }
+
+    private async Task<AcquiredPackage?> DownloadAsync(PackageConfiguration package, NuGetVersion version, SourceContext context, FullPath entryDirectory, FullPath packagePath, FullPath metadataPath, CancellationToken cancellationToken)
     {
         var candidates = context.GetSources(package, out var error);
         if (candidates.Count == 0)
@@ -123,13 +290,13 @@ internal sealed class PackageAcquirer
                     var repository = Repository.Factory.GetCoreV3(source);
                     var resource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken)
                         ?? throw new InvalidOperationException($"source '{source.Name}' does not support package downloads");
-                    found = await resource.CopyNupkgToStreamAsync(package.Id, package.Version, stream, context.CacheContext, _logger, cancellationToken);
+                    found = await resource.CopyNupkgToStreamAsync(package.Id, version, stream, context.CacheContext, _logger, cancellationToken);
                 }
 
                 if (!found)
                     continue;
 
-                var verified = Verify(package, temporaryPath, source.Name, reportCorruption: true);
+                var verified = Verify(package, version, temporaryPath, source.Name, reportCorruption: true);
                 if (verified is null)
                     return null;
 
@@ -164,11 +331,12 @@ internal sealed class PackageAcquirer
 
         if (failures.Count > 0)
         {
-            Report(DiagnosticDescriptors.PackageSourceFailure, $"Cannot download {package.Identity}: {string.Join("; ", failures)}", package);
+            Report(DiagnosticDescriptors.PackageSourceFailure, $"Cannot download {package.Id}@{version.ToNormalizedString()}: {string.Join("; ", failures)}", package);
         }
         else
         {
-            Report(DiagnosticDescriptors.PackageNotFound, $"{package.Identity} was not found in {string.Join(", ", candidates.Select(s => $"'{s.Name}'"))}. The exact version is required; no other version or source is used", package);
+            var hint = package.ExactVersion is null ? "" : ". The exact version is required; use a version range such as 1.* or * to accept other versions";
+            Report(DiagnosticDescriptors.PackageNotFound, $"{package.Id}@{version.ToNormalizedString()} was not found in {string.Join(", ", candidates.Select(s => $"'{s.Name}'"))}{hint}", package);
         }
 
         return null;
@@ -191,18 +359,14 @@ internal sealed class PackageAcquirer
         return $"source '{source.Name}' failed: {message}";
     }
 
-    private AcquiredPackage? Verify(PackageConfiguration package, FullPath path, string source, bool reportCorruption)
+    /// <summary>Verifies a package file. A local file has no <paramref name="expectedVersion"/>: its version must satisfy the configured range.</summary>
+    private AcquiredPackage? Verify(PackageConfiguration package, NuGetVersion? expectedVersion, FullPath path, string source, bool reportCorruption)
     {
         try
         {
-            using var archive = PackageArchive.Open(path);
-            var nuspecs = archive.Entries.Where(e => !e.Contains('/', StringComparison.Ordinal) && e.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase)).ToList();
-            if (nuspecs.Count != 1)
-                throw new PackageArchiveException($"the package must contain exactly one .nuspec file at its root (found {nuspecs.Count.ToString(CultureInfo.InvariantCulture)})");
-
-            using var nuspecStream = archive.OpenRead(nuspecs[0], maxSize: 10 * 1024 * 1024);
-            var metadata = PackageMetadata.Read(new NuspecReader(nuspecStream));
-            if (!string.Equals(metadata.Id, package.Id, StringComparison.OrdinalIgnoreCase) || metadata.Version != package.Version)
+            var metadata = ReadMetadata(path);
+            var versionMatches = expectedVersion is null ? package.Version.Satisfies(metadata.Version) : metadata.Version == expectedVersion;
+            if (!string.Equals(metadata.Id, package.Id, StringComparison.OrdinalIgnoreCase) || !versionMatches)
             {
                 Report(DiagnosticDescriptors.PackageIdentityMismatch, $"'{path.Name}' contains {metadata.Id}@{metadata.Version.ToNormalizedString()} but {package.Identity} is configured", package);
                 return null;
@@ -217,16 +381,34 @@ internal sealed class PackageAcquirer
                 Source = source,
             };
         }
-        catch (Exception ex) when (ex is PackageArchiveException or InvalidDataException or NuGet.Packaging.Core.PackagingException or System.Xml.XmlException or IOException)
+        catch (Exception ex) when (IsInvalidPackageException(ex))
         {
             if (reportCorruption)
             {
-                var descriptor = ex is PackageArchiveException && ex.Message.Contains("unsafe", StringComparison.Ordinal) ? DiagnosticDescriptors.UnsafePackageEntry : DiagnosticDescriptors.PackageIntegrity;
-                Report(descriptor, $"{package.Identity} is invalid: {ex.Message}", package);
+                ReportInvalidPackage(package, $"{package.Id}@{expectedVersion?.ToNormalizedString() ?? package.VersionText} is invalid: {ex.Message}", ex);
             }
 
             return null;
         }
+    }
+
+    private static PackageMetadata ReadMetadata(FullPath path)
+    {
+        using var archive = PackageArchive.Open(path);
+        var nuspecs = archive.Entries.Where(e => !e.Contains('/', StringComparison.Ordinal) && e.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (nuspecs.Count != 1)
+            throw new PackageArchiveException($"the package must contain exactly one .nuspec file at its root (found {nuspecs.Count.ToString(CultureInfo.InvariantCulture)})");
+
+        using var nuspecStream = archive.OpenRead(nuspecs[0], maxSize: 10 * 1024 * 1024);
+        return PackageMetadata.Read(new NuspecReader(nuspecStream));
+    }
+
+    private static bool IsInvalidPackageException(Exception ex) => ex is PackageArchiveException or InvalidDataException or NuGet.Packaging.Core.PackagingException or System.Xml.XmlException or IOException;
+
+    private void ReportInvalidPackage(PackageConfiguration package, string message, Exception ex)
+    {
+        var descriptor = ex is PackageArchiveException && ex.Message.Contains("unsafe", StringComparison.Ordinal) ? DiagnosticDescriptors.UnsafePackageEntry : DiagnosticDescriptors.PackageIntegrity;
+        Report(descriptor, message, package);
     }
 
     internal static string ComputeSha512(FullPath path)

@@ -4,6 +4,7 @@ using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Packages;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.Framework;
+using NuGet.Versioning;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
@@ -71,6 +72,188 @@ public sealed class PackageAcquisitionTests
         Assert.Empty(diagnostics2);
         Assert.Equal(package.Sha512, Assert.Single(second).Sha512);
         Assert.Equal(package.Path, second[0].Path);
+    }
+
+    [Theory]
+    [InlineData("*", "2.1.0")]
+    [InlineData("*-*", "3.0.0-preview.1")]
+    [InlineData("1.*", "1.5.0")]
+    [InlineData("2.*-*", "2.1.0")]
+    [InlineData("[1.0,2.0)", "1.5.0")]
+    [InlineData("[1.0,3.0)", "2.1.0")]
+    [InlineData("[2.0.0-beta.1,3.0)", "3.0.0-preview.1")] // Like NuGet, 3.0.0-preview.1 is lower than 3.0.0
+    [InlineData("[2.0.0-beta.1,2.0.0)", "2.0.0-beta.1")]
+    [InlineData("[1.0,)", "2.1.0")]
+    [InlineData("1.0.0", "1.0.0")]
+    [InlineData("[4.0,)", null)]
+    public void SelectVersion_PicksTheHighestMatchingVersion(string range, string? expected)
+    {
+        var versions = new[] { "1.0.0", "1.5.0", "2.0.0-beta.1", "2.0.0", "2.1.0", "3.0.0-preview.1" }.Select(NuGetVersion.Parse).ToList();
+        Assert.True(ConfigurationLoader.TryParseVersionRange(range, out var versionRange));
+
+        Assert.Equal(expected, PackageAcquirer.SelectVersion(versionRange, versions)?.ToNormalizedString());
+    }
+
+    [Fact]
+    public void SelectVersion_StableOnlyRangeIgnoresPrereleases()
+    {
+        Assert.True(ConfigurationLoader.TryParseVersionRange("*", out var range));
+        Assert.Null(PackageAcquirer.SelectVersion(range, [NuGetVersion.Parse("1.0.0-alpha"), NuGetVersion.Parse("1.0.0-beta")]));
+    }
+
+    [Theory]
+    [InlineData("", "2.1.0")]
+    [InlineData(""", "version": "*" """, "2.1.0")]
+    [InlineData(""", "version": "*-*" """, "3.0.0-preview.1")]
+    [InlineData(""", "version": "[1.0,2.0)" """, "1.5.0")]
+    public async Task FolderFeed_ResolvesVersionRange(string versionProperty, string expectedVersion)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        foreach (var version in new[] { "1.0.0", "1.5.0", "2.1.0", "3.0.0-preview.1" })
+        {
+            new TestPackageBuilder("Contoso.Json", version).Save(temp.FullPath / "feed");
+        }
+
+        WriteNuGetConfig(temp, ("feed", temp.FullPath / "feed"));
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json"{{versionProperty}} } ] }""");
+
+        var package = Assert.Single(packages);
+        Assert.Equal(expectedVersion, package.Metadata.Version.ToNormalizedString());
+        Assert.Equal("Contoso.Json@" + expectedVersion, package.Identity);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG2015", diagnostic.Code);
+        Assert.Contains("resolves to " + expectedVersion, diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FolderFeed_HighestVersionAcrossSources()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0").Save(temp.FullPath / "a");
+        new TestPackageBuilder("Contoso.Json", "2.0.0").Save(temp.FullPath / "b");
+        WriteNuGetConfig(temp, ("a", temp.FullPath / "a"), ("b", temp.FullPath / "b"));
+
+        var (packages, _) = await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json" } ] }""");
+
+        var package = Assert.Single(packages);
+        Assert.Equal("2.0.0", package.Metadata.Version.ToNormalizedString());
+        Assert.Equal("b", package.Source);
+    }
+
+    [Fact]
+    public async Task FolderFeed_NoMatchingVersion()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0-beta").Save(temp.FullPath / "feed");
+        WriteNuGetConfig(temp, ("feed", temp.FullPath / "feed"));
+
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json" } ] }""");
+
+        Assert.Empty(packages);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG2001", diagnostic.Code);
+        Assert.Contains("No version of Contoso.Json matching '*'", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("*-*", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Offline_VersionRangeResolvesFromCache()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0").Save(temp.FullPath / "feed");
+        new TestPackageBuilder("Contoso.Json", "1.5.0").Save(temp.FullPath / "feed");
+        WriteNuGetConfig(temp, ("feed", temp.FullPath / "feed"));
+        await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json", "version": "1.0.0" } ] }""");
+        await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json", "version": "1.5.0" } ] }""");
+
+        // A newer version on the feed is ignored offline
+        new TestPackageBuilder("Contoso.Json", "2.0.0").Save(temp.FullPath / "feed");
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json", "version": "*" } ] }""", offline: true);
+        Assert.Equal("1.5.0", Assert.Single(packages).Metadata.Version.ToNormalizedString());
+        Assert.Equal("DG2015", Assert.Single(diagnostics).Code);
+
+        (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "cacheDirectory": "cache", "packages": [ { "id": "Contoso.Json", "version": "2.*" } ] }""", offline: true);
+        Assert.Empty(packages);
+        Assert.Equal("DG2006", Assert.Single(diagnostics).Code);
+    }
+
+    [Theory]
+    [InlineData("", true)]
+    [InlineData(""", "version": "2.*" """, true)]
+    [InlineData(""", "version": "[1.0,2.0)" """, false)]
+    public async Task LocalPackage_VersionRange(string versionProperty, bool expectedMatch)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var path = new TestPackageBuilder("Contoso.Json", "2.1.0").Save(temp.FullPath, "contoso.json.nupkg");
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""{ "version": 1, "packages": [ { "id": "Contoso.Json"{{versionProperty}}, "path": "contoso.json.nupkg" } ] }""");
+
+        if (expectedMatch)
+        {
+            Assert.Empty(diagnostics);
+            Assert.Equal(path, Assert.Single(packages).Path);
+        }
+        else
+        {
+            Assert.Empty(packages);
+            Assert.Equal("DG2009", Assert.Single(diagnostics).Code);
+        }
+    }
+
+    [Theory]
+    [InlineData("", "2.1.0")]
+    [InlineData(""", "version": "*-*" """, "3.0.0-preview.1")]
+    [InlineData(""", "version": "[1.0,2.0)" """, "1.5.0")]
+    [InlineData(""", "version": "1.0.0" """, "1.0.0")]
+    public async Task LocalFolder_UsesHighestMatchingPackage(string versionProperty, string expectedVersion)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        foreach (var version in new[] { "1.0.0", "1.5.0", "2.1.0", "3.0.0-preview.1" })
+        {
+            new TestPackageBuilder("Contoso.Json", version).Save(temp.FullPath / "packages");
+        }
+
+        // Other packages of the folder are ignored, even when their identifier starts with the same prefix
+        new TestPackageBuilder("Contoso.Json.Extensions", "9.0.0").Save(temp.FullPath / "packages");
+        new TestPackageBuilder("Other", "9.0.0").Save(temp.FullPath / "packages");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""{ "version": 1, "packages": [ { "id": "Contoso.Json"{{versionProperty}}, "path": "packages" } ] }""", offline: true);
+
+        var package = Assert.Single(packages);
+        Assert.Equal(expectedVersion, package.Metadata.Version.ToNormalizedString());
+        Assert.Equal("local", package.Source);
+        Assert.Equal(temp.FullPath / "packages", package.Path.Parent);
+        Assert.All(diagnostics, d => Assert.Equal("DG2015", d.Code));
+    }
+
+    [Fact]
+    public async Task LocalFolder_NoMatchingPackage()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0-ci.42").Save(temp.FullPath / "packages");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "id": "Contoso.Json", "path": "packages" } ] }""");
+        Assert.Empty(packages);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG2001", diagnostic.Code);
+        Assert.Contains("*-*", diagnostic.Message, StringComparison.Ordinal);
+
+        (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "id": "Contoso.Json", "version": "1.0.0", "path": "packages" } ] }""");
+        Assert.Empty(packages);
+        Assert.Equal("DG2001", Assert.Single(diagnostics).Code);
+    }
+
+    [Fact]
+    public async Task LocalFolder_CorruptPackage()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("Contoso.Json", "1.0.0").Save(temp.FullPath / "packages");
+        temp.CreateTextFile("packages/Contoso.Json.2.0.0.nupkg", "not a zip");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "id": "Contoso.Json", "path": "packages" } ] }""");
+        Assert.Empty(packages);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("DG2003", diagnostic.Code);
+        Assert.Contains("Contoso.Json.2.0.0.nupkg", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]

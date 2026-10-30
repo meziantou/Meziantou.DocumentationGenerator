@@ -38,7 +38,7 @@ internal sealed class SourcePackageCompiler(DiagnosticBag diagnostics)
         foreach (var folder in package.SourceFolders)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var location = new DiagnosticLocation { Package = package.Package.Configuration.Identity, JsonPath = package.Package.Configuration.JsonPath, TargetFramework = folder.TargetFramework, Assembly = folder.DisplayPath };
+            var location = new DiagnosticLocation { Package = package.Package.Identity, JsonPath = package.Package.Configuration.JsonPath, TargetFramework = folder.TargetFramework, Assembly = folder.DisplayPath };
             var (references, referenceNames) = GetReferences(folder.Framework, package, availablePackages);
             var compiled = Compile(package, folder, archive, references, location, cancellationToken);
             if (compiled is null)
@@ -137,10 +137,10 @@ internal sealed class SourcePackageCompiler(DiagnosticBag diagnostics)
             using var archive = PackageArchive.Open(other.Package.Path);
             foreach (var asset in other.Assets.Where(a => a.Framework == nearest))
             {
-                var key = (other.Package.Configuration.Identity, asset.AssemblyEntry);
+                var key = (other.Package.Identity, asset.AssemblyEntry);
                 if (!_references.TryGetValue(key, out var reference))
                 {
-                    reference = MetadataReference.CreateFromImage(archive.ReadAllBytes(asset.AssemblyEntry), filePath: other.Package.Configuration.Identity + "/" + asset.AssemblyEntry);
+                    reference = MetadataReference.CreateFromImage(archive.ReadAllBytes(asset.AssemblyEntry), filePath: other.Package.Identity + "/" + asset.AssemblyEntry);
                     _references.Add(key, reference);
                 }
 
@@ -148,7 +148,7 @@ internal sealed class SourcePackageCompiler(DiagnosticBag diagnostics)
                 hasCoreLibrary |= asset.AssemblyName is "System.Runtime" or "netstandard" or "mscorlib";
             }
 
-            names.Add(other.Package.Configuration.Identity + " (" + nearest.GetShortFolderName() + ")");
+            names.Add(other.Package.Identity + " (" + nearest.GetShortFolderName() + ")");
         }
 
         if (!hasCoreLibrary)

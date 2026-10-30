@@ -87,13 +87,13 @@ internal sealed class ConfigurationFile
         [Description("NuGet package identifier.")]
         public string? Id { get; set; }
 
-        [Description("Exact package version. Version ranges are not supported.")]
+        [Description("Package version: an exact version (1.2.3), a NuGet version range ([1.0,2.0)) or a floating version (1.*, *, *-*). The highest matching version is used. Default: the latest stable version.")]
         public string? Version { get; set; }
 
         [Description("Package source URL or name from NuGet.Config. Default: the sources from NuGet.Config.")]
         public string? Source { get; set; }
 
-        [Description("Local .nupkg file, relative to the configuration file. When set, no feed is queried.")]
+        [Description("Local .nupkg file, or folder containing .nupkg files, relative to the configuration file. In a folder, the highest version matching 'version' is used. When set, no feed is queried.")]
         public string? Path { get; set; }
 
         [Description("Target framework folders to document, such as net8.0. Default: all.")]

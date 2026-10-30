@@ -22,7 +22,7 @@ internal sealed class ApiAssemblyReader(DiagnosticBag diagnostics)
         foreach (var asset in package.Assets)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var location = new DiagnosticLocation { Package = package.Package.Configuration.Identity, TargetFramework = asset.TargetFramework, Assembly = asset.AssemblyEntry };
+            var location = new DiagnosticLocation { Package = package.Package.Identity, TargetFramework = asset.TargetFramework, Assembly = asset.AssemblyEntry };
             try
             {
                 using var stream = asset.CompiledSource is { } compiled ? new MemoryStream(compiled.Assembly, writable: false) : archive.OpenRead(asset.AssemblyEntry);

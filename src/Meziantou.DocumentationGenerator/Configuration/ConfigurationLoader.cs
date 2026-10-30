@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -110,6 +111,21 @@ internal static partial class ConfigurationLoader
     private static bool IsPreprocessorSymbol(string? value)
     {
         return !string.IsNullOrEmpty(value) && !char.IsAsciiDigit(value[0]) && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+    }
+
+    /// <summary>
+    /// Parses a package version. Unlike NuGet, where <c>1.2.3</c> means "1.2.3 or higher", a version without range
+    /// syntax is an exact match so that existing configurations keep their pinned version.
+    /// </summary>
+    internal static bool TryParseVersionRange(string value, [NotNullWhen(true)] out VersionRange? range)
+    {
+        if (NuGetVersion.TryParse(value, out var exact))
+        {
+            range = new VersionRange(exact, includeMinVersion: true, exact, includeMaxVersion: true);
+            return true;
+        }
+
+        return VersionRange.TryParse(value, allowFloating: true, out range);
     }
 
         private static string CleanJsonExceptionMessage(string message)
@@ -343,18 +359,10 @@ internal static partial class ConfigurationLoader
                     isValid = false;
                 }
 
-                NuGetVersion? version = null;
-                if (string.IsNullOrWhiteSpace(section.Version))
+                var versionText = string.IsNullOrWhiteSpace(section.Version) ? "*" : section.Version.Trim();
+                if (!TryParseVersionRange(versionText, out var version))
                 {
-                    Error(DiagnosticDescriptors.InvalidPackageReference, $"The version of package '{section.Id}' is required; versions must be pinned for reproducible builds", path);
-                    isValid = false;
-                }
-                else if (!NuGetVersion.TryParse(section.Version, out version))
-                {
-                    var message = section.Version.IndexOfAny(['[', '(', '*', ',']) >= 0
-                        ? $"Version ranges are not supported ('{section.Version}'); use an exact version"
-                        : $"Invalid version '{section.Version}'";
-                    Error(DiagnosticDescriptors.InvalidPackageReference, message, path + ".version");
+                    Error(DiagnosticDescriptors.InvalidPackageReference, $"Invalid version '{section.Version}': use an exact version (1.2.3), a version range ([1.0,2.0)) or a floating version (1.*, *-*)", path + ".version");
                     isValid = false;
                 }
 
@@ -373,13 +381,36 @@ internal static partial class ConfigurationLoader
                 }
 
                 FullPath? localPath = null;
+                var isLocalFolder = false;
                 if (section.Path is not null)
                 {
-                    localPath = ResolveExistingFile(section.Path, path + ".path");
-                    if (localPath is { } p && !p.Extension.Equals(".nupkg", StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrWhiteSpace(section.Path))
                     {
-                        Error(DiagnosticDescriptors.InvalidPackageReference, $"'{section.Path}' is not a .nupkg file", path + ".path");
+                        Error(DiagnosticDescriptors.InvalidConfigurationValue, "The path cannot be empty", path + ".path");
                         isValid = false;
+                    }
+                    else
+                    {
+                        var resolved = Resolve(section.Path);
+                        if (Directory.Exists(resolved))
+                        {
+                            localPath = resolved;
+                            isLocalFolder = true;
+                        }
+                        else if (!File.Exists(resolved))
+                        {
+                            Error(DiagnosticDescriptors.InputNotFound, $"File or directory '{section.Path}' not found", path + ".path");
+                            isValid = false;
+                        }
+                        else if (!resolved.Extension.Equals(".nupkg", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Error(DiagnosticDescriptors.InvalidPackageReference, $"'{section.Path}' is neither a .nupkg file nor a directory", path + ".path");
+                            isValid = false;
+                        }
+                        else
+                        {
+                            localPath = resolved;
+                        }
                     }
                 }
 
@@ -449,8 +480,10 @@ internal static partial class ConfigurationLoader
                     {
                         Id = section.Id!,
                         Version = version,
+                        VersionText = versionText,
                         Source = section.Source,
                         LocalPath = localPath,
+                        IsLocalFolder = isLocalFolder,
                         TargetFrameworks = frameworks.ToImmutable(),
                         Assemblies = assemblies.ToImmutable(),
                         DefineConstants = defineConstants.ToImmutable(),

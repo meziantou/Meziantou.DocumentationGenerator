@@ -48,7 +48,7 @@ internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagno
     private ApiAssemblyGroup? CreateGroup(List<ApiAssemblyModel> models)
     {
         var first = models[0];
-        var location = new DiagnosticLocation { Package = first.Package.Package.Configuration.Identity, Assembly = first.Asset.AssemblyName };
+        var location = new DiagnosticLocation { Package = first.Package.Package.Identity, Assembly = first.Asset.AssemblyName };
         var duplicates = models.GroupBy(m => m.TargetFramework, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count > 0)
         {

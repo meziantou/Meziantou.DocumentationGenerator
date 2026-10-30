@@ -66,7 +66,7 @@ internal sealed class SourceLinkProvider
     private static async Task<Dictionary<ApiSymbolModel, SourceLocation>> ComputeAsync(ApiAssemblyGroup group, ApiAssemblyModel model, PackageArchive archive, DebugInfoLoader loader, DiagnosticBag diagnostics, CancellationToken cancellationToken)
     {
         var result = new Dictionary<ApiSymbolModel, SourceLocation>();
-        var location = new DiagnosticLocation { Package = group.Package.Package.Configuration.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
+        var location = new DiagnosticLocation { Package = group.Package.Package.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
 
         // Prefer the implementation without runtime identifier; runtime-specific implementations are only used when they agree
         var candidates = model.Asset.SymbolCandidates.Where(c => c.RuntimeIdentifier is null).ToList();

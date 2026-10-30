@@ -18,5 +18,8 @@ internal sealed class AcquiredPackage
 
     public string Id => Metadata.Id;
 
-    public override string ToString() => Configuration.Identity;
+    /// <summary>The identity with the resolved version, such as <c>Contoso@1.2.3</c>.</summary>
+    public string Identity => Configuration.Id + "@" + Metadata.Version.ToNormalizedString();
+
+    public override string ToString() => Identity;
 }

@@ -34,8 +34,8 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
                     continue;
                 }
 
-                var displayPath = group.Package.Package.Configuration.Identity + "/" + entry;
-                var location = new DiagnosticLocation { Package = group.Package.Package.Configuration.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
+                var displayPath = group.Package.Package.Identity + "/" + entry;
+                var location = new DiagnosticLocation { Package = group.Package.Package.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
                 using var stream = model.Asset.CompiledSource is { } compiled ? new MemoryStream(compiled.XmlDocumentation, writable: false) : archive.OpenRead(entry);
                 var file = XmlDocumentationFile.Load(stream, displayPath, diagnostics, location);
                 _files[model] = file;

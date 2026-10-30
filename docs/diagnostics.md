@@ -27,7 +27,7 @@ input and cannot be lowered.
 | `DG1001` | error | Unsupported configuration version |
 | `DG1002` | error | Invalid configuration syntax or unknown property |
 | `DG1003` | error | The configuration declares no package and no content |
-| `DG1004` | error | Invalid package identifier or version (version ranges are rejected) |
+| `DG1004` | error | Invalid package identifier, version or version range |
 | `DG1005` | error | Invalid target framework filter |
 | `DG1006` | error | Invalid site URL or base path |
 | `DG1007` | error | Configured input file or directory not found |
@@ -39,12 +39,12 @@ input and cannot be lowered.
 | `DG1013` | error | Invalid configuration value |
 | `DG1014` | error | Invalid API filter pattern |
 | `DG1015` | error | Invalid diagnostic severity override |
-| `DG2001` | error | Package not found in the configured sources (the exact version is required) |
+| `DG2001` | error | Package not found in the configured sources or local folder, or no version matches the configured version range |
 | `DG2002` | error | Package source or authentication failure |
 | `DG2003` | error | Invalid or corrupt package |
 | `DG2004` | error | A target framework or assembly filter matches no asset of the package |
 | `DG2005` | error (safety) | The package contains unsafe entries (rooted paths, `..`, links, duplicates, excessive sizes) |
-| `DG2006` | error | Package not available in the cache in offline mode |
+| `DG2006` | error | Package not available in the cache in offline mode (for a version range: no matching version in the cache) |
 | `DG2007` | warning | The package contains no compile-time managed assembly (dependency-only, native or tool package) |
 | `DG2008` | warning | Invalid managed assembly or unrecognized target framework folder, ignored |
 | `DG2009` | error | The package identity does not match the configuration |
@@ -53,6 +53,7 @@ input and cannot be lowered.
 | `DG2012` | warning | Unsupported or unreadable metadata (the assembly or attribute is skipped or displayed partially) |
 | `DG2013` | error | The builds of an assembly cannot be aggregated across target frameworks (duplicate inputs) |
 | `DG2014` | warning | The sources of a source package cannot be compiled for a framework (usually a dependency missing from `references`); the framework has no API reference |
+| `DG2015` | info | A version range or floating version was resolved to an exact version |
 | `DG3002` | warning | No XML documentation for an assembly; pages show signatures only |
 | `DG3003` | info | No usable PDB or Source Link information for an assembly; no source links are generated |
 | `DG3005` | warning | A PDB does not match its assembly (PDB identifier and timestamp); it is not used |

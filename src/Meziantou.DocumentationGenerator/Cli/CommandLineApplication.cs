@@ -58,7 +58,7 @@ internal sealed class CommandLineApplication
             Arity = ArgumentArity.ZeroOrOne,
         };
         var packageOption = new Option<string?>("--package") { Description = "Identifier of a package to document." };
-        var versionOption = new Option<string?>("--package-version") { Description = "Exact version of the package." };
+        var versionOption = new Option<string?>("--package-version") { Description = "Version or version range of the package. Default: the latest stable version." };
         var titleOption = new Option<string?>("--title") { Description = "Site title." };
         var forceOption = new Option<bool>("--force") { Description = "Overwrite an existing docgen.json. Existing Markdown files are never overwritten." };
 

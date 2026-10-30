@@ -41,7 +41,7 @@ internal sealed class DiscoveryStage : IBuildStage
             }
             catch (PackageArchiveException ex)
             {
-                context.Diagnostics.Report(DiagnosticDescriptors.PackageIntegrity, ex.Message, new DiagnosticLocation { Package = package.Package.Configuration.Identity });
+                context.Diagnostics.Report(DiagnosticDescriptors.PackageIntegrity, ex.Message, new DiagnosticLocation { Package = package.Package.Identity });
                 return package;
             }
         }
@@ -62,7 +62,7 @@ internal sealed class DiscoveryStage : IBuildStage
             }
             catch (PackageArchiveException ex)
             {
-                diagnostics.Report(DiagnosticDescriptors.PackageIntegrity, ex.Message, new DiagnosticLocation { Package = package.Configuration.Identity });
+                diagnostics.Report(DiagnosticDescriptors.PackageIntegrity, ex.Message, new DiagnosticLocation { Package = package.Identity });
             }
         }
 
@@ -87,7 +87,7 @@ internal sealed class DiscoveryStage : IBuildStage
                 if (!configured.Contains(dependency.Key))
                 {
                     var ranges = string.Join(", ", dependency.Select(d => d.VersionRange.ToNormalizedString()).Distinct(StringComparer.Ordinal));
-                    context.Diagnostics.Report(DiagnosticDescriptors.DependencyNotConfigured, $"Dependency '{dependency.Key}' ({ranges}) is not configured in 'references'; documentation inherited from it is not available", new DiagnosticLocation { Package = package.Package.Configuration.Identity });
+                    context.Diagnostics.Report(DiagnosticDescriptors.DependencyNotConfigured, $"Dependency '{dependency.Key}' ({ranges}) is not configured in 'references'; documentation inherited from it is not available", new DiagnosticLocation { Package = package.Package.Identity });
                 }
             }
         }

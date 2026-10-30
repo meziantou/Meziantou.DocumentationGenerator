@@ -84,7 +84,7 @@ public sealed class ConfigurationTests
                 Assert.Equal("json", product.Id);
                 Assert.Equal("Contoso.Json", product.Name);
             });
-        Assert.Equal("3.0.0-beta.1", configuration.Packages[1].Version.ToNormalizedString());
+        Assert.Equal("3.0.0-beta.1", configuration.Packages[1].ExactVersion?.ToNormalizedString());
     }
 
     [Fact]
@@ -314,9 +314,8 @@ public sealed class ConfigurationTests
     [InlineData("""{ "packages": [ { "id": "A", "version": "1.0.0" } ] }""", "DG1001")]
     [InlineData("""{ "version": 2, "packages": [ { "id": "A", "version": "1.0.0" } ] }""", "DG1001")]
     [InlineData("""{ "version": 1 }""", "DG1003")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "[1.0,2.0)" } ] }""", "DG1004")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.*" } ] }""", "DG1004")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A" } ] }""", "DG1004")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "not-a-version" } ] }""", "DG1004")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "[2.0,1.0]" } ] }""", "DG1004")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A b", "version": "1.0.0" } ] }""", "DG1004")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" }, { "id": "a", "version": "2.0.0" } ] }""", "DG1008")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "source": "https://user:secret@example.com/v3/index.json" } ] }""", "DG1011")]
@@ -329,6 +328,8 @@ public sealed class ConfigurationTests
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "diagnostics": { "severity": { "DG1009": "warning" } } }""", "DG1015")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "xrefs": [ { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/" } ] }""", "DG1013")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "path": "missing.nupkg" } ] }""", "DG1007")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "path": "missing-folder" } ] }""", "DG1007")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "path": "" } ] }""", "DG1013")]
     public async Task InvalidConfiguration(string json, string expectedCode)
     {
         await using var temp = TemporaryDirectory.Create();
@@ -336,6 +337,48 @@ public sealed class ConfigurationTests
 
         Assert.Null(configuration);
         Assert.Contains(diagnostics, d => d.Code == expectedCode && d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Theory]
+    [InlineData(null, "*", null)]
+    [InlineData("1.2.3", "1.2.3", "1.2.3")]
+    [InlineData("1.2.3-beta.1", "1.2.3-beta.1", "1.2.3-beta.1")]
+    [InlineData("[1.2.3]", "[1.2.3]", "1.2.3")]
+    [InlineData("*", "*", null)]
+    [InlineData("*-*", "*-*", null)]
+    [InlineData("1.*", "1.*", null)]
+    [InlineData("[1.0,2.0)", "[1.0,2.0)", null)]
+    public async Task PackageVersion_ExactRangeOrFloating(string? version, string expectedText, string? expectedExactVersion)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var versionProperty = version is null ? "" : $$""", "version": "{{version}}" """;
+        var (configuration, diagnostics) = Load(temp, $$"""{ "version": 1, "packages": [ { "id": "A"{{versionProperty}} } ] }""");
+
+        Assert.Empty(diagnostics);
+        var package = Assert.Single(configuration!.Packages);
+        Assert.Equal(expectedText, package.VersionText);
+        Assert.Equal(expectedExactVersion, package.ExactVersion?.ToNormalizedString());
+        Assert.Equal("A@" + (expectedExactVersion ?? expectedText), package.Identity);
+    }
+
+    [Fact]
+    public async Task PackagePath_FileOrFolder()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        Directory.CreateDirectory(temp.FullPath / "packages");
+        temp.CreateTextFile("a.nupkg", "");
+        temp.CreateTextFile("a.txt", "");
+
+        var (configuration, diagnostics) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "path": "a.nupkg" }, { "id": "B", "path": "packages" } ] }""");
+        Assert.Empty(diagnostics);
+        Assert.False(configuration!.Packages[0].IsLocalFolder);
+        Assert.Equal(temp.FullPath / "a.nupkg", configuration.Packages[0].LocalPath);
+        Assert.True(configuration.Packages[1].IsLocalFolder);
+        Assert.Equal(temp.FullPath / "packages", configuration.Packages[1].LocalPath);
+
+        (configuration, diagnostics) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "path": "a.txt" } ] }""");
+        Assert.Null(configuration);
+        Assert.Equal("DG1004", Assert.Single(diagnostics).Code);
     }
 
     [Fact]

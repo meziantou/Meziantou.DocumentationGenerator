@@ -17,7 +17,7 @@ internal static class ConfigurationTemplate
                 BasePath = "/",
             },
             Output = "_site",
-            Packages = packageId is null ? [] : [new ConfigurationFile.PackageSection { Id = packageId, Version = packageVersion ?? "1.0.0" }],
+            Packages = packageId is null ? [] : [new ConfigurationFile.PackageSection { Id = packageId, Version = packageVersion }],
             Content = new ConfigurationFile.ContentSection { Root = "docs" },
         };
 
