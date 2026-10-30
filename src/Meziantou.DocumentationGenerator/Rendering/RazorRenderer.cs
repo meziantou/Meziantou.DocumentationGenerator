@@ -10,7 +10,6 @@ namespace Meziantou.DocumentationGenerator.Rendering;
 internal sealed class RazorRenderer : IAsyncDisposable
 {
     private readonly ServiceProvider _services;
-    private readonly HtmlRenderer _renderer;
 
     public RazorRenderer(Action<IServiceCollection>? configureServices = null)
     {
@@ -21,7 +20,6 @@ internal sealed class RazorRenderer : IAsyncDisposable
         services.AddSingleton(System.Text.Encodings.Web.HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All));
         configureServices?.Invoke(services);
         _services = services.BuildServiceProvider();
-        _renderer = new HtmlRenderer(_services, NullLoggerFactory.Instance);
     }
 
     public Task<string> RenderAsync<TComponent>(IReadOnlyDictionary<string, object?> parameters)
@@ -30,13 +28,15 @@ internal sealed class RazorRenderer : IAsyncDisposable
         return RenderAsync(typeof(TComponent), parameters);
     }
 
-    public Task<string> RenderAsync(Type componentType, IReadOnlyDictionary<string, object?> parameters)
+    public async Task<string> RenderAsync(Type componentType, IReadOnlyDictionary<string, object?> parameters)
     {
+        // A renderer retains its root components until disposed. Release each page's tree before rendering the next page.
+        await using var renderer = new HtmlRenderer(_services, NullLoggerFactory.Instance);
         // HtmlRenderer has thread affinity: every call must go through its dispatcher, and asynchronous component work
         // must complete before the HTML is read
-        return _renderer.Dispatcher.InvokeAsync(async () =>
+        return await renderer.Dispatcher.InvokeAsync(async () =>
         {
-            var root = await _renderer.RenderComponentAsync(componentType, ParameterView.FromDictionary(parameters.ToDictionary(StringComparer.Ordinal)));
+            var root = await renderer.RenderComponentAsync(componentType, ParameterView.FromDictionary(parameters.ToDictionary(StringComparer.Ordinal)));
             await root.QuiescenceTask;
             return root.ToHtmlString();
         });
@@ -44,7 +44,6 @@ internal sealed class RazorRenderer : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _renderer.DisposeAsync();
         await _services.DisposeAsync();
     }
 }

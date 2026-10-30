@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
@@ -59,20 +61,48 @@ internal sealed class RenderStage : IBuildStage
             SocialImageUrl = socialImage,
         };
 
-        // A single renderer is used sequentially: HtmlRenderer has dispatcher affinity, and sequential rendering keeps the output deterministic
+        // Components use shared site services, so render them sequentially to keep diagnostics deterministic.
         await using var renderer = new RazorRenderer(services => services.AddSingleton(site));
         var minifier = new HtmlMinifier(styleSheet);
         var sourcePaths = context.Content.Pages.ToDictionary(p => p.Route.FilePath, p => p.DisplayPath, StringComparer.Ordinal);
-        foreach (var page in SitePageCatalog.GetPages(site))
+        var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 4), CancellationToken = cancellationToken };
+        var renderingTime = TimeSpan.Zero;
+        var linkExtractionTime = TimeSpan.Zero;
+        var minificationTime = TimeSpan.Zero;
+        var writingTime = TimeSpan.Zero;
+        // Bound the number of HTML documents in memory; only minification is independent of the shared site services.
+        foreach (var pages in SitePageCatalog.GetPages(site).Chunk(parallelOptions.MaxDegreeOfParallelism))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var html = await renderer.RenderAsync(page.Component, page.Parameters);
-            html = html.ReplaceLineEndings("\n");
+            var htmlPages = new string[pages.Length];
+            for (var i = 0; i < pages.Length; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var page = pages[i];
+                var renderStarted = Stopwatch.GetTimestamp();
+                var html = await renderer.RenderAsync(page.Component, page.Parameters);
+                htmlPages[i] = html.ReplaceLineEndings("\n");
+                renderingTime += Stopwatch.GetElapsedTime(renderStarted);
 
-            // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
-            validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html), sourcePaths.GetValueOrDefault(page.FilePath));
-            staging.WriteText(page.FilePath, minifier.Minify(html));
+                // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
+                var extractionStarted = Stopwatch.GetTimestamp();
+                validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(htmlPages[i]), HtmlLinkExtractor.GetLinks(htmlPages[i]), sourcePaths.GetValueOrDefault(page.FilePath));
+                linkExtractionTime += Stopwatch.GetElapsedTime(extractionStarted);
+            }
+
+            var started = Stopwatch.GetTimestamp();
+            Parallel.For(0, pages.Length, parallelOptions, i => htmlPages[i] = minifier.Minify(htmlPages[i]));
+            minificationTime += Stopwatch.GetElapsedTime(started);
+            started = Stopwatch.GetTimestamp();
+            for (var i = 0; i < pages.Length; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                staging.WriteText(pages[i].FilePath, htmlPages[i]);
+            }
+
+            writingTime += Stopwatch.GetElapsedTime(started);
         }
+
+        context.Reporter.Verbose(string.Create(CultureInfo.InvariantCulture, $"Page rendering: components {renderingTime.TotalMilliseconds:F0} ms; link extraction {linkExtractionTime.TotalMilliseconds:F0} ms; minification {minificationTime.TotalMilliseconds:F0} ms; writing {writingTime.TotalMilliseconds:F0} ms"));
 
         // The search index lists URLs relative to the base path; they are validated like links
         var indexPath = LinkService.AssetsDirectory + "/" + Search.SearchIndexBuilder.FileName;

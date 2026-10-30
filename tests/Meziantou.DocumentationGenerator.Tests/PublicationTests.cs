@@ -8,6 +8,33 @@ namespace Meziantou.DocumentationGenerator.Tests;
 public sealed class PublicationTests
 {
     [Fact]
+    public void ParallelMinification_IsByteIdenticalToSequentialMinification()
+    {
+        var minifier = new HtmlMinifier("""
+            p { display: block; }
+            .inline { display: inline; }
+            pre { white-space: pre; }
+            .label::before { content: "Label "; }
+            """);
+        string[] pages =
+        [
+            "<!DOCTYPE html><html><head><title>Page</title></head><body><p> Some <strong>bold</strong> text. </p></body></html>",
+            "<!DOCTYPE html><html><body><div class=\"inline\"> First </div> <span> second </span></body></html>",
+            "<!DOCTYPE html><html><body><pre>  first\n    second\n</pre><p class=\"label\"> Value </p></body></html>",
+            "<!DOCTYPE html><html><body><table><tr><th>Title</th></tr><tr><td><a href=\"/#example\">Value &amp; text</a></td></tr></table></body></html>",
+        ];
+        var expected = pages.Select(minifier.Minify).ToArray();
+        var actual = new string[128];
+
+        Parallel.For(0, actual.Length, new ParallelOptions { MaxDegreeOfParallelism = 4 }, i => actual[i] = minifier.Minify(pages[i % pages.Length]));
+
+        for (var i = 0; i < actual.Length; i++)
+        {
+            Assert.Equal(expected[i % pages.Length], actual[i]);
+        }
+    }
+
+    [Fact]
     public async Task GeneratesACompleteStaticSite()
     {
         await using var temp = CreateSite();
