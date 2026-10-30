@@ -21,23 +21,22 @@ internal static class SitePageCatalog
             yield return PageRequest.Create<ArticlePage>(page.Route.FilePath, new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(ArticlePage.PagePath)] = page.Route.FilePath });
         }
 
-        foreach (var product in site.Configuration.Products)
+        foreach (var package in site.Catalog.Packages)
         {
-            var model = site.GetProductModel(product.Id);
-            if (model is null || model.Namespaces.IsEmpty)
+            if (package.Namespaces.IsEmpty)
                 continue;
 
-            yield return PageRequest.Create<ApiReferencePage>(RouteNames.GetApiReferencePath(product.Id), new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(ApiReferencePage.ProductId)] = product.Id });
-            foreach (var ns in model.Namespaces)
+            yield return PageRequest.Create<PackagePage>(RouteNames.GetPackagePath(package.Id), new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(PackagePage.PackageId)] = package.Id });
+            foreach (var ns in package.Namespaces)
             {
-                yield return PageRequest.Create<NamespacePage>(RouteNames.GetNamespacePath(product.Id, ns.Name), new Dictionary<string, object?>(StringComparer.Ordinal)
+                yield return PageRequest.Create<NamespacePage>(RouteNames.GetNamespacePath(package.Id, ns.Name), new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
-                    [nameof(NamespacePage.ProductId)] = product.Id,
+                    [nameof(NamespacePage.PackageId)] = package.Id,
                     [nameof(NamespacePage.Namespace)] = ns.Name,
                 });
             }
 
-            foreach (var type in model.GetAllTypes())
+            foreach (var type in package.GetAllTypes())
             {
                 if (site.Links.GetTypeRoute(type) is { } route)
                 {

@@ -165,7 +165,7 @@ public sealed class InheritanceTests
         await using var build = await BuildAsync();
         var remarks = Render(build, "T:Contoso.Inherit.Derived", c => c.Remarks!);
 
-        Assert.Contains("<a href=\"/contoso.inherit/api/Contoso.Inherit.Base.html#Run(System.Int32)\"><code>Base.Run</code></a>", remarks);
+        Assert.Contains("<a href=\"/api/contoso.inherit/Contoso.Inherit.Base.html#Run(System.Int32)\"><code>Base.Run</code></a>", remarks);
     }
 
     [Fact]

@@ -128,35 +128,6 @@
         "$ref": "#/properties/packages/items"
       }
     },
-    "products": {
-      "description": "Products group packages under a landing page and an API reference. Default: one product per package.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "description": "Product identifier, used in URLs. Lowercase letters, digits, \u0027-\u0027 and \u0027.\u0027.",
-            "type": "string"
-          },
-          "name": {
-            "description": "Display name. Default: the first package identifier.",
-            "type": "string"
-          },
-          "description": {
-            "description": "Short description displayed on the API reference page of the product. Default: the package description.",
-            "type": "string"
-          },
-          "packages": {
-            "description": "Identifiers of the packages of the product.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
-      }
-    },
     "content": {
       "description": "Authored Markdown content.",
       "type": "object",

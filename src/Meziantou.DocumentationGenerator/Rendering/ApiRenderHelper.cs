@@ -193,11 +193,11 @@ internal sealed class ApiRenderHelper(SiteRenderContext site)
         return text.Length <= 160 ? text : text[..157].TrimEnd() + "...";
     }
 
-    public static LinkContext GetLinkContext(ApiSymbolModel symbol) => new(symbol.Assembly.Scope, symbol.Assembly.ProductId);
+    public static LinkContext GetLinkContext(ApiSymbolModel symbol) => new(symbol.Assembly.Scope, symbol.Assembly.Package.Id);
 
     private static XmlRenderContext CreateContext(DocumentationComment comment, ApiSymbolModel symbol)
     {
-        return new XmlRenderContext(new LinkContext(comment.Scope ?? symbol.Assembly.Scope, symbol.Assembly.ProductId), comment.SourcePath, symbol.DocumentationId);
+        return new XmlRenderContext(new LinkContext(comment.Scope ?? symbol.Assembly.Scope, symbol.Assembly.Package.Id), comment.SourcePath, symbol.DocumentationId);
     }
 
     /// <summary>Attributes worth a badge: obsolescence, experimental APIs, and platform support.</summary>

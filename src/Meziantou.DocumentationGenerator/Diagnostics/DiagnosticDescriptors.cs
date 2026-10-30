@@ -15,7 +15,6 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor DangerousOutputPath = new("DG1009", "The output directory overlaps inputs", DiagnosticSeverity.Error, IsSafetyCritical: true);
     public static readonly DiagnosticDescriptor RobotsUnderSubpath = new("DG1010", "robots.txt cannot be generated under a base path", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor CredentialsInConfiguration = new("DG1011", "Credentials must not be stored in the configuration", DiagnosticSeverity.Error, IsSafetyCritical: true);
-    public static readonly DiagnosticDescriptor InvalidProductMapping = new("DG1012", "Invalid product definition", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidConfigurationValue = new("DG1013", "Invalid configuration value", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidFilterPattern = new("DG1014", "Invalid API filter pattern", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidDiagnosticOverride = new("DG1015", "Invalid diagnostic severity override", DiagnosticSeverity.Error);

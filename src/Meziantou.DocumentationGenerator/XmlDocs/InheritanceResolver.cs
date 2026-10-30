@@ -134,7 +134,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         var preferred = candidates.Where(c => c.Assembly.Scope == model.Scope).ToList();
         if (preferred.Count == 0)
         {
-            preferred = candidates.Where(c => c.Assembly.ProductId is not null && c.Assembly.ProductId == model.ProductId).ToList();
+            preferred = candidates.Where(c => string.Equals(c.Assembly.Package.Id, model.Package.Id, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
         if (preferred.Count == 0)

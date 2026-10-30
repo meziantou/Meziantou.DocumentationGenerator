@@ -11,9 +11,6 @@
   "packages": [
     { "id": "Sample.Library", "version": "1.0.0", "path": "artifacts/packages/Sample.Library.1.0.0.nupkg" }
   ],
-  "products": [
-    { "id": "sample", "name": "Sample.Library", "packages": [ "Sample.Library" ] }
-  ],
   "content": { "root": "docs" },
   "xrefs": [
     { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }

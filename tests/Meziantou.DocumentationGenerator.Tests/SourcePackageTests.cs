@@ -218,7 +218,7 @@ public sealed class SourcePackageTests
         await using var site = await SiteBuilder.BuildAsync([CreateSourcePackage()]);
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
 
-        var guard = HtmlDocumentLoader.Parse(site.ReadFile("contoso.sources/api/Contoso.Sources.Guard.html"));
+        var guard = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.sources/Contoso.Sources.Guard.html"));
         Assert.Equal("Guard Class", guard.QuerySelector("h1")!.TextContent);
         Assert.Contains("Compiled into the consuming project (source package)", guard.QuerySelector("dl.api-metadata")!.TextContent, StringComparison.Ordinal);
         Assert.Equal("internal static class Guard", guard.QuerySelector("pre.declaration")!.TextContent);
@@ -228,13 +228,13 @@ public sealed class SourcePackageTests
         Assert.Contains(declarations, d => d.StartsWith("public static T NotNull<T>(", StringComparison.Ordinal));
         Assert.Contains("internal static void NotEmpty(ReadOnlySpan<char> value)", declarations);
 
-        var options = HtmlDocumentLoader.Parse(site.ReadFile("contoso.sources/api/Contoso.Sources.GuardOptions.html"));
+        var options = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.sources/Contoso.Sources.GuardOptions.html"));
         Assert.Equal("internal sealed class GuardOptions", options.QuerySelector("pre.declaration")!.TextContent);
         Assert.Equal("public string Label { get; internal set; }", options.GetElementById("Label")!.QuerySelector("pre.declaration")!.TextContent);
         Assert.Equal("internal static readonly GuardOptions Default", options.GetElementById("Default")!.QuerySelector("pre.declaration")!.TextContent);
         Assert.Null(options.GetElementById("Reset"));
 
-        var publicPart = HtmlDocumentLoader.Parse(site.ReadFile("contoso.sources/api/Contoso.Sources.PublicPart.html"));
+        var publicPart = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.sources/Contoso.Sources.PublicPart.html"));
         Assert.StartsWith("public class PublicPart", publicPart.QuerySelector("pre.declaration")!.TextContent, StringComparison.Ordinal);
     }
 

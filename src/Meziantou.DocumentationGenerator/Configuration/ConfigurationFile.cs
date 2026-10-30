@@ -31,9 +31,6 @@ internal sealed class ConfigurationFile
     [Description("Packages whose metadata and XML documentation are used for inherited documentation and cross-references, without publishing their APIs.")]
     public List<PackageSection>? References { get; set; }
 
-    [Description("Products group packages under a landing page and an API reference. Default: one product per package.")]
-    public List<ProductSection>? Products { get; set; }
-
     [Description("Authored Markdown content.")]
     public ContentSection? Content { get; set; }
 
@@ -104,21 +101,6 @@ internal sealed class ConfigurationFile
 
         [Description("Preprocessor symbols defined when compiling a source package, in addition to the symbols of the target framework, such as the symbols its MSBuild targets define in the consuming project. Default: none.")]
         public List<string>? DefineConstants { get; set; }
-    }
-
-    internal sealed class ProductSection
-    {
-        [Description("Product identifier, used in URLs. Lowercase letters, digits, '-' and '.'.")]
-        public string? Id { get; set; }
-
-        [Description("Display name. Default: the first package identifier.")]
-        public string? Name { get; set; }
-
-        [Description("Short description displayed on the API reference page of the product. Default: the package description.")]
-        public string? Description { get; set; }
-
-        [Description("Identifiers of the packages of the product.")]
-        public List<string>? Packages { get; set; }
     }
 
     internal sealed class ContentSection

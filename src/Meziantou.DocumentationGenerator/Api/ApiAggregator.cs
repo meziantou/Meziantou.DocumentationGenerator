@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using Meziantou.DocumentationGenerator.Configuration;
+using Meziantou.DocumentationGenerator.Discovery;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.Framework.PublicApiGenerator;
 using NuGet.Frameworks;
@@ -13,7 +13,7 @@ namespace Meziantou.DocumentationGenerator.Api;
 /// </summary>
 internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagnostics)
 {
-    public ApiCatalog Aggregate(IEnumerable<ApiAssemblyModel> models, IReadOnlyList<ProductConfiguration> products)
+    public ApiCatalog Aggregate(IEnumerable<ApiAssemblyModel> models, IReadOnlyList<DiscoveredPackage> packages)
     {
         var groups = ImmutableArray.CreateBuilder<ApiAssemblyGroup>();
         var byAssembly = models
@@ -29,20 +29,23 @@ internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagno
             }
         }
 
-        var productModels = ImmutableArray.CreateBuilder<ApiProductModel>();
-        foreach (var product in products)
+        var packageModels = ImmutableArray.CreateBuilder<ApiPackageModel>();
+        foreach (var package in packages)
         {
-            var productAssemblies = groups.Where(g => string.Equals(g.ProductId, product.Id, StringComparison.Ordinal) && !g.IsReference).ToImmutableArray();
-            var namespaces = productAssemblies
+            if (package.Package.Configuration.IsReference)
+                continue;
+
+            var packageAssemblies = groups.Where(g => string.Equals(g.Package.Id, package.Id, StringComparison.OrdinalIgnoreCase) && !g.IsReference).ToImmutableArray();
+            var namespaces = packageAssemblies
                 .SelectMany(a => a.GetAllTypes())
                 .GroupBy(t => t.Namespace, StringComparer.Ordinal)
                 .OrderBy(g => g.Key, StringComparer.Ordinal)
                 .Select(g => new ApiNamespaceModel(g.Key, [.. g.OrderBy(t => t.MetadataName, StringComparer.Ordinal).ThenBy(t => t.Assembly.Scope, StringComparer.Ordinal)]))
                 .ToImmutableArray();
-            productModels.Add(new ApiProductModel { Product = product, Assemblies = productAssemblies, Namespaces = namespaces });
+            packageModels.Add(new ApiPackageModel { Package = package, Assemblies = packageAssemblies, Namespaces = namespaces });
         }
 
-        return new ApiCatalog(groups.ToImmutable(), productModels.ToImmutable());
+        return new ApiCatalog(groups.ToImmutable(), packageModels.ToImmutable());
     }
 
     private ApiAssemblyGroup? CreateGroup(List<ApiAssemblyModel> models)
@@ -74,7 +77,6 @@ internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagno
         {
             Package = first.Package,
             AssemblyName = first.Asset.AssemblyName,
-            ProductId = first.ProductId,
             Models = [.. models],
             Aggregate = aggregate,
             TargetFrameworks = targetFrameworks,

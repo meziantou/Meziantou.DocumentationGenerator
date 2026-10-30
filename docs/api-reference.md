@@ -80,15 +80,15 @@ compiler-generated types. Use [`api.include` and `api.exclude`](configuration.md
 
 | Page | URL |
 | --- | --- |
-| API reference | `/{product}/api/` |
-| Namespace | `/{product}/api/namespaces/{Namespace}.html` |
-| Type | `/{product}/api/{Namespace}.{Type}.html`, generic arity as `-N` (`Tree-1.Node.html`) |
+| Package API reference | `/api/{package}/`, where `{package}` is the lowercase package ID |
+| Namespace | `/api/{package}/namespaces/{Namespace}.html` |
+| Type | `/api/{package}/{Namespace}.{Type}.html`, generic arity as `-N` (`Tree-1.Node.html`) |
 | Member | type page + `#` + the member part of the documentation ID (`#Send(System.String)`, `#%23ctor`) |
 | Overloads | type page + `#{Name}-overloads` |
 
-URLs only depend on product identifiers, namespaces and type names. They do not change when titles change, when the
+URLs only depend on package identifiers, namespaces and type names. They do not change when titles change, when the
 order of the inputs changes, or when target frameworks are added. Two types mapping to the same file (for instance in
-two packages of a product, or names differing only by case) are disambiguated with the assembly name, then a hash
+two assemblies of a package, or names differing only by case) are disambiguated with the assembly name, then a hash
 (`DG4004`); such URLs are only stable while the set of colliding types is unchanged.
 
 ## Missing inputs

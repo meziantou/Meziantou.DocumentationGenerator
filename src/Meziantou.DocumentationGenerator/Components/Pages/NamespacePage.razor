@@ -1,5 +1,5 @@
 @inject SiteRenderContext Site
-<SiteLayout Title="@Title" Description="@($"Types of the {DisplayName} namespace.")" PagePath="@RouteNames.GetNamespacePath(ProductId, Namespace)" Headings="@Headings">
+<SiteLayout Title="@Title" Description="@($"Types of the {DisplayName} namespace.")" PagePath="@RouteNames.GetNamespacePath(PackageId, Namespace)" Headings="@Headings">
     <h1>@Title</h1>
     @if (Model.Types.IsEmpty)
     {
@@ -25,7 +25,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public required string ProductId { get; set; }
+    public required string PackageId { get; set; }
 
     [Parameter, EditorRequired]
     public required string Namespace { get; set; }
@@ -36,7 +36,7 @@
 
     private string Title => Namespace.Length == 0 ? "Global namespace" : Namespace + " namespace";
 
-    private ApiNamespaceModel Model => Site.GetProductModel(ProductId)!.Namespaces.Single(n => n.Name == Namespace);
+    private ApiNamespaceModel Model => Site.GetPackageModel(PackageId).Namespaces.Single(n => n.Name == Namespace);
 
     private IEnumerable<(string Id, string Title, IReadOnlyList<ApiTypeModel> Types)> Groups => Model.Types
         .GroupBy(ApiRenderHelper.GetTypeKind)

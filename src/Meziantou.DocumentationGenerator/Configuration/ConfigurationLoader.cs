@@ -135,9 +135,6 @@ internal static partial class ConfigurationLoader
         return index >= 0 ? message[..index] : message;
     }
 
-    [GeneratedRegex("^[a-z0-9]+(?:[-.][a-z0-9]+)*$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    internal static partial Regex SlugRegex();
-
     [GeneratedRegex(@"^DG\d{4}$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex DiagnosticCodeRegex();
 
@@ -156,7 +153,6 @@ internal static partial class ConfigurationLoader
             var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var packages = ValidatePackages(file.Packages, "packages", isReference: false, packageIds);
             var references = ValidatePackages(file.References, "references", isReference: true, packageIds);
-            var products = ValidateProducts(file.Products, packages);
             var content = ValidateContent(file.Content);
             var apiFilter = ValidateApi(file.Api);
             var xrefs = ValidateXrefs(file.Xrefs);
@@ -187,7 +183,6 @@ internal static partial class ConfigurationLoader
                 OutputDirectory = output.Value,
                 CacheDirectory = cache.Value,
                 Packages = packages,
-                Products = products,
                 References = references,
                 Content = content,
                 ApiFilter = apiFilter,
@@ -490,115 +485,6 @@ internal static partial class ConfigurationLoader
                         Index = i,
                         IsReference = isReference,
                     });
-                }
-            }
-
-            return result.ToImmutable();
-        }
-
-        private ImmutableArray<ProductConfiguration> ValidateProducts(List<ConfigurationFile.ProductSection>? sections, ImmutableArray<PackageConfiguration> packages)
-        {
-            if (sections is null)
-            {
-                _defaultedValues.Add("$.products");
-                var implicitProducts = ImmutableArray.CreateBuilder<ProductConfiguration>();
-                var slugs = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var package in packages)
-                {
-                    var slug = package.Id.ToLowerInvariant();
-                    if (!SlugRegex().IsMatch(slug))
-                    {
-                        Error(DiagnosticDescriptors.InvalidProductMapping, $"Package '{package.Id}' cannot be used as a product identifier; declare a product with an explicit id", $"$.packages[{package.Index.ToString(CultureInfo.InvariantCulture)}].id");
-                        continue;
-                    }
-
-                    if (!slugs.Add(slug))
-                        continue;
-
-                    implicitProducts.Add(new ProductConfiguration
-                    {
-                        Id = slug,
-                        Name = package.Id,
-                        Packages = [package.Id],
-                        IsImplicit = true,
-                    });
-                }
-
-                return implicitProducts.ToImmutable();
-            }
-
-            var result = ImmutableArray.CreateBuilder<ProductConfiguration>();
-            var productIds = new HashSet<string>(StringComparer.Ordinal);
-            var packageOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < sections.Count; i++)
-            {
-                var path = $"$.products[{i.ToString(CultureInfo.InvariantCulture)}]";
-                var section = sections[i];
-                if (section is null)
-                {
-                    Error(DiagnosticDescriptors.InvalidProductMapping, "A product entry cannot be null", path);
-                    continue;
-                }
-
-                var isValid = true;
-                if (string.IsNullOrEmpty(section.Id) || !SlugRegex().IsMatch(section.Id))
-                {
-                    Error(DiagnosticDescriptors.InvalidProductMapping, $"Invalid product identifier '{section.Id}': use lowercase letters, digits, '-' and '.'", path + ".id");
-                    isValid = false;
-                }
-                else if (!productIds.Add(section.Id))
-                {
-                    Error(DiagnosticDescriptors.DuplicateIdentity, $"Product '{section.Id}' is defined more than once", path + ".id");
-                    isValid = false;
-                }
-
-                if (section.Packages is null || section.Packages.Count == 0)
-                {
-                    Error(DiagnosticDescriptors.InvalidProductMapping, $"Product '{section.Id}' must reference at least one package", path);
-                    continue;
-                }
-
-                var productPackages = ImmutableArray.CreateBuilder<string>();
-                for (var j = 0; j < section.Packages.Count; j++)
-                {
-                    var packageId = section.Packages[j];
-                    var packagePath = $"{path}.packages[{j.ToString(CultureInfo.InvariantCulture)}]";
-                    var package = packages.FirstOrDefault(p => string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase));
-                    if (package is null)
-                    {
-                        Error(DiagnosticDescriptors.InvalidProductMapping, $"Product '{section.Id}' references the package '{packageId}' which is not declared in 'packages'", packagePath);
-                        isValid = false;
-                    }
-                    else if (packageOwners.TryGetValue(package.Id, out var owner))
-                    {
-                        Error(DiagnosticDescriptors.InvalidProductMapping, $"Package '{package.Id}' belongs to products '{owner}' and '{section.Id}'; a package can belong to one product only", packagePath);
-                        isValid = false;
-                    }
-                    else
-                    {
-                        packageOwners[package.Id] = section.Id ?? "";
-                        productPackages.Add(package.Id);
-                    }
-                }
-
-                if (isValid)
-                {
-                    result.Add(new ProductConfiguration
-                    {
-                        Id = section.Id!,
-                        Name = string.IsNullOrWhiteSpace(section.Name) ? productPackages[0] : section.Name.Trim(),
-                        Description = section.Description,
-                        Packages = productPackages.ToImmutable(),
-                        IsImplicit = false,
-                    });
-                }
-            }
-
-            foreach (var package in packages)
-            {
-                if (!packageOwners.ContainsKey(package.Id))
-                {
-                    Error(DiagnosticDescriptors.InvalidProductMapping, $"Package '{package.Id}' does not belong to any product", $"$.packages[{package.Index.ToString(CultureInfo.InvariantCulture)}]");
                 }
             }
 

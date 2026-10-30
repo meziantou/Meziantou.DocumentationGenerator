@@ -8,7 +8,7 @@ namespace Meziantou.DocumentationGenerator.Navigation;
 
 /// <summary>
 /// Builds the navigation from the folders of the content directory, sorted by name, followed by the generated API
-/// reference: <c>API reference / {product} / {namespace} / {type}</c>.
+/// reference: <c>API reference / {package} / {namespace} / {type}</c>.
 /// </summary>
 internal sealed class NavigationBuilder(SiteConfiguration configuration, ContentModel content, ApiCatalog catalog, LinkService links)
 {
@@ -56,44 +56,39 @@ internal sealed class NavigationBuilder(SiteConfiguration configuration, Content
 
     private static NavigationNode CreatePageNode(AuthoredPage page) => new() { Title = page.Title, Url = page.Url, PagePath = page.Route.FilePath };
 
-    /// <summary>The last section of the navigation: one node per product with an API, in configuration order.</summary>
+    /// <summary>The last section of the navigation: one node per package with an API, in configuration order.</summary>
     private NavigationNode? CreateApiReferenceNode()
     {
-        var products = ImmutableArray.CreateBuilder<NavigationNode>();
-        foreach (var product in configuration.Products)
+        var packages = ImmutableArray.CreateBuilder<NavigationNode>();
+        foreach (var package in catalog.Packages)
         {
-            var namespaces = CreateApiNodes(product.Id);
-            if (namespaces.IsEmpty)
+            if (package.Namespaces.IsEmpty)
                 continue;
 
-            products.Add(new NavigationNode
+            packages.Add(new NavigationNode
             {
-                Title = product.Name,
-                Url = links.GetApiReferenceUrl(product.Id),
-                PagePath = RouteNames.GetApiReferencePath(product.Id),
-                Kind = NavigationNode.ProductKind,
-                Children = namespaces,
+                Title = package.Id,
+                Url = links.GetPackageUrl(package.Id),
+                PagePath = RouteNames.GetPackagePath(package.Id),
+                Kind = NavigationNode.PackageKind,
+                Children = CreateNamespaceNodes(package),
             });
         }
 
-        if (products.Count == 0)
+        if (packages.Count == 0)
             return null;
 
-        return new NavigationNode { Title = ApiReferenceTitle, Url = products[0].Url, IsGroup = true, Kind = NavigationNode.ApiReferenceKind, Children = products.ToImmutable() };
+        return new NavigationNode { Title = ApiReferenceTitle, Url = packages[0].Url, IsGroup = true, Kind = NavigationNode.ApiReferenceKind, Children = packages.ToImmutable() };
     }
 
     /// <summary>Namespaces sorted ordinally, each listing its types (including nested types) sorted by metadata name.</summary>
-    private ImmutableArray<NavigationNode> CreateApiNodes(string productId)
+    private ImmutableArray<NavigationNode> CreateNamespaceNodes(ApiPackageModel package)
     {
-        var product = catalog.Products.FirstOrDefault(p => p.Product.Id == productId);
-        if (product is null)
-            return [];
-
-        return [.. product.Namespaces.Select(ns => new NavigationNode
+        return [.. package.Namespaces.Select(ns => new NavigationNode
         {
             Title = ns.IsGlobal ? "Global namespace" : ns.Name,
-            Url = links.GetNamespaceUrl(productId, ns.Name),
-            PagePath = RouteNames.GetNamespacePath(productId, ns.Name),
+            Url = links.GetNamespaceUrl(package.Id, ns.Name),
+            PagePath = RouteNames.GetNamespacePath(package.Id, ns.Name),
             Kind = NavigationNode.NamespaceKind,
             Children = [.. ns.Types.Select(type => new NavigationNode
             {

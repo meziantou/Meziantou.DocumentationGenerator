@@ -7,7 +7,7 @@
         </div>
         <dl class="api-metadata">
             <dt>Namespace</dt>
-            <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.ProductId!, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
+            <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.Package.Id, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
             @if (Type.Assembly.IsSourcePackage)
             {
                 <dt>Assembly</dt>

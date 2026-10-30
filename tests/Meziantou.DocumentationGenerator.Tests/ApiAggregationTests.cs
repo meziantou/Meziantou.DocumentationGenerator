@@ -145,10 +145,10 @@ public sealed class ApiAggregationTests
         await using var build = TestBuild.Create($$"""{ "version": 1, "packages": [ {{TestBuild.PackageReference(package)}} ] }""", [package]);
         await build.RunSuccessfullyAsync(new AcquisitionStage(), new DiscoveryStage(), new ApiModelStage());
         var models = build.Context.ApiAssemblies;
-        var products = build.Context.Configuration.Products;
+        var packages = build.Context.DiscoveredPackages;
 
-        var forward = Describe(new ApiAggregator(ApiSymbolPolicy.Default, new DiagnosticBag()).Aggregate(models, products));
-        var reversed = Describe(new ApiAggregator(ApiSymbolPolicy.Default, new DiagnosticBag()).Aggregate(models.Reverse(), products));
+        var forward = Describe(new ApiAggregator(ApiSymbolPolicy.Default, new DiagnosticBag()).Aggregate(models, packages));
+        var reversed = Describe(new ApiAggregator(ApiSymbolPolicy.Default, new DiagnosticBag()).Aggregate(models.Reverse(), packages));
         Assert.Equal(forward, reversed);
     }
 
@@ -177,8 +177,8 @@ public sealed class ApiAggregationTests
         Assert.HasCount(2, catalog.Assemblies);
         var widgets = catalog.FindByDocumentationId("T:Contoso.Variants.Widget");
         Assert.Equal(["Contoso.First/Contoso.Variants", "Contoso.Second/Contoso.Variants"], widgets.Select(w => w.Identity.Scope));
-        Assert.Equal(["contoso.first", "contoso.second"], catalog.Products.Select(p => p.Product.Id));
-        Assert.All(catalog.Products, p => Assert.Single(p.Assemblies));
+        Assert.Equal(["Contoso.First", "Contoso.Second"], catalog.Packages.Select(p => p.Id));
+        Assert.All(catalog.Packages, p => Assert.Single(p.Assemblies));
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class ApiAggregationTests
         var diagnostics = new DiagnosticBag();
         var model = build.Context.ApiAssemblies[0];
 
-        var catalog = new ApiAggregator(ApiSymbolPolicy.Default, diagnostics).Aggregate([model, model], build.Context.Configuration.Products);
+        var catalog = new ApiAggregator(ApiSymbolPolicy.Default, diagnostics).Aggregate([model, model], build.Context.DiscoveredPackages);
         Assert.Empty(catalog.Assemblies);
         Assert.Equal("DG2013", Assert.Single(diagnostics.GetDiagnostics()).Code);
     }
@@ -199,10 +199,10 @@ public sealed class ApiAggregationTests
     public async Task NamespacesAndNestedTypes()
     {
         var catalog = await AggregateAsync(ApiModelTests.CreateKitchenSinkPackage());
-        var product = Assert.Single(catalog.Products);
+        var package = Assert.Single(catalog.Packages);
 
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], product.Namespaces.Select(n => n.Name));
-        var collections = product.Namespaces[1];
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], package.Namespaces.Select(n => n.Name));
+        var collections = package.Namespaces[1];
         Assert.Equal(["Tree`1", "Tree`1.Node", "Tree`1.Node.Child`1"], collections.Types.Select(t => t.MetadataName));
         Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], collections.Types.Select(t => t.DisplayName));
         var node = collections.Types[1];

@@ -3,7 +3,7 @@
     'use strict';
 
     var MAX_RESULTS = 20;
-    var KIND_PRIORITY = { 'class': 0, 'struct': 0, 'interface': 0, 'enum': 0, 'delegate': 0, 'product': 1, 'namespace': 2, 'article': 3 };
+    var KIND_PRIORITY = { 'class': 0, 'struct': 0, 'interface': 0, 'enum': 0, 'delegate': 0, 'package': 1, 'namespace': 2, 'article': 3 };
 
     function normalize(value) {
         return (value || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -76,7 +76,7 @@
                 title: title,
                 url: item[1],
                 kind: item[2],
-                product: item[3] >= 0 ? index.products[item[3]] : null,
+                package: item[3] >= 0 ? index.packages[item[3]] : null,
                 qualifiedName: qualified,
                 targetFrameworks: item[5] || '',
                 position: position,
@@ -124,7 +124,7 @@
     }
 
     function createEngine(index) {
-        if (!index || index.version !== 1 || !Array.isArray(index.items)) throw new Error('Invalid search index');
+        if (!index || index.version !== 2 || !Array.isArray(index.items)) throw new Error('Invalid search index');
         var entries = prepare(index);
         return {
             count: entries.length,
@@ -209,7 +209,7 @@
                 title.textContent = item.title;
                 var context = document.createElement('span');
                 context.className = 'search-context';
-                context.textContent = [item.kind, item.product, item.targetFrameworks].filter(Boolean).join(' · ');
+                context.textContent = [item.kind, item.package, item.targetFrameworks].filter(Boolean).join(' · ');
                 link.appendChild(title);
                 link.appendChild(context);
                 option.appendChild(link);

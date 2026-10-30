@@ -129,19 +129,20 @@ public sealed class NavigationTests
         var api = build.Context.Navigation.Root[^1];
         Assert.Equal("API reference", api.Title);
         Assert.True(api.IsGroup);
-        var product = Assert.Single(api.Children);
-        Assert.Equal("Contoso.Library", product.Title);
-        Assert.Equal("/docs/contoso.library/api/", product.Url);
-        Assert.Equal(product.Url, api.Url);
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], product.Children.Select(n => n.Title));
-        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], product.Children[1].Children.Select(n => n.Title));
+        var package = Assert.Single(api.Children);
+        Assert.Equal("Contoso.Library", package.Title);
+        Assert.Equal("package", package.Kind);
+        Assert.Equal("/docs/api/contoso.library/", package.Url);
+        Assert.Equal(package.Url, api.Url);
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], package.Children.Select(n => n.Title));
+        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], package.Children[1].Children.Select(n => n.Title));
     }
 
     [Fact]
     public async Task ApiPages_UseTheSiteNavigation()
     {
         await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
-        var navigation = build.Context.Navigation.GetPageNavigation("contoso.library/api/Contoso.Library.Client.html");
+        var navigation = build.Context.Navigation.GetPageNavigation("api/contoso.library/Contoso.Library.Client.html");
 
         Assert.Equal(["Imaging", "Other", "API reference"], navigation.Sidebar.Select(n => n.Title));
         Assert.Equal(["API reference", "Contoso.Library", "Contoso.Library", "Client"], navigation.ActiveTrail.Select(n => n.Title));

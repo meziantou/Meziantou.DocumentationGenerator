@@ -46,19 +46,19 @@ public sealed class LinkServiceTests
         """));
 
     [Theory]
-    [InlineData("T:Contoso.Library.Client", "/contoso.library/api/Contoso.Library.Client.html")]
-    [InlineData("T:Contoso.Library.Collections.Tree`1", "/contoso.library/api/Contoso.Library.Collections.Tree-1.html")]
-    [InlineData("T:Contoso.Library.Collections.Tree`1.Node", "/contoso.library/api/Contoso.Library.Collections.Tree-1.Node.html")]
-    [InlineData("T:Contoso.Library.Collections.Tree`1.Node.Child`1", "/contoso.library/api/Contoso.Library.Collections.Tree-1.Node.Child-1.html")]
-    [InlineData("M:Contoso.Library.Client.Send(System.String)", "/contoso.library/api/Contoso.Library.Client.html#Send(System.String)")]
-    [InlineData("M:Contoso.Library.Client.#ctor(System.String)", "/contoso.library/api/Contoso.Library.Client.html#%23ctor(System.String)")]
-    [InlineData("M:Contoso.Library.Client.#ctor", "/contoso.library/api/Contoso.Library.Client.html#%23ctor")]
-    [InlineData("M:Contoso.Library.Client.Convert``1(System.Object)", "/contoso.library/api/Contoso.Library.Client.html#Convert%60%601(System.Object)")]
-    [InlineData("M:Contoso.Library.Client.op_Implicit(System.String)~Contoso.Library.Client", "/contoso.library/api/Contoso.Library.Client.html#op_Implicit(System.String)~Contoso.Library.Client")]
-    [InlineData("M:Contoso.Library.Client.op_Explicit(Contoso.Library.Client)~System.String", "/contoso.library/api/Contoso.Library.Client.html#op_Explicit(Contoso.Library.Client)~System.String")]
-    [InlineData("M:Contoso.Library.Client.System#IDisposable#Dispose", "/contoso.library/api/Contoso.Library.Client.html#System%23IDisposable%23Dispose")]
-    [InlineData("P:Contoso.Library.Client.Item(System.Int32)", "/contoso.library/api/Contoso.Library.Client.html#Item(System.Int32)")]
-    [InlineData("M:Contoso.Library.Collections.Tree`1.Map``1(System.Func{`0,``0})", "/contoso.library/api/Contoso.Library.Collections.Tree-1.html#Map%60%601(System.Func%7B%600,%60%600%7D)")]
+    [InlineData("T:Contoso.Library.Client", "/api/contoso.library/Contoso.Library.Client.html")]
+    [InlineData("T:Contoso.Library.Collections.Tree`1", "/api/contoso.library/Contoso.Library.Collections.Tree-1.html")]
+    [InlineData("T:Contoso.Library.Collections.Tree`1.Node", "/api/contoso.library/Contoso.Library.Collections.Tree-1.Node.html")]
+    [InlineData("T:Contoso.Library.Collections.Tree`1.Node.Child`1", "/api/contoso.library/Contoso.Library.Collections.Tree-1.Node.Child-1.html")]
+    [InlineData("M:Contoso.Library.Client.Send(System.String)", "/api/contoso.library/Contoso.Library.Client.html#Send(System.String)")]
+    [InlineData("M:Contoso.Library.Client.#ctor(System.String)", "/api/contoso.library/Contoso.Library.Client.html#%23ctor(System.String)")]
+    [InlineData("M:Contoso.Library.Client.#ctor", "/api/contoso.library/Contoso.Library.Client.html#%23ctor")]
+    [InlineData("M:Contoso.Library.Client.Convert``1(System.Object)", "/api/contoso.library/Contoso.Library.Client.html#Convert%60%601(System.Object)")]
+    [InlineData("M:Contoso.Library.Client.op_Implicit(System.String)~Contoso.Library.Client", "/api/contoso.library/Contoso.Library.Client.html#op_Implicit(System.String)~Contoso.Library.Client")]
+    [InlineData("M:Contoso.Library.Client.op_Explicit(Contoso.Library.Client)~System.String", "/api/contoso.library/Contoso.Library.Client.html#op_Explicit(Contoso.Library.Client)~System.String")]
+    [InlineData("M:Contoso.Library.Client.System#IDisposable#Dispose", "/api/contoso.library/Contoso.Library.Client.html#System%23IDisposable%23Dispose")]
+    [InlineData("P:Contoso.Library.Client.Item(System.Int32)", "/api/contoso.library/Contoso.Library.Client.html#Item(System.Int32)")]
+    [InlineData("M:Contoso.Library.Collections.Tree`1.Map``1(System.Func{`0,``0})", "/api/contoso.library/Contoso.Library.Collections.Tree-1.html#Map%60%601(System.Func%7B%600,%60%600%7D)")]
     public async Task Routes_AreDeterministic(string documentationId, string expectedUrl)
     {
         await using var build = await BuildAsync([ApiModelTests.CreateKitchenSinkPackage()]);
@@ -75,7 +75,7 @@ public sealed class LinkServiceTests
 
         Assert.Equal("Send(Contoso.Library.Message,System.Int32)", RouteNames.GetMemberAnchor(send));
         Assert.Equal("Send-overloads", RouteNames.GetOverloadAnchor(send.OverloadName));
-        Assert.Equal("/contoso.library/api/Contoso.Library.Client.html#Send-overloads", build.Context.Links!.GetOverloadGroupUrl(send));
+        Assert.Equal("/api/contoso.library/Contoso.Library.Client.html#Send-overloads", build.Context.Links!.GetOverloadGroupUrl(send));
     }
 
     [Fact]
@@ -88,9 +88,9 @@ public sealed class LinkServiceTests
         Assert.Equal("/docs/", docs.Context.Links!.HomeUrl);
         Assert.Equal("/404.html", root.Context.Links.NotFoundUrl);
         Assert.Equal("/docs/404.html", docs.Context.Links.NotFoundUrl);
-        Assert.Equal("/docs/contoso.library/api/", docs.Context.Links.GetApiReferenceUrl("contoso.library"));
-        Assert.Equal("/docs/contoso.library/api/namespaces/Contoso.Library.Collections.html", docs.Context.Links.GetNamespaceUrl("contoso.library", "Contoso.Library.Collections"));
-        Assert.Equal("/docs/contoso.library/api/namespaces/_global.html", docs.Context.Links.GetNamespaceUrl("contoso.library", ""));
+        Assert.Equal("/docs/api/contoso.library/", docs.Context.Links.GetPackageUrl("Contoso.Library"));
+        Assert.Equal("/docs/api/contoso.library/namespaces/Contoso.Library.Collections.html", docs.Context.Links.GetNamespaceUrl("Contoso.Library", "Contoso.Library.Collections"));
+        Assert.Equal("/docs/api/contoso.library/namespaces/_global.html", docs.Context.Links.GetNamespaceUrl("Contoso.Library", ""));
         Assert.Equal("/docs/_assets/site.css", docs.Context.Links.GetAssetUrl("site.css"));
         Assert.Equal(
             root.Context.Links.Routes.Select(r => r.FilePath),
@@ -109,41 +109,40 @@ public sealed class LinkServiceTests
     }
 
     [Fact]
-    public async Task SameTypeInTwoAssembliesOfAProduct_IsDisambiguated()
+    public async Task SameTypeInTwoAssembliesOfAPackage_IsDisambiguated()
     {
-        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", Guard.Value.Assembly);
-        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", OtherGuard.Value.Assembly);
-        await using var build = await BuildAsync([first, second], """ "products": [ { "id": "guards", "packages": [ "Contoso.Guard", "Contoso.OtherGuard" ] } ], """);
+        var package = new TestPackageBuilder("Contoso.Guards", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", Guard.Value.Assembly).AddFile("lib/net8.0/Contoso.OtherGuard.dll", OtherGuard.Value.Assembly);
+        await using var build = await BuildAsync([package]);
 
         var urls = build.Context.ApiCatalog.FindByDocumentationId("T:Utils.Guard").Select(build.Context.Links!.GetUrl).ToList();
-        Assert.Equal(["/guards/api/Utils.Guard--Contoso.Guard.html", "/guards/api/Utils.Guard--Contoso.OtherGuard.html"], urls);
+        Assert.Equal(["/api/contoso.guards/Utils.Guard--Contoso.Guard.html", "/api/contoso.guards/Utils.Guard--Contoso.OtherGuard.html"], urls);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4004");
     }
 
     [Fact]
-    public async Task SameTypeInTwoProducts_HasOnePagePerProduct()
+    public async Task SameTypeInTwoPackages_HasOnePagePerPackage()
     {
         var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", Guard.Value.Assembly);
         var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", OtherGuard.Value.Assembly);
         await using var build = await BuildAsync([first, second]);
         var links = build.Context.Links!;
 
-        Assert.Equal(["/contoso.guard/api/Utils.Guard.html", "/contoso.otherguard/api/Utils.Guard.html"], build.Context.ApiCatalog.FindByDocumentationId("T:Utils.Guard").Select(links.GetUrl));
+        Assert.Equal(["/api/contoso.guard/Utils.Guard.html", "/api/contoso.otherguard/Utils.Guard.html"], build.Context.ApiCatalog.FindByDocumentationId("T:Utils.Guard").Select(links.GetUrl));
         Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG4004");
 
-        // References are resolved in the product of the page first, and are ambiguous outside of any product
-        Assert.Equal("/contoso.guard/api/Utils.Guard.html", links.Resolve("T:Utils.Guard", new LinkContext(null, "contoso.guard")).Url);
-        Assert.Equal("/contoso.otherguard/api/Utils.Guard.html", links.Resolve("T:Utils.Guard", new LinkContext("Contoso.OtherGuard/Contoso.OtherGuard", null)).Url);
+        // References are resolved in the package of the page first, and are ambiguous outside of any package
+        Assert.Equal("/api/contoso.guard/Utils.Guard.html", links.Resolve("T:Utils.Guard", new LinkContext(null, "Contoso.Guard")).Url);
+        Assert.Equal("/api/contoso.otherguard/Utils.Guard.html", links.Resolve("T:Utils.Guard", new LinkContext("Contoso.OtherGuard/Contoso.OtherGuard", null)).Url);
         var ambiguous = links.Resolve("T:Utils.Guard", LinkContext.None);
         Assert.Equal(CrefResolutionKind.Ambiguous, ambiguous.Kind);
         Assert.Equal(["Contoso.Guard!T:Utils.Guard", "Contoso.OtherGuard!T:Utils.Guard"], ambiguous.Candidates);
-        Assert.Equal("/contoso.otherguard/api/Utils.Guard.html", links.Resolve("Contoso.OtherGuard!T:Utils.Guard", LinkContext.None).Url);
+        Assert.Equal("/api/contoso.otherguard/Utils.Guard.html", links.Resolve("Contoso.OtherGuard!T:Utils.Guard", LinkContext.None).Url);
     }
 
     [Theory]
     [InlineData("Utils")]
     [InlineData("N:Utils")]
-    public async Task NamespaceInTwoProducts_IsAmbiguousUntilQualified(string cref)
+    public async Task NamespaceInTwoPackages_IsAmbiguousUntilQualified(string cref)
     {
         var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", Guard.Value.Assembly);
         var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", OtherGuard.Value.Assembly);
@@ -152,11 +151,11 @@ public sealed class LinkServiceTests
 
         var ambiguous = links.Resolve(cref, LinkContext.None);
         Assert.Equal(CrefResolutionKind.Ambiguous, ambiguous.Kind);
-        Assert.Equal(["contoso.guard!N:Utils", "contoso.otherguard!N:Utils"], ambiguous.Candidates);
+        Assert.Equal(["Contoso.Guard!N:Utils", "Contoso.OtherGuard!N:Utils"], ambiguous.Candidates);
 
-        Assert.Equal("/contoso.guard/api/namespaces/Utils.html", links.Resolve(cref, new LinkContext(null, "contoso.guard")).Url);
-        Assert.Equal("/contoso.otherguard/api/namespaces/Utils.html", links.Resolve("Contoso.OtherGuard!" + cref, LinkContext.None).Url);
-        Assert.Equal("/contoso.otherguard/api/namespaces/Utils.html", links.Resolve("contoso.otherguard!" + cref, LinkContext.None).Url);
+        Assert.Equal("/api/contoso.guard/namespaces/Utils.html", links.Resolve(cref, new LinkContext(null, "Contoso.Guard")).Url);
+        Assert.Equal("/api/contoso.otherguard/namespaces/Utils.html", links.Resolve("Contoso.OtherGuard!" + cref, LinkContext.None).Url);
+        Assert.Equal("/api/contoso.otherguard/namespaces/Utils.html", links.Resolve("contoso.otherguard!" + cref, LinkContext.None).Url);
         Assert.Equal(CrefResolutionKind.Unresolved, links.Resolve("Contoso.Missing!" + cref, LinkContext.None).Kind);
     }
 
@@ -170,8 +169,8 @@ public sealed class LinkServiceTests
         var lowerItem = links.GetUrl(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("T:Contoso.item")))!;
 
         Assert.NotEqual(item, lowerItem, StringComparer.OrdinalIgnoreCase);
-        Assert.Matches("^/contoso.case/api/Contoso.Item--[0-9a-f]{8}.html$", item);
-        Assert.Equal("/contoso.case/api/Contoso.CON.html", links.GetUrl(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("T:Contoso.CON"))));
+        Assert.Matches("^/api/contoso.case/Contoso.Item--[0-9a-f]{8}.html$", item);
+        Assert.Equal("/api/contoso.case/Contoso.CON.html", links.GetUrl(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("T:Contoso.CON"))));
         Assert.Equal("_CON", RouteNames.SanitizeFileName("CON"));
         Assert.Equal("_nul.txt", RouteNames.SanitizeFileName("nul.txt"));
     }
@@ -188,16 +187,16 @@ public sealed class LinkServiceTests
     }
 
     [Theory]
-    [InlineData("T:Contoso.Library.Client", "Resolved", "/contoso.library/api/Contoso.Library.Client.html", "Client")]
-    [InlineData("Contoso.Library.Client", "Resolved", "/contoso.library/api/Contoso.Library.Client.html", "Client")]
-    [InlineData("Contoso.Library.Collections.Tree<T>.Node", "Resolved", "/contoso.library/api/Contoso.Library.Collections.Tree-1.Node.html", "Tree<T>.Node")]
-    [InlineData("Contoso.Library.Collections.Tree{T}", "Resolved", "/contoso.library/api/Contoso.Library.Collections.Tree-1.html", "Tree<T>")]
-    [InlineData("M:Contoso.Library.Client.Send(System.String)", "Resolved", "/contoso.library/api/Contoso.Library.Client.html#Send(System.String)", "Client.Send")]
-    [InlineData("M:Contoso.Library.Client.Send", "Resolved", "/contoso.library/api/Contoso.Library.Client.html#Send-overloads", "Client.Send")]
-    [InlineData("Contoso.Library.Client.Name", "Resolved", "/contoso.library/api/Contoso.Library.Client.html#Name", "Client.Name")]
-    [InlineData("M:Contoso.Library.Client.Convert``1(System.Object)", "Resolved", "/contoso.library/api/Contoso.Library.Client.html#Convert%60%601(System.Object)", "Client.Convert")]
-    [InlineData("N:Contoso.Library.Collections", "Resolved", "/contoso.library/api/namespaces/Contoso.Library.Collections.html", "Contoso.Library.Collections")]
-    [InlineData("Contoso.Library.Collections", "Resolved", "/contoso.library/api/namespaces/Contoso.Library.Collections.html", "Contoso.Library.Collections")]
+    [InlineData("T:Contoso.Library.Client", "Resolved", "/api/contoso.library/Contoso.Library.Client.html", "Client")]
+    [InlineData("Contoso.Library.Client", "Resolved", "/api/contoso.library/Contoso.Library.Client.html", "Client")]
+    [InlineData("Contoso.Library.Collections.Tree<T>.Node", "Resolved", "/api/contoso.library/Contoso.Library.Collections.Tree-1.Node.html", "Tree<T>.Node")]
+    [InlineData("Contoso.Library.Collections.Tree{T}", "Resolved", "/api/contoso.library/Contoso.Library.Collections.Tree-1.html", "Tree<T>")]
+    [InlineData("M:Contoso.Library.Client.Send(System.String)", "Resolved", "/api/contoso.library/Contoso.Library.Client.html#Send(System.String)", "Client.Send")]
+    [InlineData("M:Contoso.Library.Client.Send", "Resolved", "/api/contoso.library/Contoso.Library.Client.html#Send-overloads", "Client.Send")]
+    [InlineData("Contoso.Library.Client.Name", "Resolved", "/api/contoso.library/Contoso.Library.Client.html#Name", "Client.Name")]
+    [InlineData("M:Contoso.Library.Client.Convert``1(System.Object)", "Resolved", "/api/contoso.library/Contoso.Library.Client.html#Convert%60%601(System.Object)", "Client.Convert")]
+    [InlineData("N:Contoso.Library.Collections", "Resolved", "/api/contoso.library/namespaces/Contoso.Library.Collections.html", "Contoso.Library.Collections")]
+    [InlineData("Contoso.Library.Collections", "Resolved", "/api/contoso.library/namespaces/Contoso.Library.Collections.html", "Contoso.Library.Collections")]
     [InlineData("T:System.String", "External", "https://learn.microsoft.com/dotnet/api/system.string", "String")]
     [InlineData("T:System.Collections.Generic.List`1", "External", "https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1", "List")]
     [InlineData("M:System.String.Join(System.String,System.String[])", "External", "https://learn.microsoft.com/dotnet/api/system.string.join", "String.Join")]
@@ -230,7 +229,7 @@ public sealed class LinkServiceTests
         var message = declaration.Segments.Single(s => s.Text == "Message");
 
         var resolution = build.Context.Links!.ResolveType((Meziantou.Framework.PublicApiGenerator.PublicApiNamedTypeReference)message.TypeReference!, LinkContext.None);
-        Assert.Equal("/contoso.library/api/Contoso.Library.Message.html", resolution.Url);
+        Assert.Equal("/api/contoso.library/Contoso.Library.Message.html", resolution.Url);
     }
 
     [Fact]
@@ -242,7 +241,7 @@ public sealed class LinkServiceTests
         Assert.False(links.TryRegister(new SiteRoute("../outside.html", PageKind.Article, "article")));
         Assert.False(links.TryRegister(new SiteRoute("/rooted.html", PageKind.Article, "article")));
         Assert.False(links.TryRegister(new SiteRoute("a\\b.html", PageKind.Article, "article")));
-        Assert.False(links.TryRegister(new SiteRoute("CONTOSO.LIBRARY/API/Contoso.Library.Client.html", PageKind.Article, "article")));
+        Assert.False(links.TryRegister(new SiteRoute("API/CONTOSO.LIBRARY/Contoso.Library.Client.html", PageKind.Article, "article")));
         Assert.True(links.TryRegister(new SiteRoute("guides/intro.html", PageKind.Article, "article")));
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4007");
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4005" && d.Message.Contains("case-insensitively", StringComparison.Ordinal));

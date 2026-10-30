@@ -203,7 +203,7 @@ public sealed class DiscoveryTests
         Assert.Equal(BuildStatus.Succeeded, status);
         Assert.Single(context.DiscoveredPackages);
         Assert.Single(context.DiscoveredReferences);
-        Assert.DoesNotContain("Contoso.Configured", context.Configuration.Products.SelectMany(p => p.Packages));
+        Assert.DoesNotContain("Contoso.Configured", context.DiscoveredPackages.Select(p => p.Id));
         var diagnostic = Assert.Single(diagnostics.GetDiagnostics(), d => d.Code == "DG2010");
         Assert.Contains("'Contoso.Core' ([1.0.0, ))", diagnostic.Message);
     }

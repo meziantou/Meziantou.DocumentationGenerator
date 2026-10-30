@@ -9,7 +9,7 @@ internal sealed class ApiAggregationStage : IBuildStage
     public Task ExecuteAsync(BuildContext context, CancellationToken cancellationToken)
     {
         var aggregator = new ApiAggregator(new ApiSymbolPolicy(context.Configuration.ApiFilter), context.Diagnostics);
-        context.ApiCatalog = aggregator.Aggregate(context.ApiAssemblies, context.Configuration.Products);
+        context.ApiCatalog = aggregator.Aggregate(context.ApiAssemblies, context.DiscoveredPackages);
         return Task.CompletedTask;
     }
 }

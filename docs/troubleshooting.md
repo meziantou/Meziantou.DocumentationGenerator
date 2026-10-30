@@ -37,4 +37,4 @@ the output directory is not modified (exit code `130`).
 
 The configuration format is versioned (`"version": 1`). Unknown properties are errors, so that a misspelled option is
 not silently ignored. Generated URLs follow the rules of [api-reference.md](api-reference.md#urls-and-anchors) and only
-change when product identifiers, namespaces, type names or the titles or slugs of authored pages and folders change.
+change when package identifiers, namespaces, type names or the titles or slugs of authored pages and folders change.

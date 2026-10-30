@@ -66,7 +66,7 @@ To install the tool globally instead, use `dotnet tool install --global Mezianto
 }
 ```
 
-Each package becomes a product with an API reference. The `docs` directory contains Markdown pages; `docs/index.md` is
+Each package gets its own section in the API reference. The `docs` directory contains Markdown pages; `docs/index.md` is
 the home page and the folder structure of `docs` defines the navigation.
 
 ## Commands
@@ -83,7 +83,7 @@ with `1` and the server is not started.
 
 ## Documentation
 
-- [Configuration reference](docs/configuration.md): every option, path rules and examples (grouped products,
+- [Configuration reference](docs/configuration.md): every option, path rules and examples (multiple packages,
   multiple target frameworks, private feeds, `/docs/` deployment).
 - [Authoring content](docs/content.md): Markdown, front matter, `cref:` links, assets, navigation, XML documentation tags,
   `inheritdoc` and `include`.

@@ -13,10 +13,10 @@ public sealed class BrowserTests(BrowserFixture fixture)
         "",
         "guide.html",
         "contoso.library/",
-        "contoso.library/api/",
-        "contoso.library/api/namespaces/Contoso.Library.html",
-        "contoso.library/api/Contoso.Library.Client.html",
-        "contoso.library/api/Contoso.Library.MessageKind.html",
+        "api/contoso.library/",
+        "api/contoso.library/namespaces/Contoso.Library.html",
+        "api/contoso.library/Contoso.Library.Client.html",
+        "api/contoso.library/Contoso.Library.MessageKind.html",
     ];
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.EndsWith("/guide.html", page.Url);
         Assert.Equal("Guide", await page.TextContentAsync("h1"));
 
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html#Send(System.String)");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html#Send(System.String)");
         Assert.True(await page.IsVisibleAsync("[id='Send(System.String)']"));
         Assert.Equal(2, await page.Locator("[id='Name'] .declaration-variant, [id='Send(System.ReadOnlySpan{System.Byte})'] .declaration-variant").CountAsync());
     }
@@ -129,7 +129,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         var navigation = page.WaitForURLAsync(url => url.EndsWith("/Contoso.Library.Client.html", StringComparison.Ordinal));
         await page.Keyboard.PressAsync("Enter");
         await navigation;
-        Assert.Equal(fixture.DocsServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html", page.Url);
+        Assert.Equal(fixture.DocsServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html", page.Url);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         // A short viewport makes the sidebar scroll; the API reference, and so the current type, is at its end
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 1280, Height = 200 } });
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
 
         var state = await page.EvaluateAsync<double[]>("""
             () => {
@@ -250,7 +250,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
 
         var span = page.Locator("[id='Send(System.ReadOnlySpan{System.Byte})']");
         Assert.True(await span.IsVisibleAsync());
@@ -266,10 +266,10 @@ public sealed class BrowserTests(BrowserFixture fixture)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ReducedMotion = ReducedMotion.Reduce });
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
 
         var href = await page.Locator("[id='Send(System.String)'] .heading-anchor").GetAttributeAsync("href");
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "contoso.library/api/Contoso.Library.Client.html" + href);
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html" + href);
         Assert.Equal("#Send(System.String)", href);
         Assert.True(await page.EvaluateAsync<bool>("(() => { const top = document.getElementById('Send(System.String)').getBoundingClientRect().top; return top >= 0 && top < window.innerHeight; })()"));
     }

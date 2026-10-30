@@ -48,41 +48,24 @@ one, never a partial site.
 - The build has no global mutable state. All state flows through a `BuildContext` created per build.
 - There is no plugin framework. Extension happens by contributing to this repository.
 
-## Product and package identity
+## Package identity
 
 **Guaranteed.**
 
 - A *package* is a NuGet package identified by `id` + `version`. A version range is resolved to one exact version
   during acquisition; every later stage uses the resolved version.
-- A *product* is a group of packages sharing an API reference and URLs. Its `description` (default: the package
-  description) is the lead paragraph of its API reference page.
-- When `products` is omitted, each package becomes its own product (`id` = lowercase package ID).
+- Each published package is a section of the API reference, identified in URLs by its lowercase ID. The package
+  description is the lead paragraph of its API reference page.
 - Pages are only the authored Markdown files. Nothing is generated from package READMEs; READMEs are never read or
   published.
-- A package can belong to at most one product. A package not referenced by any product while `products` is
-  configured is an error (`DG1012`).
 
-### Example: single-package product
+### Example
 
 ```json
 { "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ] }
 ```
 
-Product `contoso.json`, API reference at `/contoso.json/api/`.
-
-### Example: grouped product
-
-```json
-{
-  "packages": [
-    { "id": "Contoso.Data", "version": "3.0.0" },
-    { "id": "Contoso.Data.Sqlite", "version": "3.0.0" }
-  ],
-  "products": [
-    { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ] }
-  ]
-}
-```
+API reference of the package at `/api/contoso.json/`.
 
 ## Configuration
 
@@ -105,7 +88,6 @@ Product `contoso.json`, API reference at `/contoso.json/api/`.
 - `site.url` is an optional absolute `https://` or `http://` origin without path, query or fragment. The
   canonical URL of a page is `site.url` + `site.basePath` + page path. A `site.url` containing a path is
   rejected (`DG1006`) so that the path is not applied twice.
-- Slugs (`products[].id`) must match `^[a-z0-9]+(?:[-.][a-z0-9]+)*$`.
 
 ## Assembly selection: `ref/` versus `lib/`
 
@@ -160,7 +142,7 @@ A member is documented when it is visible to a consumer of the package:
 | Authored page | source path relative to the content root, without extension, `/` separators | `03-Guides/01-GettingStarted` |
 
 - XML documentation IDs alone are not unique: two packages can both define `T:Utils.Guard`. Symbol lookups
-  from XML or `cref:` links are resolved first in the current assembly scope, then in the current product,
+  from XML or `cref:` links are resolved first in the current assembly scope, then in the current package,
   then across all configured packages; more than one match at the same level is ambiguous (`DG4002`) and no
   link is generated.
 - Metadata tokens and MVIDs are provenance used for PDB lookup only; they are never part of a URL or identity.
@@ -182,10 +164,10 @@ Authored page URLs are computed from folder and page titles unless a `slug` is s
 | Page | File | URL with `basePath: /` | URL with `basePath: /docs/` |
 | --- | --- | --- | --- |
 | Site home | `index.html` | `/` | `/docs/` |
-| API reference | `{product}/api/index.html` | `/json/api/` | `/docs/json/api/` |
-| Namespace | `{product}/api/namespaces/{Namespace}.html` | `/json/api/namespaces/Contoso.Json.html` | `/docs/json/api/namespaces/Contoso.Json.html` |
-| Type | `{product}/api/{TypeName}.html` | `/json/api/Contoso.Json.JsonReader.html` | `/docs/json/api/Contoso.Json.JsonReader.html` |
-| Member | type page + fragment | `/json/api/Contoso.Json.JsonReader.html#Read(System.Int32)` | `/docs/json/api/Contoso.Json.JsonReader.html#Read(System.Int32)` |
+| Package API reference | `api/{package}/index.html` | `/api/contoso.json/` | `/docs/api/contoso.json/` |
+| Namespace | `api/{package}/namespaces/{Namespace}.html` | `/api/contoso.json/namespaces/Contoso.Json.html` | `/docs/api/contoso.json/namespaces/Contoso.Json.html` |
+| Type | `api/{package}/{TypeName}.html` | `/api/contoso.json/Contoso.Json.JsonReader.html` | `/docs/api/contoso.json/Contoso.Json.JsonReader.html` |
+| Member | type page + fragment | `/api/contoso.json/Contoso.Json.JsonReader.html#Read(System.Int32)` | `/docs/api/contoso.json/Contoso.Json.JsonReader.html#Read(System.Int32)` |
 | Authored page | `{folder slugs}/{page slug}.html` | `/guides/getting-started.html` | `/docs/guides/getting-started.html` |
 | Root `index.md` | `index.html` (site home) | `/` | `/docs/` |
 | Asset | `_assets/...`, or content-relative path | `/_assets/site.css` | `/docs/_assets/site.css` |
@@ -205,8 +187,8 @@ Authored page URLs are computed from folder and page titles unless a `slug` is s
 ### Collisions
 
 - Collisions are detected **case-insensitively** because common filesystems are case-insensitive.
-- When two pages of the same product map to the same file, every colliding page is suffixed with
-  `--{assemblyName}` (for instance two packages of one product both defining `Utils.Guard`). If the suffix
+- When two pages of the same package map to the same file, every colliding page is suffixed with
+  `--{assemblyName}` (for instance two assemblies of one package both defining `Utils.Guard`). If the suffix
   still collides (case-only differences), a stable 8-character hash of the scoped identity is appended.
   Warning `DG4004` lists the involved symbols because such URLs are only stable as long as the colliding
   set is unchanged.
@@ -229,11 +211,11 @@ Authored page URLs are computed from folder and page titles unless a `slug` is s
 ### Example: generic and nested types
 
 ```text
-T:Contoso.Collections.Tree`1            -> /json/api/Contoso.Collections.Tree-1.html
-T:Contoso.Collections.Tree`1.Node       -> /json/api/Contoso.Collections.Tree-1.Node.html
-M:Contoso.Collections.Tree`1.Add(`0)    -> /json/api/Contoso.Collections.Tree-1.html#Add(`0)
+T:Contoso.Collections.Tree`1            -> /api/contoso.json/Contoso.Collections.Tree-1.html
+T:Contoso.Collections.Tree`1.Node       -> /api/contoso.json/Contoso.Collections.Tree-1.Node.html
+M:Contoso.Collections.Tree`1.Add(`0)    -> /api/contoso.json/Contoso.Collections.Tree-1.html#Add(`0)
 M:Contoso.Collections.Tree`1.Map``1(System.Func{`0,``0})
-                                        -> /json/api/Contoso.Collections.Tree-1.html#Map``1(System.Func{`0,``0})
+                                        -> /api/contoso.json/Contoso.Collections.Tree-1.html#Map``1(System.Func{`0,``0})
 ```
 
 ### Example: TFM-specific members
@@ -244,15 +226,15 @@ whether or not the `netstandard2.0` asset is documented.
 
 ### Example: identical symbol IDs in different assemblies
 
-`Contoso.A` and `Contoso.B`, in different products, both define `T:Utils.Guard`:
+The packages `Contoso.A` and `Contoso.B` both define `T:Utils.Guard`:
 
 ```text
-/a/api/Utils.Guard.html   (scope Contoso.A/Contoso.A)
-/b/api/Utils.Guard.html   (scope Contoso.B/Contoso.B)
+/api/contoso.a/Utils.Guard.html   (scope Contoso.A/Contoso.A)
+/api/contoso.b/Utils.Guard.html   (scope Contoso.B/Contoso.B)
 ```
 
-A `cref:T:Utils.Guard` link in a page of product `a` resolves to `/a/api/Utils.Guard.html`. The same link in an
-authored page outside any product is ambiguous (`DG4002`) and must be qualified with the package:
+A `cref:T:Utils.Guard` link in a page of package `Contoso.A` resolves to `/api/contoso.a/Utils.Guard.html`. The same
+link in an authored page is ambiguous (`DG4002`) and must be qualified with the package:
 `cref:Contoso.B!T:Utils.Guard`.
 
 ## Cross-references
@@ -312,8 +294,8 @@ authored page outside any product is ambiguous (`DG4002`) and must be qualified 
   removes accents, lowercases, replaces runs of characters other than ASCII letters and digits with `-`, and trims.
   The root `index.md` is always `index.html`; other `index.md` files are ordinary pages. Collisions between pages,
   between folders, and any other page mapping to `index.html` are errors (`DG4005`).
-- The last section is always the generated API reference: a non-clickable `API reference` group, one node per product
-  (product name, linking to `{product}/api/index.html`) in configuration order, then namespaces and types sorted
+- The last section is always the generated API reference: a non-clickable `API reference` group, one node per package
+  (package ID, linking to `api/{package}/index.html`) in configuration order, then namespaces and types sorted
   ordinally.
 - Previous and next links only go through authored pages.
 

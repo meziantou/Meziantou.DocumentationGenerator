@@ -14,4 +14,4 @@ and a 20,000-entry index size budget (160 bytes per entry) are tested with the J
 search is checked interactively in a browser.
 
 API navigation only lists the types of the current namespace, so the size of a page does not grow with the number of
-namespaces of a product.
+namespaces of a package.

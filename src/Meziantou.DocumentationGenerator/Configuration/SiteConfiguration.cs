@@ -12,7 +12,6 @@ internal sealed class SiteConfiguration
     public required FullPath OutputDirectory { get; init; }
     public required FullPath CacheDirectory { get; init; }
     public required ImmutableArray<PackageConfiguration> Packages { get; init; }
-    public required ImmutableArray<ProductConfiguration> Products { get; init; }
 
     /// <summary>Packages used for inherited documentation and cross-references only.</summary>
     public required ImmutableArray<PackageConfiguration> References { get; init; }
@@ -32,6 +31,4 @@ internal sealed class SiteConfiguration
     }
 
     public PackageConfiguration? FindPackage(string id) => Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
-
-    public ProductConfiguration? FindProductOfPackage(string packageId) => Products.FirstOrDefault(p => p.Packages.Contains(packageId, StringComparer.OrdinalIgnoreCase));
 }

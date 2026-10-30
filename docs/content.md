@@ -114,11 +114,10 @@ generated HTML is validated afterwards: every internal `href`, `src` and fragmen
   namespaces.
 - `cref:M:Contoso.Json.JsonReader.Read`: without parameters, links to the overloads of the method.
 - `cref:Contoso.Collections.Tree{T}` or `cref:Contoso.Collections.Tree<T>.Node`: generic types.
-- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol. For a
-  namespace (`cref:Contoso.Json!N:Contoso` or `cref:Contoso.Json!Contoso`), the qualifier is a package or a product
-  identifier, since namespace pages belong to products.
+- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol. It also
+  applies to namespaces: `cref:Contoso.Json!N:Contoso` or `cref:Contoso.Json!Contoso`.
 
-References are resolved first in the current assembly, then in the current product, then in every package. Several
+References are resolved first in the current assembly, then in the current package, then in every package. Several
 matches at the same level are ambiguous (`DG4002`); unresolved references are an error (`DG4001`). Symbols
 outside the configured packages are linked only through [`xrefs`](configuration.md#xrefs) (by default, `System` and
 `Microsoft` namespaces to Microsoft Learn).
@@ -169,7 +168,7 @@ slug: guides
 - Without `_folder.yml` or without `title`, the title is the folder name without its number prefix (`03-Guides` →
   `Guides`) and `DG5011` is reported.
 - The last section is the generated API reference: an `API reference` group, linking to the API reference of the first
-  product, with one entry per product, in configuration order, linking to `{product}/api/index.html`, then its
+  package, with one entry per package, in configuration order, linking to `api/{package}/index.html`, then its
   namespaces and their types, sorted ordinally.
 - Previous and next links only go through authored pages.
 

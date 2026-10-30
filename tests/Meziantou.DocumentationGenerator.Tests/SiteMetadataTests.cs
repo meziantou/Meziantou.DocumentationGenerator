@@ -37,7 +37,7 @@ public sealed class SiteMetadataTests
         var sitemap = site.ReadFile("sitemap.xml");
         var locations = System.Xml.Linq.XDocument.Parse(sitemap).Descendants().Where(e => e.Name.LocalName == "loc").Select(e => e.Value).ToList();
         Assert.Contains("https://example.com/", locations);
-        Assert.Contains("https://example.com/contoso.library/api/Contoso.Library.Client.html", locations);
+        Assert.Contains("https://example.com/api/contoso.library/Contoso.Library.Client.html", locations);
         Assert.DoesNotContain(locations, l => l.Contains('#', StringComparison.Ordinal) || l.EndsWith("404.html", StringComparison.Ordinal));
         Assert.Distinct(locations);
         Assert.Equal(locations.Order(StringComparer.Ordinal), locations);

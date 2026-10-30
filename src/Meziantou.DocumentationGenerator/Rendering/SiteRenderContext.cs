@@ -34,21 +34,11 @@ internal sealed class SiteRenderContext
 
     public ApiTypeModel GetTypeByPagePath(string pagePath)
     {
-        _typesByPath ??= Catalog.Products.SelectMany(p => p.GetAllTypes()).Where(t => Links.GetTypeRoute(t) is not null).ToDictionary(t => Links.GetTypeRoute(t)!.FilePath, StringComparer.Ordinal);
+        _typesByPath ??= Catalog.Packages.SelectMany(p => p.GetAllTypes()).Where(t => Links.GetTypeRoute(t) is not null).ToDictionary(t => Links.GetTypeRoute(t)!.FilePath, StringComparer.Ordinal);
         return _typesByPath[pagePath];
     }
 
-    public ApiProductModel? GetProductModel(string productId) => Catalog.Products.FirstOrDefault(p => p.Product.Id == productId);
-
-    public ProductConfiguration GetProduct(string productId) => Configuration.Products.Single(p => p.Id == productId);
-
-    /// <summary>Discovered packages of a product, in configuration order.</summary>
-    public IReadOnlyList<Discovery.DiscoveredPackage> GetPackages(ProductConfiguration product)
-    {
-        return [.. product.Packages.Select(id => Packages.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase))).Where(p => p is not null).Select(p => p!)];
-    }
-
-    public string? GetProductDescription(ProductConfiguration product) => product.Description ?? GetPackages(product).Select(p => p.Package.Metadata.Description).FirstOrDefault(d => d is not null);
+    public ApiPackageModel GetPackageModel(string packageId) => Catalog.Packages.Single(p => string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Formats a page title: <c>{page} | {site}</c>, or the site title alone for the home page.</summary>
     public string GetDocumentTitle(string? pageTitle) => string.IsNullOrEmpty(pageTitle) || string.Equals(pageTitle, SiteTitle, StringComparison.Ordinal) ? SiteTitle : pageTitle + " | " + SiteTitle;

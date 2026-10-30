@@ -108,10 +108,10 @@ public sealed class SearchTests
         var items = document.RootElement.GetProperty("items").EnumerateArray().Select(i => (Title: i[0].GetString()!, Url: i[1].GetString()!, Kind: i[2].GetString()!, Frameworks: i[5].GetString()!)).ToList();
 
         Assert.Contains(items, i => i is { Title: "Guide", Url: "guide.html", Kind: "article" });
-        Assert.Contains(items, i => i is { Title: "Contoso.Library", Kind: "product" });
-        Assert.Contains(items, i => i is { Title: "Client", Url: "contoso.library/api/Contoso.Library.Client.html", Kind: "class" });
-        Assert.Contains(items, i => i is { Title: "Client.Send", Url: "contoso.library/api/Contoso.Library.Client.html#Send-overloads", Kind: "method" });
-        Assert.Contains(items, i => i is { Title: "Client.Name", Url: "contoso.library/api/Contoso.Library.Client.html#Name", Kind: "property" });
+        Assert.Contains(items, i => i is { Title: "Contoso.Library", Url: "api/contoso.library/index.html", Kind: "package" });
+        Assert.Contains(items, i => i is { Title: "Client", Url: "api/contoso.library/Contoso.Library.Client.html", Kind: "class" });
+        Assert.Contains(items, i => i is { Title: "Client.Send", Url: "api/contoso.library/Contoso.Library.Client.html#Send-overloads", Kind: "method" });
+        Assert.Contains(items, i => i is { Title: "Client.Name", Url: "api/contoso.library/Contoso.Library.Client.html#Name", Kind: "property" });
         Assert.Contains(items, i => i is { Title: "ModernOnly", Frameworks: "net8.0" });
         Assert.Single(items, i => i.Title == "Client.Send");
         Assert.Equal(items.Select(i => i.Url).Order(StringComparer.Ordinal), items.Select(i => i.Url));
@@ -122,7 +122,7 @@ public sealed class SearchTests
         Assert.Equal("/docs/", search.GetAttribute("data-base-path"));
 
         using var host = new SearchEngineHost(json);
-        Assert.Equal("contoso.library/api/Contoso.Library.Client.html", host.SearchDetailed("Client")[0].Url);
+        Assert.Equal("api/contoso.library/Contoso.Library.Client.html", host.SearchDetailed("Client")[0].Url);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class SearchTests
         for (var i = 0; i < 20_000; i++)
         {
             var type = $"Generated{i % 2000}Type{i}";
-            items.Add((i % 10 == 0 ? type : type + ".Member" + i, $"p/api/Contoso.Namespace{i % 50}.{type}.html" + (i % 10 == 0 ? "" : "#Member" + i), i % 10 == 0 ? "class" : "method", $"Contoso.Namespace{i % 50}.{type}"));
+            items.Add((i % 10 == 0 ? type : type + ".Member" + i, $"api/p/Contoso.Namespace{i % 50}.{type}.html" + (i % 10 == 0 ? "" : "#Member" + i), i % 10 == 0 ? "class" : "method", $"Contoso.Namespace{i % 50}.{type}"));
         }
 
         var json = CreateIndex([.. items]);
@@ -153,8 +153,8 @@ public sealed class SearchTests
     {
         return JsonSerializer.Serialize(new
         {
-            version = 1,
-            products = new[] { "Product" },
+            version = 2,
+            packages = new[] { "Package" },
             items = items.Select(i => new object[] { i.Title, i.Url, i.Kind, 0, i.QualifiedName, "" }),
         });
     }

@@ -130,9 +130,9 @@ public sealed partial class MarkdownTests
             });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/contoso.library/api/Contoso.Library.Client.html"><code>Client</code></a>""", html);
-        Assert.Contains("""<a href="/docs/contoso.library/api/Contoso.Library.Client.html#Send(System.String)">the send method</a>""", html);
-        Assert.Contains("""<a href="/docs/contoso.library/api/Contoso.Library.Collections.Tree-1.html"><code>Tree&lt;T&gt;</code></a>""", html);
+        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Client.html"><code>Client</code></a>""", html);
+        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Client.html#Send(System.String)">the send method</a>""", html);
+        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Collections.Tree-1.html"><code>Tree&lt;T&gt;</code></a>""", html);
         Assert.Contains("<code>Type</code>", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4001" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("Missing.Type", StringComparison.Ordinal));
     }
@@ -148,7 +148,7 @@ public sealed partial class MarkdownTests
         });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/contoso.guard/api/Utils.Guard.html">qualified</a>""", html);
+        Assert.Contains("""<a href="/docs/api/contoso.guard/Utils.Guard.html">qualified</a>""", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'T:Utils.Guard' is ambiguous", StringComparison.Ordinal));
     }
 
@@ -163,7 +163,7 @@ public sealed partial class MarkdownTests
         });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/contoso.guard/api/namespaces/Utils.html">qualified</a>""", html);
+        Assert.Contains("""<a href="/docs/api/contoso.guard/namespaces/Utils.html">qualified</a>""", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Message.Contains("'Utils' is ambiguous", StringComparison.Ordinal));
         Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG4001");
     }
@@ -479,7 +479,7 @@ public sealed partial class MarkdownTests
 
         Assert.Equal(["01-Page"], build.Context.Content.Pages.Select(p => p.Id));
         Assert.Empty(build.Context.Assets!.Assets);
-        Assert.DoesNotContain(build.Context.Links!.Routes, r => r.FilePath.StartsWith("contoso.readme/", StringComparison.Ordinal) && !r.FilePath.StartsWith("contoso.readme/api/", StringComparison.Ordinal));
+        Assert.DoesNotContain(build.Context.Links!.Routes, r => r.FilePath.StartsWith("contoso.readme/", StringComparison.Ordinal) && !r.FilePath.StartsWith("api/contoso.readme/", StringComparison.Ordinal));
     }
 
     private static async Task<TestBuild> BuildAsync(

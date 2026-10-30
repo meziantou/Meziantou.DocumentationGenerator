@@ -134,7 +134,7 @@ public sealed class ApiModelTests
             .ToList();
         Assert.HasCount(2, identities);
         Assert.NotEqual(identities[0], identities[1]);
-        Assert.Equal(["contoso.first", "contoso.second"], build.Context.ApiAssemblies.Select(a => a.ProductId).Distinct());
+        Assert.Equal(["Contoso.First", "Contoso.Second"], build.Context.ApiAssemblies.Select(a => a.Package.Id).Distinct());
     }
 
     [Fact]

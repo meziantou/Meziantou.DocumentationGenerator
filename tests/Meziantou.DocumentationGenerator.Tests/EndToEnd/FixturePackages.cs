@@ -103,11 +103,6 @@ internal static class FixturePackages
             { "id": "Contoso.Meta", "version": "1.0.0", "path": "packages/contoso.meta.1.0.0.nupkg" },
             { "id": "Contoso.Undocumented", "version": "1.0.0", "path": "packages/contoso.undocumented.1.0.0.nupkg" }
           ],
-          "products": [
-            { "id": "contoso", "name": "Contoso", "packages": [ "Contoso.Library", "Contoso.Extensions" ] },
-            { "id": "meta", "name": "Contoso Meta", "packages": [ "Contoso.Meta" ] },
-            { "id": "undocumented", "name": "Undocumented", "packages": [ "Contoso.Undocumented" ] }
-          ],
           "content": { "root": "docs", "exclude": [ "**/AGENTS.md" ] },
           "xrefs": [ { "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" } ]
         }

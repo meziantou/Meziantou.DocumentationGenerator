@@ -1,6 +1,6 @@
 # Basic sample
 
-A product built from a local package and Markdown pages. Build it from the repository root:
+A site built from a local package and Markdown pages. Build it from the repository root:
 
 ```bash
 dotnet pack samples/basic/src/Sample.Library --output samples/basic/artifacts/packages

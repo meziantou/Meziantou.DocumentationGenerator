@@ -33,7 +33,6 @@ configuration model, so it cannot drift from what the tool accepts.
 | `cacheDirectory` | path | `DOCGEN_CACHE`, or a per-user directory | Package cache. |
 | `packages` | array | `[]` | Packages whose APIs are documented. |
 | `references` | array | `[]` | Packages used for inherited documentation and cross-references only; their APIs are not published. Same properties as `packages`. |
-| `products` | array | one product per package | Groups of packages sharing an API reference and URLs. |
 | `content` | object | | Authored Markdown pages. |
 | `api` | object | all visible APIs | API selection rules. |
 | `xrefs` | array | `System` and `Microsoft` to Microsoft Learn | Links to documentation of symbols outside the configured packages. |
@@ -92,16 +91,8 @@ Dependencies of the documented packages are never downloaded implicitly. To inhe
 dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the
 dependencies that are not configured).
 
-## `products[]`
-
-| Property | Default | Description |
-| --- | --- | --- |
-| `id` | required | Identifier used in URLs: lowercase letters, digits, `-` and `.`. |
-| `name` | first package ID | Display name. |
-| `description` | package description | Lead paragraph of the API reference page of the product. |
-| `packages` | required | Package identifiers. A package belongs to exactly one product. |
-
-When `products` is omitted, each package is a product whose `id` is the lowercase package ID.
+Each package is a section of the API reference, at `/api/{package}/` where `{package}` is the lowercase package ID.
+The package description is the lead paragraph of its page.
 
 ## `content`
 
@@ -179,7 +170,7 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
 }
 ```
 
-### Grouped product
+### Multiple packages
 
 ```json
 {
@@ -189,17 +180,11 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
     { "id": "Contoso.Data", "version": "3.0.0" },
     { "id": "Contoso.Data.Sqlite", "version": "3.0.0" }
   ],
-  "products": [
-    {
-      "id": "data",
-      "name": "Contoso Data",
-      "description": "Data access libraries.",
-      "packages": [ "Contoso.Data", "Contoso.Data.Sqlite" ]
-    }
-  ],
   "content": { "root": "docs" }
 }
 ```
+
+The API reference has one section per package: `/api/contoso.data/` and `/api/contoso.data.sqlite/`.
 
 ### Multiple target frameworks
 

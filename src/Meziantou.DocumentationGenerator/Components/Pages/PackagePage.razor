@@ -1,0 +1,27 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="@($"{PackageId} API reference")" Description="@($"API reference of {PackageId}.")" PagePath="@RouteNames.GetPackagePath(PackageId)">
+    <h1>@Model.Id API reference</h1>
+    @if (Model.Description is { } description)
+    {
+        <p class="lead">@description</p>
+    }
+    <table class="api-table">
+        <thead><tr><th scope="col">Namespace</th><th scope="col">Types</th></tr></thead>
+        <tbody>
+            @foreach (var ns in Model.Namespaces)
+            {
+                <tr>
+                    <td><a href="@Site.Links.GetNamespaceUrl(Model.Id, ns.Name)">@(ns.IsGlobal ? "Global namespace" : ns.Name)</a></td>
+                    <td>@ns.Types.Length</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string PackageId { get; set; }
+
+    private ApiPackageModel Model => Site.GetPackageModel(PackageId);
+}

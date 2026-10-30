@@ -73,7 +73,7 @@ public sealed class PerformanceTests(ITestOutputHelper output)
         var allocated = GC.GetTotalAllocatedBytes() - allocatedBefore;
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
 
-        var typePages = Directory.GetFiles(site.Output / "contoso.large" / "api", "Contoso.Large.*.html");
+        var typePages = Directory.GetFiles(site.Output / "api" / "contoso.large", "Contoso.Large.*.html");
         var averagePageSize = (long)typePages.Average(f => new FileInfo(f).Length);
         var indexSize = new FileInfo(site.Output / "_assets" / "search-index.json").Length;
         var totalSize = Directory.EnumerateFiles(site.Output, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length);

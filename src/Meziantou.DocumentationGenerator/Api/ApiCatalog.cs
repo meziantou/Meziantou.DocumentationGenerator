@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 
 namespace Meziantou.DocumentationGenerator.Api;
 
-/// <summary>Every aggregated assembly of the build: published products and reference packages.</summary>
+/// <summary>Every aggregated assembly of the build: published packages and reference packages.</summary>
 internal sealed class ApiCatalog
 {
     public static ApiCatalog Empty { get; } = new([], []);
@@ -10,10 +10,10 @@ internal sealed class ApiCatalog
     private readonly Dictionary<string, List<ApiSymbolModel>> _symbolsByDocumentationId;
     private readonly Dictionary<string, List<ApiSymbolModel>> _symbolsByNameKey;
 
-    public ApiCatalog(ImmutableArray<ApiAssemblyGroup> assemblies, ImmutableArray<ApiProductModel> products)
+    public ApiCatalog(ImmutableArray<ApiAssemblyGroup> assemblies, ImmutableArray<ApiPackageModel> packages)
     {
         Assemblies = assemblies;
-        Products = products;
+        Packages = packages;
         _symbolsByDocumentationId = new Dictionary<string, List<ApiSymbolModel>>(StringComparer.Ordinal);
         _symbolsByNameKey = new Dictionary<string, List<ApiSymbolModel>>(StringComparer.Ordinal);
         foreach (var assembly in assemblies)
@@ -30,7 +30,8 @@ internal sealed class ApiCatalog
     }
 
     public ImmutableArray<ApiAssemblyGroup> Assemblies { get; }
-    public ImmutableArray<ApiProductModel> Products { get; }
+    /// <summary>Published packages with an API, in configuration order.</summary>
+    public ImmutableArray<ApiPackageModel> Packages { get; }
 
     /// <summary>Returns the symbols with the given documentation ID in every assembly, in assembly order.</summary>
     public IReadOnlyList<ApiSymbolModel> FindByDocumentationId(string documentationId)

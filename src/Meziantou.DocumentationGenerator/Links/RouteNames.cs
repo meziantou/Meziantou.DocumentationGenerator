@@ -16,9 +16,12 @@ internal static partial class RouteNames
         "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     };
 
-    public static string GetApiReferencePath(string productId) => productId + "/api/index.html";
+    /// <summary>URL segment of a package: its lowercase identifier, <c>Contoso.Json</c> becomes <c>contoso.json</c>.</summary>
+    public static string GetPackageSlug(string packageId) => SanitizeFileName(packageId.ToLowerInvariant());
 
-    public static string GetNamespacePath(string productId, string namespaceName) => productId + "/api/namespaces/" + SanitizeFileName(namespaceName.Length == 0 ? GlobalNamespaceFileName : namespaceName) + ".html";
+    public static string GetPackagePath(string packageId) => "api/" + GetPackageSlug(packageId) + "/index.html";
+
+    public static string GetNamespacePath(string packageId, string namespaceName) => "api/" + GetPackageSlug(packageId) + "/namespaces/" + SanitizeFileName(namespaceName.Length == 0 ? GlobalNamespaceFileName : namespaceName) + ".html";
 
     /// <summary><c>Contoso.Collections.Tree`1.Node</c> becomes <c>Contoso.Collections.Tree-1.Node</c>.</summary>
     public static string GetTypeFileName(ApiTypeModel type)
@@ -27,7 +30,7 @@ internal static partial class RouteNames
         return SanitizeFileName(name.Replace('`', '-'));
     }
 
-    public static string GetTypePath(string productId, string fileName) => productId + "/api/" + fileName + ".html";
+    public static string GetTypePath(string packageId, string fileName) => "api/" + GetPackageSlug(packageId) + "/" + fileName + ".html";
 
     /// <summary>The member part of the documentation ID: <c>M:Contoso.Client.Send(System.Int32)</c> becomes <c>Send(System.Int32)</c>.</summary>
     public static string GetMemberAnchor(ApiMemberModel member)

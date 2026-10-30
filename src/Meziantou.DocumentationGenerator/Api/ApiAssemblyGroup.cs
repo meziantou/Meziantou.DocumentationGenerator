@@ -9,7 +9,6 @@ internal sealed class ApiAssemblyGroup
 {
     public required DiscoveredPackage Package { get; init; }
     public required string AssemblyName { get; init; }
-    public string? ProductId { get; init; }
 
     /// <summary>Models per target framework, in <see cref="TargetFrameworks"/> order.</summary>
     public required ImmutableArray<ApiAssemblyModel> Models { get; init; }

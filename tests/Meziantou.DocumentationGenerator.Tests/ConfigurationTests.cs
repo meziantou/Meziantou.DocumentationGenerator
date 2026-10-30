@@ -26,10 +26,7 @@ public sealed class ConfigurationTests
         Assert.Equal("Documentation", configuration.Site.Title);
         Assert.Equal(temp.FullPath / "_site", configuration.OutputDirectory);
         Assert.Equal(RobotsPolicy.None, configuration.Site.Robots);
-        var product = Assert.Single(configuration.Products);
-        Assert.Equal("contoso.json", product.Id);
-        Assert.True(product.IsImplicit);
-        Assert.Equal(["Contoso.Json"], product.Packages);
+        Assert.Equal("Contoso.Json", Assert.Single(configuration.Packages).Id);
         Assert.Contains("$.site.basePath", configuration.DefaultedValues);
         Assert.Contains("$.output", configuration.DefaultedValues);
         Assert.DoesNotContain("$.packages", configuration.DefaultedValues);
@@ -50,10 +47,9 @@ public sealed class ConfigurationTests
     }
 
     [Fact]
-    public async Task MultipleProducts_GroupedPackages()
+    public async Task MultiplePackages()
     {
         await using var temp = TemporaryDirectory.Create();
-        temp.CreateTextFile("docs/data.md", "# Data");
         var (configuration, diagnostics) = Load(temp, """
             {
               "version": 1,
@@ -62,28 +58,12 @@ public sealed class ConfigurationTests
                 { "id": "Contoso.Data.Sqlite", "version": "3.0.0-beta.1" },
                 { "id": "Contoso.Json", "version": "2.1.0" },
               ],
-              "products": [
-                { "id": "data", "name": "Contoso Data", "packages": [ "Contoso.Data", "contoso.data.sqlite" ] },
-                { "id": "json", "packages": [ "Contoso.Json" ] },
-              ],
             }
             """);
 
         Assert.Empty(diagnostics);
         Assert.NotNull(configuration);
-        Assert.Collection(configuration.Products,
-            product =>
-            {
-                Assert.Equal("data", product.Id);
-                Assert.Equal("Contoso Data", product.Name);
-                Assert.Equal(["Contoso.Data", "Contoso.Data.Sqlite"], product.Packages);
-                Assert.False(product.IsImplicit);
-            },
-            product =>
-            {
-                Assert.Equal("json", product.Id);
-                Assert.Equal("Contoso.Json", product.Name);
-            });
+        Assert.Equal(["Contoso.Data", "Contoso.Data.Sqlite", "Contoso.Json"], configuration.Packages.Select(p => p.Id));
         Assert.Equal("3.0.0-beta.1", configuration.Packages[1].ExactVersion?.ToNormalizedString());
     }
 
@@ -183,8 +163,7 @@ public sealed class ConfigurationTests
 
     [Theory]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "readme": "README.md" } ] }""", "$.packages[0].readme")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ], "landingPage": "docs/index.md" } ] }""", "$.products[0].landingPage")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ], "readmePackage": "A" } ] }""", "$.products[0].readmePackage")]
+    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ] } ] }""", "$.products")]
     [InlineData("""{ "version": 1, "content": { "root": "docs", "toc": "toc.yml" } }""", "$.content.toc")]
     public async Task RemovedOptions_AreUnknownProperties(string json, string jsonPath)
     {
@@ -319,9 +298,6 @@ public sealed class ConfigurationTests
     [InlineData("""{ "version": 1, "packages": [ { "id": "A b", "version": "1.0.0" } ] }""", "DG1004")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" }, { "id": "a", "version": "2.0.0" } ] }""", "DG1008")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0", "source": "https://user:secret@example.com/v3/index.json" } ] }""", "DG1011")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "B" ] } ] }""", "DG1012")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "Invalid Id", "packages": [ "A" ] } ] }""", "DG1012")]
-    [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "products": [ { "id": "p", "packages": [ "A" ] }, { "id": "p", "packages": [ ] } ] }""", "DG1008")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "output": "." }""", "DG1009")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "api": { "exclude": [ "X:Foo" ] } }""", "DG1014")]
     [InlineData("""{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "diagnostics": { "severity": { "DG9999": "none" } } }""", "DG1015")]
@@ -379,18 +355,6 @@ public sealed class ConfigurationTests
         (configuration, diagnostics) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "path": "a.txt" } ] }""");
         Assert.Null(configuration);
         Assert.Equal("DG1004", Assert.Single(diagnostics).Code);
-    }
-
-    [Fact]
-    public async Task PackageWithoutProduct_IsAnError()
-    {
-        await using var temp = TemporaryDirectory.Create();
-        var (configuration, diagnostics) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" }, { "id": "B", "version": "1.0.0" } ], "products": [ { "id": "a", "packages": [ "A" ] } ] }""");
-
-        Assert.Null(configuration);
-        var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("DG1012", diagnostic.Code);
-        Assert.Equal("$.packages[1]", diagnostic.Location?.JsonPath);
     }
 
     [Fact]

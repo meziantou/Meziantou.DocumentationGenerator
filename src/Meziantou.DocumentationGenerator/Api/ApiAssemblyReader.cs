@@ -12,7 +12,7 @@ namespace Meziantou.DocumentationGenerator.Api;
 /// </summary>
 internal sealed class ApiAssemblyReader(DiagnosticBag diagnostics)
 {
-    public ImmutableArray<ApiAssemblyModel> Read(DiscoveredPackage package, string? productId, CancellationToken cancellationToken)
+    public ImmutableArray<ApiAssemblyModel> Read(DiscoveredPackage package, CancellationToken cancellationToken)
     {
         if (package.Assets.IsEmpty)
             return [];
@@ -40,7 +40,6 @@ internal sealed class ApiAssemblyReader(DiagnosticBag diagnostics)
                 {
                     Package = package,
                     Asset = asset,
-                    ProductId = productId,
                     Assembly = assembly,
                 });
             }

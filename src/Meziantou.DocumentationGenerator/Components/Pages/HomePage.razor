@@ -11,10 +11,10 @@
     }
     else
     {
-        <ul class="product-catalog">
+        <ul class="section-catalog">
             @foreach (var (title, url, description) in Sections)
             {
-                <li class="product-card">
+                <li class="section-card">
                     <h2><a href="@url">@title</a></h2>
                     @if (description is not null)
                     {

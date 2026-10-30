@@ -84,8 +84,8 @@ public sealed class XmlDocumentationTests
         await using var build = await BuildAsync(FullXml);
         var html = Render(build, "T:Contoso.Docs.Widget", c => c.Summary!);
 
-        Assert.Contains("<p>A widget with <code>inline code</code>, a <a href=\"/contoso.docs/api/Contoso.Docs.Widget.html#Send(System.String)\"><code>Widget.Send</code></a> link,", html);
-        Assert.Contains("a <a href=\"/contoso.docs/api/Contoso.Docs.Widget.Nested-1.html\">custom text</a> link, <code>null</code>,", html);
+        Assert.Contains("<p>A widget with <code>inline code</code>, a <a href=\"/api/contoso.docs/Contoso.Docs.Widget.html#Send(System.String)\"><code>Widget.Send</code></a> link,", html);
+        Assert.Contains("a <a href=\"/api/contoso.docs/Contoso.Docs.Widget.Nested-1.html\">custom text</a> link, <code>null</code>,", html);
         Assert.Contains("an <a href=\"https://example.com/a?b=1&amp;c=2\">external link</a>", html);
         Assert.Contains("Unicode text (café, 日本語)", html);
         Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html);

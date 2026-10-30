@@ -48,7 +48,7 @@ internal sealed class BuildContext
     /// <summary>Routes, URLs and cross-reference resolution, created by <see cref="LinkIndexStage"/>.</summary>
     public LinkService? Links { get; set; }
 
-    /// <summary>Authored pages and product landing pages, created by <see cref="ContentStage"/>.</summary>
+    /// <summary>Authored pages, created by <see cref="ContentStage"/>.</summary>
     public ContentModel Content { get; set; } = ContentModel.Empty;
 
     /// <summary>Files copied to the output, registered by the content and rendering stages.</summary>

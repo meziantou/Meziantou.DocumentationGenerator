@@ -13,8 +13,7 @@ internal sealed class ApiModelStage : IBuildStage
         var result = ImmutableArray.CreateBuilder<ApiAssemblyModel>();
         foreach (var package in context.DiscoveredPackages.Concat(context.DiscoveredReferences))
         {
-            var productId = context.Configuration.FindProductOfPackage(package.Id)?.Id;
-            result.AddRange(reader.Read(package, package.Package.Configuration.IsReference ? null : productId, cancellationToken));
+            result.AddRange(reader.Read(package, cancellationToken));
         }
 
         context.ApiAssemblies = result.ToImmutable();
