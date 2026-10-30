@@ -77,6 +77,21 @@ internal sealed class ConfigurationFile
 
         [Description("Footer text displayed on every page.")]
         public string? Footer { get; set; }
+
+        [Description("Links displayed on the right side of the header.")]
+        public List<HeaderLinkSection>? HeaderLinks { get; set; }
+    }
+
+    internal sealed class HeaderLinkSection
+    {
+        [Description("Text displayed for the link.")]
+        public string? Text { get; set; }
+
+        [Description("Absolute http or https URL of the link.")]
+        public string? Url { get; set; }
+
+        [Description("Optional emoji or text glyph displayed before the link text.")]
+        public string? Icon { get; set; }
     }
 
     internal sealed class PackageSection

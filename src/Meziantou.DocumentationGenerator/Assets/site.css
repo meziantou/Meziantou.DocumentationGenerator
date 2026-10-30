@@ -167,6 +167,9 @@ a:hover { text-decoration-thickness: 2px; }
 .site-title { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1.1rem; color: var(--color-text); text-decoration: none; }
 .site-logo { width: 1.75rem; height: 1.75rem; object-fit: contain; }
 .header-tools { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.header-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.header-link { display: inline-flex; align-items: center; gap: 0.35rem; }
+.header-link-icon { line-height: 1; }
 .menu-button { display: none; }
 
 button, select, input {

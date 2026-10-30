@@ -69,6 +69,21 @@
             <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
         </div>
         <div class="header-tools">
+            @if (!Site.Configuration.Site.HeaderLinks.IsEmpty)
+            {
+                <nav class="header-links" aria-label="External links">
+                    @foreach (var link in Site.Configuration.Site.HeaderLinks)
+                    {
+                        <a class="header-link" href="@link.Url" rel="noopener">
+                            @if (link.Icon is not null)
+                            {
+                                <span class="header-link-icon" aria-hidden="true">@link.Icon</span>
+                            }
+                            @link.Text
+                        </a>
+                    }
+                </nav>
+            }
             <div class="theme-picker" data-theme-picker hidden>
                 <label for="theme-select">Theme</label>
                 <select id="theme-select">

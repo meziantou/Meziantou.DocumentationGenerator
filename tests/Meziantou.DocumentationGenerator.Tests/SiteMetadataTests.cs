@@ -95,6 +95,34 @@ public sealed class SiteMetadataTests
     }
 
     [Fact]
+    public async Task HeaderLinks_AreRenderedInHeader()
+    {
+        await using var site = await BuildAsync("""
+            "site": {
+              "headerLinks": [
+                { "text": "Reference", "url": "https://example.com/reference", "icon": "📖" },
+                { "text": "GitHub", "url": "https://github.com/example/project" }
+              ]
+            },
+            """);
+
+        var document = HtmlDocumentLoader.Parse(site.ReadFile("guide.html"));
+        var links = document.QuerySelectorAll(".header-links .header-link");
+        Assert.Equal(2, links.Length);
+        var firstLink = document.QuerySelector(".header-links .header-link")!;
+        var firstIcon = firstLink.QuerySelector(".header-link-icon")!;
+        Assert.Equal("https://example.com/reference", firstLink.GetAttribute("href"));
+        Assert.Equal("📖", firstIcon.TextContent);
+        Assert.Equal("true", firstIcon.GetAttribute("aria-hidden"));
+        Assert.Contains("Reference", firstLink.TextContent);
+
+        var secondLink = document.QuerySelector(".header-links .header-link:nth-child(2)")!;
+        Assert.Equal("https://github.com/example/project", secondLink.GetAttribute("href"));
+        Assert.Null(secondLink.QuerySelector(".header-link-icon"));
+        Assert.Equal("GitHub", secondLink.TextContent?.Trim());
+    }
+
+    [Fact]
     public async Task MetadataArtifacts_AreByteIdentical()
     {
         const string Configuration = """ "site": { "title": "Test site", "url": "https://example.com", "robots": "allow" }, """;

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Meziantou.Framework;
 
 namespace Meziantou.DocumentationGenerator.Configuration;
@@ -16,4 +17,5 @@ internal sealed class SiteSettings
     public FullPath? SocialImage { get; init; }
     public required RobotsPolicy Robots { get; init; }
     public string? Footer { get; init; }
+    public required ImmutableArray<SiteHeaderLink> HeaderLinks { get; init; }
 }
