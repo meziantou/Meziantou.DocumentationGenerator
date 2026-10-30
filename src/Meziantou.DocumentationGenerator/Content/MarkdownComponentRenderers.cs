@@ -12,7 +12,7 @@ internal static class MarkdownComponentRenderers
     {
         if (component.Kind is MarkdownComponentKind.Command)
         {
-            renderer.Write("<code>").Write(HtmlEncoding.Encode(component.Text)).Write("</code>");
+            renderer.Write("<code>").Write(HtmlEncoding.Encode(component.Text.Replace("\n", "; ", StringComparison.Ordinal))).Write("</code>");
             return;
         }
 
