@@ -212,7 +212,13 @@ The following table shows deployment URLs, not the relative attribute values emi
   - `P:Contoso.Json.JsonReader.Item(System.String)` → `Item(System.String)`
   - `M:Contoso.Json.JsonReader.op_Implicit(System.String)~Contoso.Json.JsonReader` → `op_Implicit(System.String)~Contoso.Json.JsonReader`
   - `M:Contoso.Json.JsonReader.System#IDisposable#Dispose` → `System#IDisposable#Dispose`
-- Overload groups get the anchor `{Name}-overloads` (`#ctor-overloads` for constructors).
+- Members of C# 14 extension blocks are shown as declared in their block, not as the implementation methods the
+  compiler adds to the static class. Their anchor starts with the receiver type instead of the compiler-generated
+  grouping type, and the anchors of their implementation methods stay on the page, so older links keep working:
+  - `P:Contoso.Json.JsonExtensions.<G>$9F2C.Depth` → `JsonReader.Depth` (also `get_Depth(Contoso.Json.JsonReader)`)
+  - `M:Contoso.Json.JsonExtensions.<G>$4B1A.Create(System.Int32)` → `JsonReader.Create(System.Int32)` (also `Create(System.Int32)`)
+- Overload groups get the anchor `{Name}-overloads` (`#ctor-overloads` for constructors, `{Receiver}.{Name}-overloads`
+  for extension members).
 - Fragments are percent-encoded in `href` attributes, the `id` attribute keeps the raw value.
 - Heading anchors in authored pages follow the GitHub slug rules; duplicates get `-1`, `-2` suffixes in
   document order.

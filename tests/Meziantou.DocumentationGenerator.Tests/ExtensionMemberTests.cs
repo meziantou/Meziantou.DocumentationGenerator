@@ -1,8 +1,12 @@
+using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.Build;
+using Meziantou.DocumentationGenerator.Cli;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Links;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.DocumentationGenerator.XmlDocs;
+using Document = Meziantou.Framework.WebPlatform.Dom.Document;
+using Element = Meziantou.Framework.WebPlatform.Dom.Element;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
@@ -40,13 +44,24 @@ public sealed class ExtensionMemberTests
                 {
                     /// <summary>Returns the first item.</summary>
                     public TItem FirstItem() => list[0];
+
+                    /// <summary>The last item.</summary>
+                    public TItem Last { get => list[^1]; set => list[^1] = value; }
                 }
 
                 extension(int)
                 {
                     /// <summary>Creates a value.</summary>
                     public static int CreateDefault() => 0;
+
+                    /// <summary>The zero value.</summary>
+                    public static int Zero => 0;
                 }
+
+                /// <summary>Not an extension property.</summary>
+                /// <param name="value">The value.</param>
+                /// <param name="other">The other value.</param>
+                public static int get_Zero(int value, int other) => value + other;
             }
 
             /// <summary>See <see cref="StringExtensions.extension(string).Repeat(int)"/>.</summary>
@@ -107,15 +122,77 @@ public sealed class ExtensionMemberTests
     }
 
     [Fact]
-    public async Task ExtensionBlockReferences_ResolveToTheImplementation()
+    public async Task ExtensionBlockReferences_ResolveToTheExtensionMember()
     {
         await using var build = await BuildAsync();
 
-        Assert.Contains("<a href=\"/api/contoso.ext/Contoso.Ext.StringExtensions.html#Repeat(System.String,System.Int32)\">", RenderSummary(build, "T:Contoso.Ext.Consumer"), StringComparison.Ordinal);
+        Assert.Equal("<p>See <a href=\"/api/contoso.ext/Contoso.Ext.StringExtensions.html#string.Repeat(System.Int32)\"><code>string.Repeat</code></a>.</p>", RenderSummary(build, "T:Contoso.Ext.Consumer"));
 
         var alias = GetComment(build, "M:Contoso.Ext.Consumer.RepeatAlias(System.String,System.Int32)");
         Assert.Equal("<p>Repeats <code class=\"paramref\">text</code> <code class=\"paramref\">times</code> times.</p>", RenderSummary(build, "M:Contoso.Ext.Consumer.RepeatAlias(System.String,System.Int32)"));
         Assert.Equal(["text", "times"], alias.Parameters.Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task ImplementationIds_ResolveToTheExtensionMember()
+    {
+        await using var build = await BuildAsync();
+
+        var property = Assert.IsType<ApiMemberModel>(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("M:Contoso.Ext.StringExtensions.get_Zero")));
+        Assert.Equal(ApiMemberCategory.Property, property.Category);
+        Assert.Same(property, Assert.Single(build.Context.ApiCatalog.FindByDocumentationId(property.DocumentationId)));
+        Assert.StartsWith("P:Contoso.Ext.StringExtensions.<G>$", property.DocumentationId, StringComparison.Ordinal);
+
+        var last = Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("M:Contoso.Ext.StringExtensions.set_Last``1(System.Collections.Generic.List{``0},``0)"));
+        Assert.Same(last, Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("M:Contoso.Ext.StringExtensions.get_Last``1(System.Collections.Generic.List{``0})")));
+
+        // A hand-written method with an accessor-like name is a method
+        var method = Assert.IsType<ApiMemberModel>(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("M:Contoso.Ext.StringExtensions.get_Zero(System.Int32,System.Int32)")));
+        Assert.Equal(ApiMemberCategory.Method, method.Category);
+        Assert.Null(method.ExtensionBlock);
+    }
+
+    [Fact]
+    public async Task TypePage_ShowsExtensionMembersAsDeclared()
+    {
+        await using var site = await SiteBuilder.BuildAsync([CreatePackage()]);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+        var document = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.ext/Contoso.Ext.StringExtensions.html"));
+
+        // Extension properties are properties, with a single entry for the getter and the setter, and every member shows its receiver
+        Assert.Equal(["Properties", "Methods"], document.QuerySelectorAll<Element>("article > section > h2").Select(h => h.TextContent));
+        Assert.Equal(["string.DoubleLength", "List<TItem>.Last", "int.Zero"], GetTableNames(document, "section-property"));
+        Assert.Equal(["string.Convert<T>(T)", "int.CreateDefault()", "List<TItem>.FirstItem()", "string.Repeat(int)", "get_Zero(int, int)"], GetTableNames(document, "section-method"));
+
+        // Anchors use the receiver type; the anchors of the implementation methods still lead to the member
+        var zero = document.GetElementById("int.Zero")!;
+        Assert.Equal("extension(int)\n{\n    public static int Zero { get; }\n}", zero.QuerySelector("pre.declaration")!.TextContent);
+        Assert.Contains("The zero value.", zero.TextContent, StringComparison.Ordinal);
+        Assert.Same(zero, document.GetElementById("get_Zero")!.ParentElement);
+
+        var last = document.GetElementById("List<TItem>.Last")!;
+        Assert.Equal("extension<TItem>(List<TItem> list)\n{\n    public TItem Last { get; set; }\n}", last.QuerySelector("pre.declaration")!.TextContent);
+        Assert.Same(last, document.GetElementById("get_Last``1(System.Collections.Generic.List{``0})")!.ParentElement);
+        Assert.Same(last, document.GetElementById("set_Last``1(System.Collections.Generic.List{``0},``0)")!.ParentElement);
+        Assert.Equal(["TItem", "list List<TItem>"], last.QuerySelectorAll<Element>("dl.parameters dt").Select(d => d.TextContent));
+
+        // Instance members document the receiver of their block
+        var repeat = document.GetElementById("string.Repeat(System.Int32)")!;
+        Assert.Same(repeat, document.GetElementById("Repeat(System.String,System.Int32)")!.ParentElement);
+        Assert.Equal(["value string", "count int"], repeat.QuerySelectorAll<Element>("dl.parameters dt").Select(d => d.TextContent));
+        Assert.Contains("The receiver.", repeat.TextContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("<G>$", document.DocumentElement!.OuterHtml, StringComparison.Ordinal);
+
+        // Search uses the names as written by consumers
+        var search = site.ReadFile("_assets/search-index.json");
+        Assert.Contains("\"int.Zero\"", search, StringComparison.Ordinal);
+        Assert.Contains("\"string.Repeat\"", search, StringComparison.Ordinal);
+        Assert.DoesNotContain("get_Last", search, StringComparison.Ordinal);
+
+        static List<string> GetTableNames(Document document, string sectionId)
+        {
+            return [.. document.GetElementById(sectionId)!.ParentElement!.QuerySelectorAll<Element>("table.api-table tbody td:first-child").Select(td => td.TextContent ?? "")];
+        }
     }
 
     [Fact]
@@ -141,12 +218,17 @@ public sealed class ExtensionMemberTests
         return renderer.RenderBlock(comment.Summary!, new XmlRenderContext(new LinkContext(comment.Scope, null), comment.SourcePath, documentationId));
     }
 
-    private static async Task<TestBuild> BuildAsync()
+    private static TestPackageBuilder CreatePackage()
     {
-        var package = new TestPackageBuilder("Contoso.Ext", "1.0.0")
+        return new TestPackageBuilder("Contoso.Ext", "1.0.0")
             .AddFile("README.md", "x")
             .AddFile("lib/net10.0/Contoso.Ext.dll", Assembly.Value.Assembly)
             .AddFile("lib/net10.0/Contoso.Ext.xml", Assembly.Value.Xml);
+    }
+
+    private static async Task<TestBuild> BuildAsync()
+    {
+        var package = CreatePackage();
         var build = TestBuild.Create($$"""{ "version": 1, "packages": [ {{TestBuild.PackageReference(package)}} ] }""", [package]);
         await build.RunAsync(new AcquisitionStage(), new DiscoveryStage(), new ApiModelStage(), new ApiAggregationStage(), new LinkIndexStage(), new XmlDocumentationStage(), new InheritanceStage());
         return build;

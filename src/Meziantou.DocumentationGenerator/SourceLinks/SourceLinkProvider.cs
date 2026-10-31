@@ -181,6 +181,8 @@ internal sealed class SourceLinkProvider
 
     private static (string Document, int Line)? GetMethodLocation(ImplementationDebugInfo info, PublicApiMethod? method)
     {
+        // The members of C# 14 extension blocks have no body: the code is in their implementation
+        method = method?.ExtensionImplementation ?? method;
         if (method?.Origin is not { } origin || origin.ModuleVersionId != info.Assembly.Module.ModuleVersionId)
             return null;
 

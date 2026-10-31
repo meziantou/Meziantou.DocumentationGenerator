@@ -103,6 +103,15 @@ internal static class DocumentationCommentParser
 
     public static IReadOnlySet<string>? GetParameterNames(PublicApiSymbol? symbol)
     {
+        // Members of C# 14 extension blocks can reference the receiver of the block
+        if (symbol is PublicApiMember { ExtensionBlock: { } block } && GetParameterNamesCore(symbol) is { } names && !string.IsNullOrEmpty(block.Receiver.Name))
+            return names.Append(block.Receiver.Name).ToHashSet(StringComparer.Ordinal);
+
+        return GetParameterNamesCore(symbol);
+    }
+
+    private static IReadOnlySet<string>? GetParameterNamesCore(PublicApiSymbol? symbol)
+    {
         return symbol switch
         {
             PublicApiMethod method => method.Parameters.Select(p => p.Name ?? "").ToHashSet(StringComparer.Ordinal),
@@ -147,6 +156,11 @@ internal static class DocumentationCommentParser
         if (symbol is PublicApiMethod method)
         {
             names.UnionWith(method.GenericParameters.Select(p => p.Name));
+        }
+
+        if (symbol is PublicApiMember { ExtensionBlock: { } block })
+        {
+            names.UnionWith(block.GenericParameters.Select(p => p.Name));
         }
 
         for (var type = symbol as PublicApiType ?? symbol.DeclaringType; type is not null; type = type.DeclaringType)

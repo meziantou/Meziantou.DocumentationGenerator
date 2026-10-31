@@ -39,13 +39,9 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
                 using var stream = model.Asset.CompiledSource is { } compiled ? new MemoryStream(compiled.XmlDocumentation, writable: false) : archive.OpenRead(entry);
                 var file = XmlDocumentationFile.Load(stream, displayPath, GetDiagnostics(model), location);
                 _files[model] = file;
-                if (file is not null)
+                if (file is not null && !model.IsReference)
                 {
-                    AddExtensionBlockAliases(catalog, group, model, file);
-                    if (!model.IsReference)
-                    {
-                        ReportUnmatchedEntries(model, file, location);
-                    }
+                    ReportUnmatchedEntries(model, file, location);
                 }
             }
         }
@@ -97,33 +93,6 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
         }
 
         return [.. groups.Select(g => new DocumentationVariant([.. g.TargetFrameworks], g.Comment))];
-    }
-
-    /// <summary>
-    /// The compiler documents the implementation of a C# 14 extension member with an <c>&lt;inheritdoc/&gt;</c> to the
-    /// member of its extension block. The ID of the block member becomes an alias of the implementation, so references
-    /// written with the <c>extension(...)</c> syntax resolve to the public API.
-    /// </summary>
-    private static void AddExtensionBlockAliases(ApiCatalog catalog, ApiAssemblyGroup group, ApiAssemblyModel model, XmlDocumentationFile file)
-    {
-        foreach (var id in file.MemberIds)
-        {
-            if (!id.StartsWith("M:", StringComparison.Ordinal) || ExtensionBlockIds.IsCompilerGenerated(id))
-                continue;
-
-            var cref = file.Find(id)?.Element("inheritdoc")?.Attribute("cref")?.Value;
-            if (cref is null || !ExtensionBlockIds.IsExtensionBlockMember(cref))
-                continue;
-
-            if (model.Assembly.FindSymbolByDocumentationId(id) is not PublicApiMember member || !ExtensionBlockIds.IsImplementation(member, cref))
-                continue;
-
-            var symbol = catalog.FindByDocumentationId(id).FirstOrDefault(s => s.Assembly == group);
-            if (symbol is not null)
-            {
-                catalog.AddAlias(cref, symbol);
-            }
-        }
     }
 
     private void ReportUnmatchedEntries(ApiAssemblyModel model, XmlDocumentationFile file, DiagnosticLocation location)

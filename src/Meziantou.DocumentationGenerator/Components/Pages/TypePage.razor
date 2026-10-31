@@ -168,6 +168,10 @@
     </text>;
 
     private RenderFragment RenderMember(ApiMemberModel member, int level) => @<section class="api-member" id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
+        @foreach (var anchor in RouteNames.GetAdditionalMemberAnchors(member))
+        {
+            <span id="@anchor"></span>
+        }
         <div class="heading-row">
             @if (level == 3)
             {
@@ -257,6 +261,16 @@
                 PublicApiType { DelegateInvokeMethod: { } invoke } => invoke.Parameters,
                 _ => [],
             };
+
+            // Members of C# 14 extension blocks also use the type parameters of the block, and instance members its receiver
+            if (variantSymbol is PublicApiMember { ExtensionBlock: { } block } extensionMember)
+            {
+                typeParameters = [.. block.GenericParameters, .. typeParameters];
+                if (!extensionMember.IsStatic && !string.IsNullOrEmpty(block.Receiver.Name))
+                {
+                    parameters = [block.Receiver, .. parameters];
+                }
+            }
         }
         @if (!typeParameters.IsDefaultOrEmpty)
         {

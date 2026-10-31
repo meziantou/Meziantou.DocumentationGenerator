@@ -64,8 +64,17 @@ internal sealed class ApiRenderHelper(SiteRenderContext site)
 
     public static string GetCategoryId(ApiMemberCategory category) => "section-" + category.ToString().ToLowerInvariant();
 
-    /// <summary>Short display name of a member, with parameter types for methods and indexers: <c>Send(Message, int)</c>.</summary>
+    /// <summary>
+    /// Short display name of a member, with parameter types for methods and indexers: <c>Send(Message, int)</c>. Members of
+    /// C# 14 extension blocks are prefixed by their receiver type: <c>Encoding.UTF8WithoutPreamble</c>.
+    /// </summary>
     public static string GetMemberDisplayName(ApiMemberModel member)
+    {
+        var name = GetMemberDisplayNameCore(member);
+        return member.ExtensionReceiverDisplayName is { } receiver && member.Category is not ApiMemberCategory.Operator ? receiver + "." + name : name;
+    }
+
+    private static string GetMemberDisplayNameCore(ApiMemberModel member)
     {
         var symbol = member.PrimaryMember;
         var name = member.Category switch
