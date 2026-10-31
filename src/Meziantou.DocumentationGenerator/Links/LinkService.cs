@@ -10,8 +10,9 @@ namespace Meziantou.DocumentationGenerator.Links;
 
 /// <summary>
 /// The single source of routes, anchors and URLs. API pages, XML documentation, Markdown, navigation and search all use
-/// this service instead of building URLs themselves. Routes only depend on package identifiers, namespaces, metadata
-/// names and authored paths, never on titles, discovery order or the selected target framework.
+/// this service instead of building URLs themselves. API routes start at the namespace: they only depend on namespaces and
+/// metadata names (package identifiers for package pages), never on titles, discovery order or the selected target
+/// framework. Authored routes only depend on authored paths.
 /// </summary>
 internal sealed partial class LinkService
 {
@@ -36,25 +37,30 @@ internal sealed partial class LinkService
 
         Register(new SiteRoute(HomePath, PageKind.Home, "site home"));
         Register(new SiteRoute(NotFoundPath, PageKind.NotFound, "404 page"));
-        foreach (var package in catalog.Packages)
+        if (catalog.HasApi)
         {
-            if (package.Namespaces.IsEmpty)
-                continue;
-
-            Register(new SiteRoute(RouteNames.GetPackagePath(package.Id), PageKind.ApiReference, "API reference of " + package.Id));
-            foreach (var ns in package.Namespaces)
+            Register(new SiteRoute(RouteNames.ApiReferencePath, PageKind.ApiReference, "API reference"));
+            foreach (var package in catalog.Packages)
             {
-                Register(new SiteRoute(RouteNames.GetNamespacePath(package.Id, ns.Name), PageKind.Namespace, "namespace " + ns.Name));
+                if (!package.Namespaces.IsEmpty)
+                {
+                    Register(new SiteRoute(RouteNames.GetPackagePath(package.Id), PageKind.Package, "package " + package.Id));
+                }
             }
 
-            RegisterTypeRoutes(package);
+            foreach (var ns in catalog.Namespaces)
+            {
+                Register(new SiteRoute(RouteNames.GetNamespacePath(ns.Name), PageKind.Namespace, "namespace " + ns.Name));
+            }
+
+            RegisterTypeRoutes(catalog.Packages.SelectMany(p => p.GetAllTypes()));
         }
     }
 
     public UrlBuilder Urls { get; }
 
     /// <summary><see langword="true"/> when at least one package has an API reference that <c>cref:</c> links can target.</summary>
-    public bool HasApiReference => _catalog.Packages.Any(p => !p.Namespaces.IsEmpty);
+    public bool HasApiReference => _catalog.HasApi;
 
     public IEnumerable<SiteRoute> Routes => _routesByPath.Values.OrderBy(r => r.FilePath, StringComparer.Ordinal);
 
@@ -64,9 +70,11 @@ internal sealed partial class LinkService
 
     public string GetAssetUrl(string fileName) => Urls.GetUrl(AssetsDirectory + "/" + fileName);
 
+    public string ApiReferenceUrl => Urls.GetUrl(RouteNames.ApiReferencePath);
+
     public string GetPackageUrl(string packageId) => Urls.GetUrl(RouteNames.GetPackagePath(packageId));
 
-    public string GetNamespaceUrl(string packageId, string namespaceName) => Urls.GetUrl(RouteNames.GetNamespacePath(packageId, namespaceName));
+    public string GetNamespaceUrl(string namespaceName) => Urls.GetUrl(RouteNames.GetNamespacePath(namespaceName));
 
     public SiteRoute? GetTypeRoute(ApiTypeModel type) => _typeRoutes.GetValueOrDefault(type);
 
@@ -156,7 +164,7 @@ internal sealed partial class LinkService
         }
 
         if (kind == 'N')
-            return ResolveNamespace(value, packageId, context);
+            return ResolveNamespace(value, packageId);
 
         var candidates = new List<ApiSymbolModel>();
         foreach (var candidateKind in kind is { } k ? [k] : DocumentationIdKinds)
@@ -180,8 +188,7 @@ internal sealed partial class LinkService
 
         if (candidates.Count == 0)
         {
-            // An ambiguous namespace is reported as such, so the author knows to qualify it with a package
-            if (kind is null && ResolveNamespace(value, packageId, context) is { Kind: CrefResolutionKind.Resolved or CrefResolutionKind.Ambiguous } namespaceResolution)
+            if (kind is null && ResolveNamespace(value, packageId) is { Kind: CrefResolutionKind.Resolved } namespaceResolution)
                 return namespaceResolution;
 
             // Without prefix, an external symbol is a type, unless it is a value of a framework enum (System.StringComparison.Ordinal)
@@ -357,25 +364,19 @@ internal sealed partial class LinkService
         };
     }
 
-    /// <summary>Resolves a namespace to its page in the package of the reference, or in the only package that publishes it.</summary>
-    private CrefResolution ResolveNamespace(string namespaceName, string? packageId, LinkContext context)
+    /// <summary>
+    /// Resolves a namespace to its page, which lists the types of every package. A package qualifier
+    /// (<c>Contoso.Package!N:Contoso</c>) only requires that this package contributes to the namespace.
+    /// </summary>
+    private CrefResolution ResolveNamespace(string namespaceName, string? packageId)
     {
-        var packages = _catalog.Packages
-            .Where(p => p.Namespaces.Any(ns => string.Equals(ns.Name, namespaceName, StringComparison.Ordinal)))
+        var exists = _catalog.Packages
             .Where(p => packageId is null || string.Equals(p.Id, packageId, StringComparison.OrdinalIgnoreCase))
-            .Select(p => p.Id)
-            .ToList();
-        if (context.PackageId is not null && packages.Contains(context.PackageId, StringComparer.OrdinalIgnoreCase))
-        {
-            packages = [context.PackageId];
-        }
+            .Any(p => p.Namespaces.Any(ns => string.Equals(ns.Name, namespaceName, StringComparison.Ordinal)));
 
-        return packages.Count switch
-        {
-            0 => ResolveExternal("N:" + namespaceName),
-            1 => new CrefResolution(CrefResolutionKind.Resolved, GetNamespaceUrl(packages[0], namespaceName), namespaceName, Symbol: null, []),
-            _ => new CrefResolution(CrefResolutionKind.Ambiguous, Url: null, namespaceName, Symbol: null, [.. packages.Select(p => p + "!N:" + namespaceName)]),
-        };
+        return exists
+            ? new CrefResolution(CrefResolutionKind.Resolved, GetNamespaceUrl(namespaceName), namespaceName, Symbol: null, [])
+            : ResolveExternal("N:" + namespaceName);
     }
 
     private CrefResolution ResolveExternal(string documentationId)
@@ -384,18 +385,21 @@ internal sealed partial class LinkService
         return new CrefResolution(url is null ? CrefResolutionKind.Unresolved : CrefResolutionKind.External, url, GetShortDisplayName(documentationId), Symbol: null, []);
     }
 
-    private void RegisterTypeRoutes(ApiPackageModel package)
+    private void RegisterTypeRoutes(IEnumerable<ApiTypeModel> types)
     {
-        var preferred = package.GetAllTypes()
+        var preferred = types
             .Select(type => (Type: type, FileName: RouteNames.GetTypeFileName(type)))
             .ToList();
 
         foreach (var group in preferred.GroupBy(p => p.FileName, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var items = group.ToList();
-            if (items.Count == 1)
+
+            // A type of the global namespace named index would replace the API reference page
+            var isReserved = string.Equals(group.Key, "index", StringComparison.OrdinalIgnoreCase);
+            if (items.Count == 1 && !isReserved)
             {
-                AddTypeRoute(package.Id, items[0].Type, items[0].FileName);
+                AddTypeRoute(items[0].Type, items[0].FileName);
                 continue;
             }
 
@@ -406,17 +410,21 @@ internal sealed partial class LinkService
                 ? items.Select(i => (i.Type, FileName: i.FileName + "--" + RouteNames.GetStableHash(i.Type.Assembly.Scope + "|" + i.Type.DocumentationId))).ToList()
                 : withAssembly;
 
-            _diagnostics.Report(DiagnosticDescriptors.RouteCollision, $"Types {string.Join(", ", items.Select(i => $"'{i.Type.Assembly.Scope}!{i.Type.DocumentationId}'").Order(StringComparer.Ordinal))} map to the same page '{group.Key}.html' in package '{package.Id}'; their URLs are disambiguated and only stable while this set of types is unchanged", new DiagnosticLocation { Symbol = items[0].Type.DocumentationId });
+            if (items.Count > 1)
+            {
+                _diagnostics.Report(DiagnosticDescriptors.RouteCollision, $"Types {string.Join(", ", items.Select(i => $"'{i.Type.Assembly.Scope}!{i.Type.DocumentationId}'").Order(StringComparer.Ordinal))} map to the same page '{group.Key}.html'; their URLs are disambiguated and only stable while this set of types is unchanged", new DiagnosticLocation { Symbol = items[0].Type.DocumentationId });
+            }
+
             foreach (var (type, fileName) in resolved)
             {
-                AddTypeRoute(package.Id, type, fileName);
+                AddTypeRoute(type, fileName);
             }
         }
     }
 
-    private void AddTypeRoute(string packageId, ApiTypeModel type, string fileName)
+    private void AddTypeRoute(ApiTypeModel type, string fileName)
     {
-        var route = new SiteRoute(RouteNames.GetTypePath(packageId, fileName), PageKind.Type, type.Assembly.Scope + "!" + type.DocumentationId);
+        var route = new SiteRoute(RouteNames.GetTypePath(fileName), PageKind.Type, type.Assembly.Scope + "!" + type.DocumentationId);
         if (Register(route))
         {
             _typeRoutes.Add(type, route);

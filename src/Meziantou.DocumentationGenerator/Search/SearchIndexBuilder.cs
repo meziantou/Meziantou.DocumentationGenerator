@@ -32,15 +32,16 @@ internal static class SearchIndexBuilder
             items.Add(new SearchItem(page.Title, page.Route.FilePath, "article", -1, "", ""));
         }
 
+        // A namespace page lists the types of every package, so namespaces do not belong to a package
+        foreach (var ns in site.Catalog.Namespaces)
+        {
+            items.Add(new SearchItem(ns.IsGlobal ? "Global namespace" : ns.Name, RouteNames.GetNamespacePath(ns.Name), "namespace", -1, ns.Name, ""));
+        }
+
         for (var packageIndex = 0; packageIndex < packages.Count; packageIndex++)
         {
             var package = packages[packageIndex];
             items.Add(new SearchItem(package.Id, RouteNames.GetPackagePath(package.Id), "package", packageIndex, "", ""));
-
-            foreach (var ns in package.Namespaces)
-            {
-                items.Add(new SearchItem(ns.IsGlobal ? "Global namespace" : ns.Name, RouteNames.GetNamespacePath(package.Id, ns.Name), "namespace", packageIndex, ns.Name, ""));
-            }
 
             foreach (var type in package.GetAllTypes())
             {

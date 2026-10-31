@@ -60,7 +60,7 @@ public sealed class DiscoveryTests
         Assert.True(Assert.Single(build.Context.References).Configuration.IsReference);
         Assert.Equal("$.references[0]", build.Context.References[0].Configuration.JsonPath);
         Assert.DoesNotContain(build.Diagnostics, d => d.Code == DiagnosticDescriptors.DependencyNotConfigured.Code);
-        Assert.True(File.Exists(build.Context.Configuration.OutputDirectory / "api/contoso.library/Contoso.Client.html"));
+        Assert.True(File.Exists(build.Context.Configuration.OutputDirectory / "api/Contoso.Client.html"));
         Assert.False(Directory.Exists(build.Context.Configuration.OutputDirectory / "api/contoso.extensions"));
     }
 

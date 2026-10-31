@@ -92,8 +92,8 @@ public sealed class XmlDocumentationTests
         await using var build = await BuildAsync(FullXml);
         var html = Render(build, "T:Contoso.Docs.Widget", c => c.Summary!);
 
-        Assert.Contains("<p>A widget with <code>inline code</code>, a <a href=\"/api/contoso.docs/Contoso.Docs.Widget.html#Send(System.String)\"><code>Widget.Send</code></a> link,", html);
-        Assert.Contains("a <a href=\"/api/contoso.docs/Contoso.Docs.Widget.Nested-1.html\">custom text</a> link, <code>null</code>,", html);
+        Assert.Contains("<p>A widget with <code>inline code</code>, a <a href=\"/api/Contoso.Docs.Widget.html#Send(System.String)\"><code>Widget.Send</code></a> link,", html);
+        Assert.Contains("a <a href=\"/api/Contoso.Docs.Widget.Nested-1.html\">custom text</a> link, <code>null</code>,", html);
         Assert.Contains("an <a href=\"https://example.com/a?b=1&amp;c=2\">external link</a>", html);
         Assert.Contains("Unicode text (café, 日本語)", html);
         Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html);
@@ -164,7 +164,7 @@ public sealed class XmlDocumentationTests
             """);
 
         var html = Render(build, "P:Contoso.Docs.Highlight.Priority", c => c.Summary!);
-        Assert.Equal("<p>Applies to <a href=\"/api/contoso.docs/Contoso.Docs.Highlight.html#Index\"><code class=\"paramref\">Index</code></a> and <code class=\"paramref\">Bogus</code>.</p>", html);
+        Assert.Equal("<p>Applies to <a href=\"/api/Contoso.Docs.Highlight.html#Index\"><code class=\"paramref\">Index</code></a> and <code class=\"paramref\">Bogus</code>.</p>", html);
 
         _ = GetComment(build, "P:Contoso.Docs.Highlight.Length");
         _ = GetComment(build, "P:Contoso.Docs.Box.Weight");

@@ -149,8 +149,9 @@ Dependencies of the documented packages are never downloaded implicitly. To inhe
 dependency (`<inheritdoc />` on an override of a dependency type), add it to `references` (`DG2010` lists the
 dependencies that are not configured).
 
-Each package is a section of the API reference, at `/api/{package}/` where `{package}` is the lowercase package ID.
-The package description is the lead paragraph of its page.
+The API reference, at `/api/`, merges the namespaces of every package. Each package also has a page at
+`/api/packages/{package}.html`, where `{package}` is the lowercase package ID; the package description is its lead
+paragraph.
 
 ## `content`
 
@@ -248,7 +249,8 @@ Severity values are `error`, `warning`, `info` and `none`. Diagnostics that repo
 }
 ```
 
-The API reference has one section per package: `/api/contoso.data/` and `/api/contoso.data.sqlite/`.
+The namespaces of both packages are listed together in the API reference; a namespace to which both packages contribute
+has a single page. The package pages are `/api/packages/contoso.data.html` and `/api/packages/contoso.data.sqlite.html`.
 
 ### Multiple target frameworks
 

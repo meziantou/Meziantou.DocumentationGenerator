@@ -54,8 +54,9 @@ one, never a partial site.
 
 - A *package* is a NuGet package identified by `id` + `version`. A version range is resolved to one exact version
   during acquisition; every later stage uses the resolved version.
-- Each published package is a section of the API reference, identified in URLs by its lowercase ID. The package
-  description is the lead paragraph of its API reference page.
+- The API reference is organized by namespace: a namespace has a single page listing its types from every published
+  package. Each published package also has a page, identified in URLs by its lowercase ID, whose lead paragraph is
+  the package description.
 - Pages are only the authored Markdown files. Nothing is generated from package READMEs; READMEs are never read or
   published.
 
@@ -65,7 +66,7 @@ one, never a partial site.
 { "packages": [ { "id": "Contoso.Json", "version": "2.1.0" } ] }
 ```
 
-API reference of the package at `/api/contoso.json/`.
+API reference at `/api/`, package page at `/api/packages/contoso.json.html`.
 
 ## Configuration
 
@@ -173,10 +174,11 @@ The following table shows deployment URLs, not the relative attribute values emi
 | Page | File | URL with `basePath: /` | URL with `basePath: /docs/` |
 | --- | --- | --- | --- |
 | Site home | `index.html` | `/` | `/docs/` |
-| Package API reference | `api/{package}/index.html` | `/api/contoso.json/` | `/docs/api/contoso.json/` |
-| Namespace | `api/{package}/namespaces/{Namespace}.html` | `/api/contoso.json/namespaces/Contoso.Json.html` | `/docs/api/contoso.json/namespaces/Contoso.Json.html` |
-| Type | `api/{package}/{TypeName}.html` | `/api/contoso.json/Contoso.Json.JsonReader.html` | `/docs/api/contoso.json/Contoso.Json.JsonReader.html` |
-| Member | type page + fragment | `/api/contoso.json/Contoso.Json.JsonReader.html#Read(System.Int32)` | `/docs/api/contoso.json/Contoso.Json.JsonReader.html#Read(System.Int32)` |
+| API reference | `api/index.html` | `/api/` | `/docs/api/` |
+| Package | `api/packages/{package}.html` | `/api/packages/contoso.json.html` | `/docs/api/packages/contoso.json.html` |
+| Namespace | `api/namespaces/{Namespace}.html` | `/api/namespaces/Contoso.Json.html` | `/docs/api/namespaces/Contoso.Json.html` |
+| Type | `api/{TypeName}.html` | `/api/Contoso.Json.JsonReader.html` | `/docs/api/Contoso.Json.JsonReader.html` |
+| Member | type page + fragment | `/api/Contoso.Json.JsonReader.html#Read(System.Int32)` | `/docs/api/Contoso.Json.JsonReader.html#Read(System.Int32)` |
 | Authored page | `{folder slugs}/{page slug}.html` | `/guides/getting-started.html` | `/docs/guides/getting-started.html` |
 | Root `index.md` | `index.html` (site home) | `/` | `/docs/` |
 | Asset | `_assets/...`, or content-relative path | `/_assets/site.css` | `/docs/_assets/site.css` |
@@ -196,9 +198,11 @@ The following table shows deployment URLs, not the relative attribute values emi
 ### Collisions
 
 - Collisions are detected **case-insensitively** because common filesystems are case-insensitive.
-- When two pages of the same package map to the same file, every colliding page is suffixed with
-  `--{assemblyName}` (for instance two assemblies of one package both defining `Utils.Guard`). If the suffix
-  still collides (case-only differences), a stable 8-character hash of the scoped identity is appended.
+- Type pages do not depend on the package. When two types map to the same file, every colliding page is suffixed
+  with `--{assemblyName}` (for instance two packages, or two assemblies of one package, both defining `Utils.Guard`).
+  If the suffix still collides (case-only differences), a stable 8-character hash of the scoped identity is appended.
+  A type of the global namespace named `index` is suffixed the same way, so that it does not replace the API
+  reference page.
   Warning `DG4004` lists the involved symbols because such URLs are only stable as long as the colliding
   set is unchanged.
 - Authored pages may not collide with generated pages; this is an error (`DG4005`).
@@ -226,11 +230,11 @@ The following table shows deployment URLs, not the relative attribute values emi
 ### Example: generic and nested types
 
 ```text
-T:Contoso.Collections.Tree`1            -> /api/contoso.json/Contoso.Collections.Tree-1.html
-T:Contoso.Collections.Tree`1.Node       -> /api/contoso.json/Contoso.Collections.Tree-1.Node.html
-M:Contoso.Collections.Tree`1.Add(`0)    -> /api/contoso.json/Contoso.Collections.Tree-1.html#Add(`0)
+T:Contoso.Collections.Tree`1            -> /api/Contoso.Collections.Tree-1.html
+T:Contoso.Collections.Tree`1.Node       -> /api/Contoso.Collections.Tree-1.Node.html
+M:Contoso.Collections.Tree`1.Add(`0)    -> /api/Contoso.Collections.Tree-1.html#Add(`0)
 M:Contoso.Collections.Tree`1.Map``1(System.Func{`0,``0})
-                                        -> /api/contoso.json/Contoso.Collections.Tree-1.html#Map``1(System.Func{`0,``0})
+                                        -> /api/Contoso.Collections.Tree-1.html#Map``1(System.Func{`0,``0})
 ```
 
 ### Example: TFM-specific members
@@ -244,13 +248,14 @@ whether or not the `netstandard2.0` asset is documented.
 The packages `Contoso.A` and `Contoso.B` both define `T:Utils.Guard`:
 
 ```text
-/api/contoso.a/Utils.Guard.html   (scope Contoso.A/Contoso.A)
-/api/contoso.b/Utils.Guard.html   (scope Contoso.B/Contoso.B)
+/api/Utils.Guard--Contoso.A.html   (scope Contoso.A/Contoso.A)
+/api/Utils.Guard--Contoso.B.html   (scope Contoso.B/Contoso.B)
+/api/namespaces/Utils.html         (lists both types)
 ```
 
-A `cref:T:Utils.Guard` link in a page of package `Contoso.A` resolves to `/api/contoso.a/Utils.Guard.html`. The same
+A `cref:T:Utils.Guard` link in a page of package `Contoso.A` resolves to `/api/Utils.Guard--Contoso.A.html`. The same
 link in an authored page is ambiguous (`DG4002`) and must be qualified with the package:
-`cref:Contoso.B!T:Utils.Guard`.
+`cref:Contoso.B!T:Utils.Guard`. `cref:N:Utils` is not ambiguous: the namespace has a single page.
 
 ## Cross-references
 
@@ -312,9 +317,9 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
   removes accents, lowercases, replaces runs of characters other than ASCII letters and digits with `-`, and trims.
   The root `index.md` is always `index.html`; other `index.md` files are ordinary pages. Collisions between pages,
   between folders, and any other page mapping to `index.html` are errors (`DG4005`).
-- The last section is always the generated API reference: a non-clickable `API reference` group, one node per package
-  (package ID, linking to `api/{package}/index.html`) in configuration order, then namespaces and types sorted
-  ordinally.
+- The last section is always the generated API reference: an `API reference` node linking to `api/index.html`, then the
+  namespaces of every package and their types, sorted ordinally. Packages are not part of the navigation; the API
+  reference page and type pages link to them.
 - Previous and next links only go through authored pages.
 
 ## Optional metadata and strictness

@@ -16,15 +16,15 @@ public sealed class ApiPageTests
         string[] expected =
         [
             "index.html",
-            "api/contoso.library/index.html",
-            "api/contoso.library/namespaces/Contoso.Library.html",
-            "api/contoso.library/namespaces/Contoso.Library.Collections.html",
-            "api/contoso.library/Contoso.Library.Client.html",
-            "api/contoso.library/Contoso.Library.MessageKind.html",
-            "api/contoso.library/Contoso.Library.MessageHandler.html",
-            "api/contoso.library/Contoso.Library.IChannel-1.html",
-            "api/contoso.library/Contoso.Library.Point.html",
-            "api/contoso.library/Contoso.Library.Collections.Tree-1.Node.Child-1.html",
+            "api/packages/contoso.library.html",
+            "api/namespaces/Contoso.Library.html",
+            "api/namespaces/Contoso.Library.Collections.html",
+            "api/Contoso.Library.Client.html",
+            "api/Contoso.Library.MessageKind.html",
+            "api/Contoso.Library.MessageHandler.html",
+            "api/Contoso.Library.IChannel-1.html",
+            "api/Contoso.Library.Point.html",
+            "api/Contoso.Library.Collections.Tree-1.Node.Child-1.html",
         ];
         Assert.All(expected, file => Assert.True(File.Exists(site.Output / file), file));
         Assert.False(File.Exists(site.Output / "contoso.library" / "index.html"));
@@ -34,7 +34,7 @@ public sealed class ApiPageTests
     public async Task TypePage_StructureAndMembers()
     {
         await using var site = await BuildKitchenSinkAsync();
-        var document = Load(site, "api/contoso.library/Contoso.Library.Client.html");
+        var document = Load(site, "api/Contoso.Library.Client.html");
 
         Assert.Equal("Client Class", document.QuerySelector("h1")!.TextContent);
         Assert.Equal("Client Class | Test site", document.Title);
@@ -82,23 +82,23 @@ public sealed class ApiPageTests
     {
         await using var site = await BuildKitchenSinkAsync();
 
-        var enumPage = Load(site, "api/contoso.library/Contoso.Library.MessageKind.html");
+        var enumPage = Load(site, "api/Contoso.Library.MessageKind.html");
         Assert.Equal("MessageKind Enum", enumPage.QuerySelector("h1")!.TextContent);
         Assert.Equal(["None", "Text", "Binary"], enumPage.QuerySelectorAll<Element>("table.api-table tbody tr td:first-child").Select(c => c.TextContent));
         Assert.Equal("2", enumPage.GetElementById("Binary")!.QuerySelectorAll<Element>("td")[1].TextContent);
 
-        var delegatePage = Load(site, "api/contoso.library/Contoso.Library.MessageHandler.html");
+        var delegatePage = Load(site, "api/Contoso.Library.MessageHandler.html");
         Assert.Equal("MessageHandler Delegate", delegatePage.QuerySelector("h1")!.TextContent);
         Assert.Contains("The message.", delegatePage.QuerySelector("dl.parameters")!.TextContent);
 
-        var sealedPage = Load(site, "api/contoso.library/Contoso.Library.Sealed.html");
+        var sealedPage = Load(site, "api/Contoso.Library.Sealed.html");
         Assert.Equal("Contoso.Library.Base.html", sealedPage.QuerySelector("dl.api-relations a")!.GetAttribute("href"));
         Assert.Null(sealedPage.GetElementById("Protected"));
 
-        var legacy = Load(site, "api/contoso.library/Contoso.Library.Legacy.html");
+        var legacy = Load(site, "api/Contoso.Library.Legacy.html");
         Assert.Equal("Obsolete: Use Client instead.", legacy.QuerySelector(".badge-obsolete")!.TextContent);
 
-        var nested = Load(site, "api/contoso.library/Contoso.Library.Collections.Tree-1.Node.Child-1.html");
+        var nested = Load(site, "api/Contoso.Library.Collections.Tree-1.Node.Child-1.html");
         Assert.Equal("Tree<T>.Node.Child<TKey> Class", nested.QuerySelector("h1")!.TextContent);
         Assert.Equal("Contoso.Library.Collections.Tree-1.Node.html", nested.QuerySelectorAll<Element>("dl.api-metadata a")[^1].GetAttribute("href"));
     }
@@ -108,12 +108,12 @@ public sealed class ApiPageTests
     {
         await using var site = await BuildKitchenSinkAsync();
 
-        var ns = Load(site, "api/contoso.library/namespaces/Contoso.Library.html");
+        var ns = Load(site, "api/namespaces/Contoso.Library.html");
         Assert.Equal(["Classes", "Structs", "Interfaces", "Enums", "Delegates"], ns.QuerySelectorAll<Element>("h2:not(#page-toc-title)").Select(h => h.TextContent));
         var modernOnly = ns.QuerySelectorAll<Element>("tr").Single(r => r.TextContent!.Contains("ModernOnly", StringComparison.Ordinal));
         Assert.Equal("net8.0", modernOnly.GetAttribute("data-tfms"));
 
-        var reference = Load(site, "api/contoso.library/index.html");
+        var reference = Load(site, "api/packages/contoso.library.html");
         Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll<Element>("tbody td:first-child a").Select(a => a.TextContent));
     }
 
@@ -144,7 +144,7 @@ public sealed class ApiPageTests
             .AddFile("lib/net8.0/Contoso.Variants.dll", net8.Assembly).AddFile("lib/net8.0/Contoso.Variants.xml", net8.Xml)
             .AddFile("lib/netstandard2.0/Contoso.Variants.dll", netstandard.Assembly).AddFile("lib/netstandard2.0/Contoso.Variants.xml", netstandard.Xml);
         await using var site = await SiteBuilder.BuildAsync([package]);
-        var document = Load(site, "api/contoso.variants/Contoso.Variants.Widget.html");
+        var document = Load(site, "api/Contoso.Variants.Widget.html");
 
         var name = document.GetElementById("Name")!;
         Assert.Equal(["public string? Name { get; set; }", "public string Name { get; set; }"], name.QuerySelectorAll<Element>("pre.declaration").Select(p => p.TextContent));
@@ -166,17 +166,17 @@ public sealed class ApiPageTests
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
         Assert.False(File.Exists(site.Output / "contoso.bare" / "index.html"));
-        var reference = Load(site, "api/contoso.bare/index.html");
-        Assert.Equal("namespaces/Contoso.Bare.html", reference.QuerySelector(".api-table a")!.GetAttribute("href"));
+        var reference = Load(site, "api/packages/contoso.bare.html");
+        Assert.Equal("../namespaces/Contoso.Bare.html", reference.QuerySelector(".api-table a")!.GetAttribute("href"));
 
-        var type = Load(site, "api/contoso.bare/Contoso.Bare.Thing.html");
+        var type = Load(site, "api/Contoso.Bare.Thing.html");
         Assert.Equal("No documentation is available.", type.GetElementById("Run")!.QuerySelector(".no-documentation")!.TextContent);
         Assert.DoesNotContain("DG3001", site.Result.AllOutput);
         Assert.Contains("DG3002", site.Result.AllOutput);
     }
 
     [Fact]
-    public async Task SeveralPackages_OneSectionPerPackage()
+    public async Task SeveralPackages_ShareTheApiReference()
     {
         var first = ApiModelTests.CreateKitchenSinkPackage("Contoso.First");
         var assembly = TestCompiler.Compile("Contoso.Second", "namespace Contoso.Second { /// <summary>Second.</summary>\npublic class Other { } }");
@@ -184,15 +184,52 @@ public sealed class ApiPageTests
         await using var site = await SiteBuilder.BuildAsync([first, second]);
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
-        var reference = Load(site, "api/contoso.first/index.html");
+
+        // The API reference lists the namespaces of every package, then the packages
+        var home = Load(site, "api/index.html");
+        Assert.Equal("API reference", home.QuerySelector("h1")!.TextContent);
+        var tables = home.QuerySelectorAll<Element>(".api-table");
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], tables[0].QuerySelectorAll<Element>("a").Select(a => a.TextContent));
+        Assert.Equal(["namespaces/Contoso.Library.html", "namespaces/Contoso.Library.Collections.html", "namespaces/Contoso.Second.html"], tables[0].QuerySelectorAll<Element>("a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["Contoso.First", "Contoso.Second"], tables[1].QuerySelectorAll<Element>("a").Select(a => a.TextContent));
+        Assert.Equal(["packages/contoso.first.html", "packages/contoso.second.html"], tables[1].QuerySelectorAll<Element>("a").Select(a => a.GetAttribute("href")));
+
+        // Each package has a page listing its own namespaces
+        var reference = Load(site, "api/packages/contoso.first.html");
+        Assert.Equal("Contoso.First package", reference.QuerySelector("h1")!.TextContent);
         Assert.Equal("Description of Contoso.First", reference.QuerySelector("p.lead")!.TextContent);
         Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
-        Assert.Equal(["Contoso.Second"], Load(site, "api/contoso.second/index.html").QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
+        Assert.Equal(["Contoso.Second"], Load(site, "api/packages/contoso.second.html").QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
+
+        // The sidebar lists namespaces directly under the API reference
         var items = reference.QuerySelectorAll<Element>(".sidebar > ul > li");
         var api = items[items.Count - 1];
-        Assert.Equal("API reference", api.QuerySelector(".nav-group")!.TextContent);
+        var apiLink = api.QuerySelector(":scope > a")!;
+        Assert.Equal("API reference", apiLink.TextContent);
+        Assert.Equal("../", apiLink.GetAttribute("href"));
         Assert.Contains("nav-api-reference", api.GetAttribute("class")!.Split(' '));
-        Assert.Equal(["Contoso.First", "Contoso.Second"], api.QuerySelectorAll<Element>("details > ul > li > a").Where(a => a.GetAttribute("href") is "./" or "../contoso.second/").Select(a => a.TextContent));
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], api.QuerySelectorAll<Element>(":scope > details > ul > li > a").Select(a => a.TextContent));
+
+        // A type page links to its package; a namespace of a single package has no package column
+        var other = Load(site, "api/Contoso.Second.Other.html");
+        Assert.Equal("packages/contoso.second.html", other.QuerySelector(".api-metadata a[href^='packages/']")!.GetAttribute("href"));
+        Assert.Equal(["Name", "Description"], Load(site, "api/namespaces/Contoso.Second.html").QuerySelectorAll<Element>(".api-table th").Select(th => th.TextContent));
+    }
+
+    [Fact]
+    public async Task NamespaceOfSeveralPackages_ShowsThePackageOfEachType()
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
+        await using var site = await SiteBuilder.BuildAsync([first, second]);
+
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+        var ns = Load(site, "api/namespaces/Utils.html");
+        Assert.Equal(["Name", "Package", "Description"], ns.QuerySelectorAll<Element>(".api-table th").Select(th => th.TextContent));
+        var rows = ns.QuerySelectorAll<Element>(".api-table tbody tr");
+        Assert.Equal(["../Utils.Guard--Contoso.Guard.html", "../Utils.Guard--Contoso.OtherGuard.html"], rows.Select(r => r.QuerySelector("td a")!.GetAttribute("href")));
+        Assert.Equal(["Contoso.Guard", "Contoso.OtherGuard"], rows.Select(r => r.QuerySelectorAll<Element>("td")[1].TextContent));
+        Assert.Equal("../packages/contoso.otherguard.html", rows[1].QuerySelectorAll<Element>("td")[1].QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -201,7 +238,7 @@ public sealed class ApiPageTests
         var assembly = TestCompiler.Compile("Contoso.Sources", [("/_/src/Widget.cs", "namespace Contoso.Sources\n{\n    public class Widget\n    {\n        public int Compute(int x)\n        {\n            return x;\n        }\n    }\n}\n")], new CompileOptions { SourceLink = SourceLinkTests.GitHubSourceLink });
         var package = new TestPackageBuilder("Contoso.Sources", "1.0.0").AddFile("lib/net8.0/Contoso.Sources.dll", assembly.Assembly).AddFile("lib/net8.0/Contoso.Sources.pdb", assembly.Pdb!);
         await using var site = await SiteBuilder.BuildAsync([package]);
-        var document = Load(site, "api/contoso.sources/Contoso.Sources.Widget.html");
+        var document = Load(site, "api/Contoso.Sources.Widget.html");
 
         var typeLink = document.QuerySelector("article > .heading-row .source-link")!;
         Assert.Equal("file", typeLink.GetAttribute("data-precision"));
@@ -218,10 +255,10 @@ public sealed class ApiPageTests
     public async Task Subpath_LinksAreRelativeToThePage()
     {
         await using var site = await BuildKitchenSinkAsync(arguments: ["--base-path", "/docs/"]);
-        var document = Load(site, "api/contoso.library/Contoso.Library.Client.html");
+        var document = Load(site, "api/Contoso.Library.Client.html");
 
         Assert.Empty(document.QuerySelectorAll<Element>("[href^='/'], [src^='/']"));
-        Assert.Equal("../../_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
+        Assert.Equal("../_assets/site.css", document.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -230,11 +267,11 @@ public sealed class ApiPageTests
         await using var site = await BuildKitchenSinkAsync(extraConfiguration: """ "api": { "exclude": [ "N:Contoso.Library.Collections", "T:Contoso.Library.Message" ] }, """);
 
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
-        Assert.False(File.Exists(site.Output / "api" / "contoso.library" / "namespaces" / "Contoso.Library.Collections.html"));
-        Assert.False(File.Exists(site.Output / "api" / "contoso.library" / "Contoso.Library.Message.html"));
+        Assert.False(File.Exists(site.Output / "api" / "namespaces" / "Contoso.Library.Collections.html"));
+        Assert.False(File.Exists(site.Output / "api" / "Contoso.Library.Message.html"));
 
         // References to the excluded type are displayed without link
-        var client = Load(site, "api/contoso.library/Contoso.Library.Client.html");
+        var client = Load(site, "api/Contoso.Library.Client.html");
         Assert.DoesNotContain(client.QuerySelectorAll<Element>("a"), a => a.GetAttribute("href")?.Contains("Contoso.Library.Message.html", StringComparison.Ordinal) == true);
     }
 

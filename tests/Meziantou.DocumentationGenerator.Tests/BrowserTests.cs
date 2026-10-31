@@ -12,10 +12,10 @@ public sealed class BrowserTests(BrowserFixture fixture)
     [
         "",
         "guide.html",
-        "api/contoso.library/",
-        "api/contoso.library/namespaces/Contoso.Library.html",
-        "api/contoso.library/Contoso.Library.Client.html",
-        "api/contoso.library/Contoso.Library.MessageKind.html",
+        "api/packages/contoso.library.html",
+        "api/namespaces/Contoso.Library.html",
+        "api/Contoso.Library.Client.html",
+        "api/Contoso.Library.MessageKind.html",
     ];
 
     [Fact]
@@ -34,7 +34,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Equal("rgb(13, 17, 23)", await GetBackgroundAsync(page));
 
         // The explicit choice survives navigation and is applied before the stylesheet is used
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/packages/contoso.library.html");
         Assert.Equal("dark", await page.EvaluateAsync<string>("document.documentElement.getAttribute('data-theme')"));
         Assert.Equal("dark", await page.InputValueAsync("#theme-select"));
 
@@ -95,7 +95,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.EndsWith("/guide.html", page.Url);
         Assert.Equal("Guide", await page.TextContentAsync("h1"));
 
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html#Send(System.String)");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html#Send(System.String)");
         Assert.True(await page.IsVisibleAsync("[id='Send(System.String)']"));
         Assert.Equal(2, await page.Locator("[id='Name'] .declaration-variant, [id='Send(System.ReadOnlySpan{System.Byte})'] .declaration-variant").CountAsync());
     }
@@ -133,8 +133,8 @@ public sealed class BrowserTests(BrowserFixture fixture)
 
     [Theory]
     [InlineData("guide.html")]
-    [InlineData("api/contoso.library/")]
-    [InlineData("api/contoso.library/namespaces/Contoso.Library.html")]
+    [InlineData("api/packages/contoso.library.html")]
+    [InlineData("api/namespaces/Contoso.Library.html")]
     public async Task Search_KeyboardNavigation(string path)
     {
         await using var context = await fixture.Browser.NewContextAsync();
@@ -153,7 +153,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         var navigation = page.WaitForURLAsync(url => url.EndsWith("/Contoso.Library.Client.html", StringComparison.Ordinal));
         await page.Keyboard.PressAsync("Enter");
         await navigation;
-        Assert.Equal(fixture.DocsServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html", page.Url);
+        Assert.Equal(fixture.DocsServer.BaseUrl + "api/Contoso.Library.Client.html", page.Url);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         {
             await page.SelectOptionAsync("#theme-select", theme);
             Assert.True(await page.EvaluateAsync<bool>("""
-                () => getComputedStyle(document.querySelector('#sidebar .nav-group')).color ===
+                () => getComputedStyle(document.querySelector('#sidebar .nav-api-reference > a')).color ===
                       getComputedStyle(document.querySelector('#sidebar a[href$="guide.html"]')).color
                 """));
         }
@@ -236,7 +236,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.True((await page.Locator("main").BoundingBoxAsync())!.Width >= contentWidth + 200);
         Assert.Equal(48, (await page.Locator(".sidebar-panel").BoundingBoxAsync())!.Width);
 
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html");
         Assert.False(await page.IsVisibleAsync("#sidebar"));
         await button.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
@@ -281,7 +281,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         // A short viewport makes the sidebar scroll; the API reference, and so the current type, is at its end
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 1280, Height = 200 } });
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html");
 
         var state = await page.EvaluateAsync<double[]>("""
             () => {
@@ -364,7 +364,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html");
 
         var span = page.Locator("[id='Send(System.ReadOnlySpan{System.Byte})']");
         Assert.True(await span.IsVisibleAsync());
@@ -380,10 +380,10 @@ public sealed class BrowserTests(BrowserFixture fixture)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { ReducedMotion = ReducedMotion.Reduce });
         var page = await context.NewPageAsync();
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html");
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html");
 
         var href = await page.Locator("[id='Send(System.String)'] .heading-anchor").GetAttributeAsync("href");
-        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/contoso.library/Contoso.Library.Client.html" + href);
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html" + href);
         Assert.Equal("#Send(System.String)", href);
         Assert.True(await page.EvaluateAsync<bool>("(() => { const top = document.getElementById('Send(System.String)').getBoundingClientRect().top; return top >= 0 && top < window.innerHeight; })()"));
     }

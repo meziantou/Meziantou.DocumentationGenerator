@@ -6,7 +6,6 @@ namespace Meziantou.DocumentationGenerator.Navigation;
 internal sealed class NavigationNode
 {
     public const string ApiReferenceKind = "api";
-    public const string PackageKind = "package";
     public const string NamespaceKind = "namespace";
     public const string TypeKind = "type";
 
@@ -21,7 +20,7 @@ internal sealed class NavigationNode
     public bool IsGroup { get; init; }
     public bool IsExpanded { get; init; }
 
-    /// <summary>Kind of generated node (<c>api</c>, <c>package</c>, <c>namespace</c>, <c>type</c>), or <see langword="null"/> for authored pages and folders.</summary>
+    /// <summary>Kind of generated node (<c>api</c>, <c>namespace</c>, <c>type</c>), or <see langword="null"/> for authored pages and folders.</summary>
     public string? Kind { get; init; }
     public ImmutableArray<NavigationNode> Children { get; init; } = [];
 

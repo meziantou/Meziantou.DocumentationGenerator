@@ -21,21 +21,22 @@ internal static class SitePageCatalog
             yield return PageRequest.Create<ArticlePage>(page.Route.FilePath, new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(ArticlePage.PagePath)] = page.Route.FilePath });
         }
 
+        if (site.Catalog.HasApi)
+        {
+            yield return PageRequest.Create<ApiReferencePage>(RouteNames.ApiReferencePath, new Dictionary<string, object?>(StringComparer.Ordinal));
+        }
+
+        foreach (var ns in site.Catalog.Namespaces)
+        {
+            yield return PageRequest.Create<NamespacePage>(RouteNames.GetNamespacePath(ns.Name), new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(NamespacePage.Namespace)] = ns.Name });
+        }
+
         foreach (var package in site.Catalog.Packages)
         {
             if (package.Namespaces.IsEmpty)
                 continue;
 
             yield return PageRequest.Create<PackagePage>(RouteNames.GetPackagePath(package.Id), new Dictionary<string, object?>(StringComparer.Ordinal) { [nameof(PackagePage.PackageId)] = package.Id });
-            foreach (var ns in package.Namespaces)
-            {
-                yield return PageRequest.Create<NamespacePage>(RouteNames.GetNamespacePath(package.Id, ns.Name), new Dictionary<string, object?>(StringComparer.Ordinal)
-                {
-                    [nameof(NamespacePage.PackageId)] = package.Id,
-                    [nameof(NamespacePage.Namespace)] = ns.Name,
-                });
-            }
-
             foreach (var type in package.GetAllTypes())
             {
                 if (site.Links.GetTypeRoute(type) is { } route)

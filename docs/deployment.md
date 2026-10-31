@@ -10,7 +10,7 @@ Internal links, images, stylesheets, scripts and search URLs are relative to the
 The same generated files can be deployed at the root of a domain or under any subpath without rebuilding or
 setting `site.basePath`.
 
-For example, `api/contoso.json/Contoso.Json.JsonReader.html` links to `../../_assets/site.css` and to its
+For example, `api/Contoso.Json.JsonReader.html` links to `../_assets/site.css` and to its
 sibling type as `Contoso.Json.JsonWriter.html`. Both work at `https://docs.example.com/` and at
 `https://meziantou.github.io/Meziantou.Framework/`.
 
@@ -18,7 +18,7 @@ Set `site.basePath` (or `--base-path`) when generating absolute canonical/social
 or to choose the local preview server's path. These absolute metadata URLs describe one deployment and must be
 regenerated if that deployment changes. External links remain unchanged.
 
-Directory URLs (`api/contoso.json/`) rely on the host serving `index.html` for directories, which every static host
+Directory URLs (`api/`) rely on the host serving `index.html` for directories, which every static host
 does. Opening the files with `file://` is not supported.
 
 ## 404 page

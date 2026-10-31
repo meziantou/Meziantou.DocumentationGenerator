@@ -131,9 +131,9 @@ public sealed partial class MarkdownTests
             });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Client.html"><code>Client</code></a>""", html);
-        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Client.html#Send(System.String)">the send method</a>""", html);
-        Assert.Contains("""<a href="/docs/api/contoso.library/Contoso.Library.Collections.Tree-1.html"><code>Tree&lt;T&gt;</code></a>""", html);
+        Assert.Contains("""<a href="/docs/api/Contoso.Library.Client.html"><code>Client</code></a>""", html);
+        Assert.Contains("""<a href="/docs/api/Contoso.Library.Client.html#Send(System.String)">the send method</a>""", html);
+        Assert.Contains("""<a href="/docs/api/Contoso.Library.Collections.Tree-1.html"><code>Tree&lt;T&gt;</code></a>""", html);
         Assert.Contains("<code>Type</code>", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4001" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("Missing.Type", StringComparison.Ordinal));
     }
@@ -149,7 +149,7 @@ public sealed partial class MarkdownTests
         });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/api/contoso.guard/Utils.Guard.html">qualified</a>""", html);
+        Assert.Contains("""<a href="/docs/api/Utils.Guard--Contoso.Guard.html">qualified</a>""", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'T:Utils.Guard' is ambiguous", StringComparison.Ordinal));
     }
 
@@ -169,12 +169,12 @@ public sealed partial class MarkdownTests
         Assert.Contains("ambiguous", html);
         var link = Assert.Single(HtmlDocumentLoader.Parse(html).QuerySelectorAll<Element>("article a"));
         Assert.Equal("qualified", link.TextContent);
-        Assert.Equal("api/contoso.guard/Utils.Guard.html", link.GetAttribute("href"));
+        Assert.Equal("api/Utils.Guard--Contoso.Guard.html", link.GetAttribute("href"));
         Assert.DoesNotContain("cref:", html);
     }
 
     [Fact]
-    public async Task AmbiguousNamespaceCref_IsReportedAsAmbiguous()
+    public async Task NamespaceCrefInTwoPackages_IsNotAmbiguous()
     {
         var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
         var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
@@ -184,9 +184,10 @@ public sealed partial class MarkdownTests
         });
 
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
-        Assert.Contains("""<a href="/docs/api/contoso.guard/namespaces/Utils.html">qualified</a>""", html);
-        Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Message.Contains("'Utils' is ambiguous", StringComparison.Ordinal));
-        Assert.DoesNotContain(build.Diagnostics, d => d.Code == "DG4001");
+        // Both packages contribute to the Utils namespace, which has a single page
+        Assert.Contains("""<a href="/docs/api/namespaces/Utils.html"><code>Utils</code></a>""", html);
+        Assert.Contains("""<a href="/docs/api/namespaces/Utils.html">qualified</a>""", html);
+        Assert.DoesNotContain(build.Diagnostics, d => d.Code is "DG4001" or "DG4002");
     }
 
     [Fact]
@@ -558,7 +559,7 @@ public sealed partial class MarkdownTests
 
         Assert.Equal(["01-Page"], build.Context.Content.Pages.Select(p => p.Id));
         Assert.Empty(build.Context.Assets!.Assets);
-        Assert.DoesNotContain(build.Context.Links!.Routes, r => r.FilePath.StartsWith("contoso.readme/", StringComparison.Ordinal) && !r.FilePath.StartsWith("api/contoso.readme/", StringComparison.Ordinal));
+        Assert.DoesNotContain(build.Context.Links!.Routes, r => r.FilePath.StartsWith("contoso.readme/", StringComparison.Ordinal) && !r.FilePath.StartsWith("api/packages/contoso.readme.html", StringComparison.Ordinal));
     }
 
     private static async Task<TestBuild> BuildAsync(

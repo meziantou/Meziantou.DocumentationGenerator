@@ -22,13 +22,16 @@ public sealed class EndToEndTests(InstalledToolFixture fixture)
         [
             "index.html", "404.html", "sitemap.xml", "robots.txt", "_assets/search-index.json",
             "guides/getting-started.html", "guides/extensions.html",
-            "api/contoso.library/index.html", "api/contoso.extensions/index.html",
-            "api/contoso.library/Contoso.Library.Client.html", "api/contoso.extensions/Contoso.Extensions.SmartClient.html", "api/contoso.extensions/Utils.Guard.html",
+            "api/packages/contoso.library.html", "api/packages/contoso.extensions.html",
+            "api/Contoso.Library.Client.html", "api/Contoso.Extensions.SmartClient.html",
             "guides/images/diagram.png",
-            "api/contoso.undocumented/Utils.Guard.html",
+
+            // Both packages declare Utils.Guard: their pages are disambiguated with the assembly name
+            "api/Utils.Guard--Contoso.Extensions.html", "api/Utils.Guard--Contoso.Undocumented.html",
+            "api/index.html", "api/namespaces/Utils.html",
         ];
         Assert.All(expectedFiles, file => Assert.True(File.Exists(output / file), file));
-        string[] removedFiles = ["contoso.library/index.html", "contoso.meta/index.html", "api/contoso.meta/index.html", "agents.html", "AGENTS.html"];
+        string[] removedFiles = ["contoso.library/index.html", "contoso.meta/index.html", "api/packages/contoso.meta.html", "agents.html", "AGENTS.html"];
         Assert.All(removedFiles, file => Assert.False(File.Exists(output / file), file));
         Assert.False(Directory.Exists(output / "api" / "contoso.library" / "_readme"));
         Assert.False(Directory.Exists(output / "01-Guides"));
@@ -41,9 +44,9 @@ public sealed class EndToEndTests(InstalledToolFixture fixture)
         Assert.Equal("guides/getting-started.html", guidesLink.GetAttribute("href"));
 
         // Inherited documentation across packages and source links pinned to the commit
-        var smartClient = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "contoso.extensions" / "Contoso.Extensions.SmartClient.html", TestContext.Current.CancellationToken));
+        var smartClient = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "Contoso.Extensions.SmartClient.html", TestContext.Current.CancellationToken));
         Assert.Equal("Runs.", smartClient.GetElementById("Run")!.QuerySelector(".summary")!.TextContent!.Trim());
-        var client = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "contoso.library" / "Contoso.Library.Client.html", TestContext.Current.CancellationToken));
+        var client = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "Contoso.Library.Client.html", TestContext.Current.CancellationToken));
         Assert.StartsWith($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Library.cs#L", client.GetElementById("Send(System.String)")!.QuerySelector(".source-link")!.GetAttribute("href"));
 
         // Degraded inputs are reported, the fixture's module initializer never ran, and nothing leaks machine paths

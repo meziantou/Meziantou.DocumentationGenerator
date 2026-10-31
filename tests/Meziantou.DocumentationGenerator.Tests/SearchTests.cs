@@ -108,10 +108,14 @@ public sealed class SearchTests
         var items = document.RootElement.GetProperty("items").EnumerateArray().Select(i => (Title: i[0].GetString()!, Url: i[1].GetString()!, Kind: i[2].GetString()!, Frameworks: i[5].GetString()!)).ToList();
 
         Assert.Contains(items, i => i is { Title: "Guide", Url: "guide.html", Kind: "article" });
-        Assert.Contains(items, i => i is { Title: "Contoso.Library", Url: "api/contoso.library/index.html", Kind: "package" });
-        Assert.Contains(items, i => i is { Title: "Client", Url: "api/contoso.library/Contoso.Library.Client.html", Kind: "class" });
-        Assert.Contains(items, i => i is { Title: "Client.Send", Url: "api/contoso.library/Contoso.Library.Client.html#Send-overloads", Kind: "method" });
-        Assert.Contains(items, i => i is { Title: "Client.Name", Url: "api/contoso.library/Contoso.Library.Client.html#Name", Kind: "property" });
+        Assert.Contains(items, i => i is { Title: "Contoso.Library", Url: "api/packages/contoso.library.html", Kind: "package" });
+        Assert.Contains(items, i => i is { Title: "Contoso.Library", Url: "api/namespaces/Contoso.Library.html", Kind: "namespace" });
+
+        // A namespace page lists the types of every package, so a namespace has no package
+        Assert.All(document.RootElement.GetProperty("items").EnumerateArray().Where(i => i[2].GetString() == "namespace"), i => Assert.Equal(-1, i[3].GetInt32()));
+        Assert.Contains(items, i => i is { Title: "Client", Url: "api/Contoso.Library.Client.html", Kind: "class" });
+        Assert.Contains(items, i => i is { Title: "Client.Send", Url: "api/Contoso.Library.Client.html#Send-overloads", Kind: "method" });
+        Assert.Contains(items, i => i is { Title: "Client.Name", Url: "api/Contoso.Library.Client.html#Name", Kind: "property" });
         Assert.Contains(items, i => i is { Title: "ModernOnly", Frameworks: "net8.0" });
         Assert.Single(items, i => i.Title == "Client.Send");
         Assert.Equal(items.Select(i => i.Url).Order(StringComparer.Ordinal), items.Select(i => i.Url));
@@ -122,7 +126,7 @@ public sealed class SearchTests
         Assert.Equal("./", search.GetAttribute("data-base-path"));
 
         using var host = new SearchEngineHost(json);
-        Assert.Equal("api/contoso.library/Contoso.Library.Client.html", host.SearchDetailed("Client")[0].Url);
+        Assert.Equal("api/Contoso.Library.Client.html", host.SearchDetailed("Client")[0].Url);
     }
 
     [Fact]
@@ -135,7 +139,7 @@ public sealed class SearchTests
         for (var i = 0; i < 20_000; i++)
         {
             var type = $"Generated{i % 2000}Type{i}";
-            items.Add((i % 10 == 0 ? type : type + ".Member" + i, $"api/p/Contoso.Namespace{i % 50}.{type}.html" + (i % 10 == 0 ? "" : "#Member" + i), i % 10 == 0 ? "class" : "method", $"Contoso.Namespace{i % 50}.{type}"));
+            items.Add((i % 10 == 0 ? type : type + ".Member" + i, $"api/Contoso.Namespace{i % 50}.{type}.html" + (i % 10 == 0 ? "" : "#Member" + i), i % 10 == 0 ? "class" : "method", $"Contoso.Namespace{i % 50}.{type}"));
         }
 
         var json = CreateIndex([.. items]);

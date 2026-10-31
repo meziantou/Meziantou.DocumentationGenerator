@@ -154,9 +154,9 @@ public sealed class PublicationTests
         Assert.NotNull(install.QuerySelector("a[href='install.html?tab=cli#setup']"));
         Assert.Equal("images/a%20b.svg", install.QuerySelector("article img")!.GetAttribute("src"));
         Assert.Equal("../_assets/logo.svg", install.QuerySelector(".site-logo")!.GetAttribute("src"));
-        var search = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.library/namespaces/Contoso.Library.html")).QuerySelector("[data-search]")!;
-        Assert.Equal("../../../_assets/search-index.json", search.GetAttribute("data-index"));
-        Assert.Equal("../../../", search.GetAttribute("data-base-path"));
+        var search = HtmlDocumentLoader.Parse(site.ReadFile("api/namespaces/Contoso.Library.html")).QuerySelector("[data-search]")!;
+        Assert.Equal("../../_assets/search-index.json", search.GetAttribute("data-index"));
+        Assert.Equal("../../", search.GetAttribute("data-base-path"));
     }
 
     [Fact]
