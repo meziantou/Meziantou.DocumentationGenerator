@@ -188,7 +188,7 @@ public sealed class LinkServiceTests
         var links = build.Context.Links!;
 
         Assert.Equal(["Utils"], build.Context.ApiCatalog.Namespaces.Select(ns => ns.Name));
-        Assert.Equal(2, build.Context.ApiCatalog.Namespaces[0].Types.Length);
+        Assert.HasCount(2, build.Context.ApiCatalog.Namespaces[0].Types);
 
         var resolution = links.Resolve(cref, LinkContext.None);
         Assert.Equal(CrefResolutionKind.Resolved, resolution.Kind);
