@@ -503,6 +503,44 @@ public sealed class ConfigurationTests
         Assert.Equal(DiagnosticSeverity.Error, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnsupportedConfigurationVersion));
     }
 
+    [Theory]
+    [InlineData(false, false, "error")]
+    [InlineData(true, false, "warning")]
+    [InlineData(true, true, "error")]
+    public async Task AllowInvalidCref_OnlyChangesCrefDiagnostics(bool allowInvalidCref, bool warningsAsErrors, string expectedSeverity)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, $$"""
+            {"version":1,"packages":[{"id":"A"}],
+             "diagnostics":{"allowInvalidCref":{{(allowInvalidCref ? "true" : "false")}},"warningsAsErrors":{{(warningsAsErrors ? "true" : "false")}}
+             }
+            }
+            """);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(configuration);
+        var severity = Enum.Parse<DiagnosticSeverity>(expectedSeverity, ignoreCase: true);
+        Assert.Equal(severity, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnresolvedReference));
+        Assert.Equal(severity, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.AmbiguousReference));
+        Assert.Equal(DiagnosticSeverity.Error, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnsafeUrl));
+        Assert.Equal(DiagnosticSeverity.Error, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.BrokenLink));
+    }
+
+    [Fact]
+    public async Task AllowInvalidCref_ExplicitSeverityTakesPrecedence()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, """
+            {"version":1,"packages":[{"id":"A"}],
+             "diagnostics":{"allowInvalidCref":true,"severity":{"DG4001":"error","DG4002":"none"}}}
+            """);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(configuration);
+        Assert.Equal(DiagnosticSeverity.Error, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnresolvedReference));
+        Assert.Equal(DiagnosticSeverity.None, configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.AmbiguousReference));
+    }
+
     [Fact]
     public async Task ApiFilter()
     {

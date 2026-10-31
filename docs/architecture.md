@@ -22,7 +22,7 @@ flowchart LR
 
 | Stage | Input | Output | Owner |
 | --- | --- | --- | --- |
-| Configuration | `docgen.json` | Validated, path-resolved `SiteConfiguration` | `Configuration/` |
+| Configuration | Optional `docgen.json` and command-line values | Validated, path-resolved `SiteConfiguration` | `Configuration/` |
 | Acquisition | Package references | Verified `.nupkg` files in the cache | `Packages/` |
 | Discovery | `.nupkg` files | Selected API assemblies, XML files, PDB candidates, metadata | `Discovery/` |
 | API models | Selected assemblies | One `PublicApiAssembly` per asset, aggregated per assembly name | `Api/` (PublicApiGenerator) |
@@ -73,11 +73,15 @@ API reference of the package at `/api/contoso.json/`.
 
 - The configuration is a JSON file (`docgen.json` by default) with comments and trailing commas allowed.
   A JSON schema is shipped in the tool package and in the repository (`schema/docgen.schema.json`).
-- `"version": 1` is required. Other values are rejected (`DG1001`).
+  Every property also has a command-line argument. Command-line values replace individual properties; arrays and
+  dictionaries are replaced as a whole.
+- `"version": 1` is required in a file. Other values are rejected (`DG1001`). Without an explicit `--config`, a
+  missing default file uses command-line values and defaults, including version `1`, without creating a file.
 - Unknown properties are errors (`DG1002`), because silently ignoring a misspelled option produces a
   different site than the author expects.
 - Every relative filesystem path is resolved against the directory containing the configuration file,
-  never the process working directory.
+  except `--output`, which is resolved against the process working directory. Without a file, relative paths use
+  the process working directory.
 - Package versions are exact NuGet versions (`1.2.3`, `1.2.3-beta.1`), version ranges (`[1.0,2.0)`) or floating
   versions (`1.*`, `*-*`). An omitted version means `*`, the latest stable version. A version without range syntax
   is an exact match, not a minimum version as in a `PackageReference`. Ranges resolve to the highest matching version
@@ -254,7 +258,10 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
   `{ "namespace": "System", "url": "https://learn.microsoft.com/dotnet/api/{uid}" }` where `{uid}` is the
   lowercase documentation ID without its prefix and generic arity markers replaced by `-N`. Without a matching
   mapping the reference is displayed as code without a link. Markdown `cref:` links and XML references the compiler
-  could not resolve (`!:`) are reported with error `DG4001`; compiler-resolved XML references and signature types
+  could not resolve (`!:`) are reported with error `DG4001`; `diagnostics.allowInvalidCref` (or
+  `--allow-invalid-cref`) makes `DG4001` and `DG4002` warnings instead. Invalid references still render their text
+  without a link, explicit severity overrides take precedence, and warnings-as-errors still applies.
+  Compiler-resolved XML references and signature types
   outside the configured packages are reported with info `DG4009`. The generator never guesses
   that every unresolved type is a valid Microsoft Learn URL.
 

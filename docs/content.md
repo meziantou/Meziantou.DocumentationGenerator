@@ -128,6 +128,11 @@ matches at the same level are ambiguous (`DG4002`); unresolved references are an
 outside the configured packages are linked only through [`xrefs`](configuration.md#xrefs) (by default, `System` and
 `Microsoft` namespaces to Microsoft Learn).
 
+To check authored documentation without its packages, set `diagnostics.allowInvalidCref` to `true` or pass
+`--allow-invalid-cref`. Unresolved and ambiguous references then produce warnings and display their text without a
+link. This also applies to XML `cref` attributes. Explicit diagnostic severity overrides take precedence, and
+warnings-as-errors still promotes these warnings to errors.
+
 ### Raw HTML
 
 Raw HTML is allowed and sanitized with an allow-list: scripts, styles, frames, objects, forms, event handlers, `style`

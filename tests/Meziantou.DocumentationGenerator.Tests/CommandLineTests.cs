@@ -1,5 +1,9 @@
+using System.CommandLine;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Meziantou.DocumentationGenerator.Build;
 using Meziantou.DocumentationGenerator.Cli;
+using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 using Meziantou.Framework;
@@ -83,10 +87,204 @@ public sealed class CommandLineTests
     public async Task Build_MissingConfiguration()
     {
         await using var temp = TemporaryDirectory.Create();
-        var result = await CliRunner.RunAsync(["build", "--config", temp.FullPath / "docgen.json"]);
+        temp.CreateTextFile("docs/index.md", "# Home");
+        var result = await CliRunner.RunAsync(["build", "--config", temp.FullPath / "docgen.json", "--content-root", temp.FullPath / "docs"]);
 
         Assert.Equal(ExitCodes.BuildFailed, result.ExitCode);
         Assert.Contains("DG1007", result.Error);
+    }
+
+    [Fact]
+    public async Task Build_WithoutConfigurationFile()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        temp.CreateTextFile("docs/index.md", "# CLI site\n\n[Unavailable](cref:T:Missing.Type)");
+        var testAssembly = typeof(CommandLineTests).Assembly.Location;
+        var result = await ProcessRunner.RunAsync(ProcessRunner.DotnetPath,
+            ["exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"), "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"),
+                typeof(CommandLineApplication).Assembly.Location, "build", "--content-root", "docs", "--site-title", "CLI site", "--cache-directory", "cache",
+                "--output", "_site", "--allow-invalid-cref"],
+            temp.FullPath, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
+        Assert.Contains("warning DG4001", result.Output);
+        var html = await File.ReadAllTextAsync(temp.FullPath / "_site" / "index.html", TestContext.Current.CancellationToken);
+        Assert.Contains("CLI site", html);
+        Assert.Contains("Unavailable", html);
+        Assert.DoesNotContain("cref:", html);
+        Assert.False(File.Exists(temp.FullPath / "docgen.json"));
+    }
+
+    [Fact]
+    public async Task Build_UsesDefaultConfigurationFileWhenPresent()
+    {
+        await using var temp = CreateSite("""{"version":1,"content":{"root":"docs"},"site":{"title":"Default file"}}""");
+        var testAssembly = typeof(CommandLineTests).Assembly.Location;
+        var result = await ProcessRunner.RunAsync(ProcessRunner.DotnetPath,
+            ["exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"), "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"),
+                typeof(CommandLineApplication).Assembly.Location, "build", "--cache-directory", "cache"],
+            temp.FullPath, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
+        var html = await File.ReadAllTextAsync(temp.FullPath / "_site" / "index.html", TestContext.Current.CancellationToken);
+        Assert.Contains("Default file", html);
+    }
+
+    [Fact]
+    public async Task VersionArguments_AreScopedToTheirCommands()
+    {
+        var result = await CliRunner.RunAsync(["--version"]);
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.NotEmpty(result.Output.Trim());
+
+        await using var temp = CreateSite(MinimalConfiguration);
+        result = await CliRunner.RunAsync(["build", "--config", temp.FullPath / "docgen.json", "--version", "2"]);
+        Assert.Equal(ExitCodes.BuildFailed, result.ExitCode);
+        Assert.Contains("DG1001", result.Error);
+    }
+
+    [Fact]
+    public void ConfigurationOptions_ExposeAllProperties()
+    {
+        const string json = """
+            {
+              "$schema": "https://example.com/schema.json",
+              "version": 1,
+              "site": {
+                "title": "CLI title", "description": "CLI description", "language": "fr", "basePath": "/docs/",
+                "url": "https://example.com", "logo": "logo.png", "favicon": "favicon.ico", "socialImage": "social.png",
+                "robots": "disallow", "footer": "CLI footer",
+                "headerLinks": [{"text":"GitHub","url":"https://github.com","icon":"GH"}]
+              },
+              "output": "output", "cacheDirectory": "cache",
+              "packages": [{"id":"Contoso","version":"1.0","source":"https://example.com/v3/index.json","path":"packages",
+                "targetFrameworks":["net8.0"],"assemblies":["Contoso.dll"],"defineConstants":["CUSTOM"]}],
+              "references": [{"id":"Reference","version":"2.*","source":"local","path":"refs",
+                "targetFrameworks":["net9.0"],"assemblies":["Reference.dll"],"defineConstants":["REFERENCE"]}],
+              "content": {"root":"pages","assets":["CNAME"],"exclude":["**/AGENTS.md"],"editUrl":"https://example.com/{path}"},
+              "api": {"include":["Contoso.*"],"exclude":["T:Contoso.Hidden"]},
+              "xrefs": [{"namespace":"Other","url":"https://example.com/{uid}"}],
+              "diagnostics": {"allowInvalidCref":true,"warningsAsErrors":false,"severity":{"DG5010":"none"}},
+              "sourceLinks": {"enabled":false,"symbolServers":["https://symbols.example.com"]}
+            }
+            """;
+        string[] args =
+        [
+            "--schema", "https://example.com/schema.json", "--version", "1",
+            "--site-title", "CLI title", "--site-description", "CLI description", "--site-language", "fr",
+            "--site-base-path", "/docs/", "--site-url", "https://example.com", "--site-logo", "logo.png",
+            "--site-favicon", "favicon.ico", "--site-social-image", "social.png", "--site-robots", "disallow",
+            "--site-footer", "CLI footer", "--site-header-links", """[{"text":"GitHub","url":"https://github.com","icon":"GH"}]""",
+            "--output", "output", "--cache-directory", "cache",
+            "--packages", """[{"id":"Contoso","version":"1.0","source":"https://example.com/v3/index.json","path":"packages","targetFrameworks":["net8.0"],"assemblies":["Contoso.dll"],"defineConstants":["CUSTOM"]}]""",
+            "--references", """[{"id":"Reference","version":"2.*","source":"local","path":"refs","targetFrameworks":["net9.0"],"assemblies":["Reference.dll"],"defineConstants":["REFERENCE"]}]""",
+            "--content-root", "pages", "--content-assets", """["CNAME"]""", "--content-exclude", """["**/AGENTS.md"]""",
+            "--content-edit-url", "https://example.com/{path}", "--api-include", """["Contoso.*"]""",
+            "--api-exclude", """["T:Contoso.Hidden"]""", "--xrefs", """[{"namespace":"Other","url":"https://example.com/{uid}"}]""",
+            "--diagnostics-allow-invalid-cref", "true", "--diagnostics-warnings-as-errors", "false",
+            "--diagnostics-severity", """{"DG5010":"none"}""", "--source-links-enabled", "false",
+            "--source-links-symbol-servers", """["https://symbols.example.com"]""",
+        ];
+        var command = new Command("build");
+        var options = new ConfigurationCommandLineOptions(command);
+        var result = command.Parse(args);
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(command.Options.Count, args.Length / 2);
+        var actual = JsonSerializer.SerializeToNode(options.GetOverrides(result).Values, ConfigurationLoader.SerializerOptions);
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(json), actual), actual?.ToJsonString());
+    }
+
+    [Theory]
+    [InlineData("--packages", "{}")]
+    [InlineData("--packages", "[")]
+    [InlineData("--packages", """[{"unknown":true}]""")]
+    [InlineData("--content-assets", "images")]
+    [InlineData("--diagnostics-severity", "[]")]
+    [InlineData("--source-links-enabled", "yes")]
+    [InlineData("--source-links-enabled", "null")]
+    [InlineData("--version", "invalid")]
+    public async Task Build_InvalidConfigurationArgument(string option, string value)
+    {
+        var result = await CliRunner.RunAsync(["build", option, value]);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Contains(option, result.Error);
+    }
+
+    [Fact]
+    public async Task Build_OverridesMergeSectionsAndReplaceCollections()
+    {
+        await using var temp = CreateSite("""
+            {
+              "version":1,
+              "site":{"title":"File title","description":"Keep description"},
+              "content":{"root":"docs","exclude":["old.md"]},
+              "packages":[{"id":"Old"}],
+              "references":[{"id":"OldReference"}],
+              "xrefs":[{"namespace":"Old","url":"https://example.com/{uid}"}],
+              "diagnostics":{"warningsAsErrors":true,"severity":{"DG5010":"error"}},
+              "sourceLinks":{"enabled":false,"symbolServers":["https://symbols.example.com"]}
+            }
+            """);
+        var inspected = false;
+        var result = await CliRunner.RunAsync(
+            ["build", "--config", temp.FullPath / "docgen.json", "--site-title", "CLI title", "--content-exclude", "[]",
+                "--packages", "[]", "--references", "[]", "--xrefs", "[]", "--diagnostics-warnings-as-errors", "false",
+                "--diagnostics-severity", """{"DG4001":"info"}""", "--source-links-enabled", "true"],
+            _ => [new DelegateStage("Inspect", (context, _) =>
+            {
+                inspected = true;
+                Assert.Equal("CLI title", context.Configuration.Site.Title);
+                Assert.Equal("Keep description", context.Configuration.Site.Description);
+                Assert.Equal(temp.FullPath / "docs", context.Configuration.Content!.Root);
+                Assert.Empty(context.Configuration.Content.Exclude);
+                Assert.Empty(context.Configuration.Packages);
+                Assert.Empty(context.Configuration.References);
+                Assert.Empty(context.Configuration.ExternalReferences);
+                Assert.False(context.Configuration.Diagnostics.WarningsAsErrors);
+                Assert.Equal(DiagnosticSeverity.Info, context.Configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnresolvedReference));
+                Assert.Equal(DiagnosticSeverity.Info, context.Configuration.Diagnostics.GetSeverity(DiagnosticDescriptors.UnknownCodeLanguage));
+                Assert.True(context.Configuration.SourceLinks.Enabled);
+                Assert.Single(context.Configuration.SourceLinks.SymbolServers);
+                context.Diagnostics.Report(DiagnosticDescriptors.RobotsUnderSubpath, "still a warning");
+                return Task.CompletedTask;
+            })]);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode, result.AllOutput);
+        Assert.True(inspected);
+    }
+
+    [Theory]
+    [InlineData(false, null, false, ExitCodes.BuildFailed)]
+    [InlineData(true, null, false, ExitCodes.Success)]
+    [InlineData(false, "true", false, ExitCodes.Success)]
+    [InlineData(true, "false", false, ExitCodes.BuildFailed)]
+    [InlineData(true, null, true, ExitCodes.BuildFailed)]
+    public async Task Build_AllowInvalidCref(bool configured, string? commandLineValue, bool warningsAsErrors, int expectedExitCode)
+    {
+        string[] arguments = [
+            .. commandLineValue is null ? Array.Empty<string>() : ["--allow-invalid-cref", commandLineValue],
+            .. warningsAsErrors ? new[] { "--warnaserror" } : [],
+        ];
+        await using var site = await SiteBuilder.BuildAsync([], files: new()
+        {
+            ["docs/index.md"] = "# Home\n\n[Unavailable](cref:T:Missing.Type)",
+        }, extraConfiguration: $$""" "diagnostics":{"allowInvalidCref":{{(configured ? "true" : "false")}}}, """, arguments: arguments);
+
+        Assert.Equal(expectedExitCode, site.Result.ExitCode, site.Result.AllOutput);
+        Assert.Contains("DG4001", site.Result.AllOutput);
+        if (expectedExitCode == ExitCodes.Success)
+        {
+            var html = site.ReadFile("index.html");
+            Assert.Contains("Unavailable", html);
+            Assert.DoesNotContain("cref:", html);
+            Assert.Contains("warning DG4001", site.Result.Output);
+        }
+        else
+        {
+            Assert.False(File.Exists(site.Output / "index.html"));
+        }
     }
 
     [Fact]
@@ -107,6 +305,21 @@ public sealed class CommandLineTests
         Assert.Equal(ExitCodes.BuildFailed, result.ExitCode);
         Assert.Contains("error DG1010: a warning", result.Error);
         Assert.DoesNotContain("published", result.AllOutput);
+    }
+
+    [Theory]
+    [InlineData("--warnaserror")]
+    [InlineData("--diagnostics-warnings-as-errors")]
+    public async Task Build_CommandLineWarningsAsErrorsAppliesDuringConfiguration(string option)
+    {
+        await using var temp = CreateSite("""{"version":1,"content":{"root":"docs"},"site":{"basePath":"/docs/","robots":"allow"}}""");
+        var executed = false;
+        var result = await CliRunner.RunAsync(["build", "--config", temp.FullPath / "docgen.json", option], _ =>
+            [new DelegateStage("Inspect", (_, _) => { executed = true; return Task.CompletedTask; })]);
+
+        Assert.Equal(ExitCodes.BuildFailed, result.ExitCode, result.AllOutput);
+        Assert.Contains("error DG1010", result.Error);
+        Assert.False(executed);
     }
 
     [Fact]

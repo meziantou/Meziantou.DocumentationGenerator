@@ -58,8 +58,8 @@ input and cannot be lowered.
 | `DG3005` | warning | A PDB does not match its assembly (PDB identifier and timestamp); it is not used |
 | `DG3006` | info | Source Link points to a host other than GitHub; no source link is generated |
 | `DG3007` | info | Several implementation assemblies give different locations for a reference assembly symbol; no source link is generated |
-| `DG4001` | error | Unresolved reference: a Markdown `cref:` link or an XML reference the compiler could not resolve (`!:`) matches no page and no `xrefs` mapping |
-| `DG4002` | error | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!` |
+| `DG4001` | error | Unresolved reference: a Markdown `cref:` link or an XML reference the compiler could not resolve (`!:`) matches no page and no `xrefs` mapping. Warning with `diagnostics.allowInvalidCref` or `--allow-invalid-cref` |
+| `DG4002` | error | Ambiguous reference: several symbols match at the same priority; qualify it with `{packageId}!`. Warning with `diagnostics.allowInvalidCref` or `--allow-invalid-cref` |
 | `DG4003` | error | Broken link in the generated site (missing page or anchor); reported on the Markdown file of authored pages |
 | `DG4004` | warning | Several types map to the same page; URLs are disambiguated with the assembly name or a hash |
 | `DG4005` | error | Several files or content folders map to the same output path (compared case-insensitively), or a page other than the root `index.md` maps to `index.html` |

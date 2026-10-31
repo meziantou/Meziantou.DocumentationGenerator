@@ -79,6 +79,17 @@ the home page and the folder structure of `docs` defines the navigation.
 | `Meziantou.DocumentationGenerator build` | Generates the site. Options: `--config` (default `docgen.json`), `--output`, `--base-path`, `--site-url`, `--offline`, `--no-source-links`, `--warnaserror`, `--verbosity quiet\|minimal\|normal\|detailed`, `--watch` (rebuild when the configuration, content or local packages change), `--serve` (preview the site on a local web server; with `--watch`, open pages reload after each build), `--port` (default `8080`, `0` picks a free port). |
 | `Meziantou.DocumentationGenerator --version`, `--help` | Displays the version or the help. |
 
+Every `docgen.json` option also has a build argument, such as `--site-title`, `--content-root` and `--packages`.
+See the [command-line configuration reference](docs/configuration.md#command-line-configuration) or `build --help`.
+When the default `docgen.json` does not exist, configure the site entirely on the command line:
+
+```bash
+dotnet Meziantou.DocumentationGenerator build --content-root docs --site-title "Contoso" --allow-invalid-cref
+```
+
+`--allow-invalid-cref` makes unresolved and ambiguous API references warnings instead of errors, so you can check
+authored documentation without the packages. Their text is displayed without a link; other validation still applies.
+
 Exit codes: `0` success, `1` build failed (nothing is published), `2` invalid command line, `130` cancelled. With
 `--watch` or `--serve`, the command runs until Ctrl+C and then exits with `0`; without `--watch`, a failed build exits
 with `1` and the server is not started.

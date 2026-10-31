@@ -222,6 +222,10 @@
       "description": "Diagnostic settings.",
       "type": "object",
       "properties": {
+        "allowInvalidCref": {
+          "description": "Report unresolved or ambiguous cref links as warnings instead of errors. The link text is still rendered without a link. Default: false.",
+          "type": "boolean"
+        },
         "warningsAsErrors": {
           "description": "Treat warnings as errors.",
           "type": "boolean"

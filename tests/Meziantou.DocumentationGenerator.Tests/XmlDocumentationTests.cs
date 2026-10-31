@@ -180,6 +180,21 @@ public sealed class XmlDocumentationTests
         Assert.True(GetComment(build, "M:Contoso.Docs.Widget.Send(System.String)").IsEmpty);
     }
 
+    [Theory]
+    [InlineData(false, "Error")]
+    [InlineData(true, "Warning")]
+    public async Task InvalidCref_RendersTextAndFollowsConfiguration(bool allowInvalidCref, string expectedSeverity)
+    {
+        await using var build = await BuildAsync("""
+            <doc><members><member name="T:Contoso.Docs.Widget">
+            <summary>A <see cref="!:Missing.Type">missing type</see>.</summary>
+            </member></members></doc>
+            """, extra: $$""" "diagnostics":{"allowInvalidCref":{{(allowInvalidCref ? "true" : "false")}}}, """);
+
+        Assert.Equal("<p>A missing type.</p>", Render(build, "T:Contoso.Docs.Widget", c => c.Summary!));
+        Assert.Equal(Enum.Parse<Diagnostics.DiagnosticSeverity>(expectedSeverity), Assert.Single(build.Diagnostics, d => d.Code == "DG4001").Severity);
+    }
+
     [Fact]
     public async Task DocumentationVariants_PerTargetFramework()
     {

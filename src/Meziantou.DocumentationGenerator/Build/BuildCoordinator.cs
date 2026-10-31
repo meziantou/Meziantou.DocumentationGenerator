@@ -16,7 +16,7 @@ internal sealed class BuildCoordinator(Func<BuildContext, IReadOnlyList<IBuildSt
         diagnostics.SetSeverityProvider(descriptor => options.WarningsAsErrors && descriptor.DefaultSeverity is DiagnosticSeverity.Warning ? DiagnosticSeverity.Error : descriptor.DefaultSeverity);
 
         reporter.StageStarted("Configuration");
-        var configuration = ConfigurationLoader.Load(options.ConfigurationFile, diagnostics, CreateOverrides(options));
+        var configuration = ConfigurationLoader.Load(options.ConfigurationFile, diagnostics, CreateOverrides(options), options.AllowMissingConfigurationFile);
         if (configuration is null)
             return new BuildResult(BuildStatus.Failed, diagnostics.GetDiagnostics(), Configuration: null, IsPublished: false, GeneratedFileCount: 0);
 
@@ -85,6 +85,7 @@ internal sealed class BuildCoordinator(Func<BuildContext, IReadOnlyList<IBuildSt
     {
         return new ConfigurationOverrides
         {
+            Values = options.ConfigurationValues,
             OutputDirectory = options.OutputDirectory,
             BasePath = options.BasePath,
             SiteUrl = options.SiteUrl,

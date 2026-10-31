@@ -116,17 +116,12 @@ internal sealed class CommandLineApplication
 
     private Command CreateBuildCommand()
     {
-        var configOption = new Option<string>("--config", "-c")
+        var configOption = new Option<string?>("--config", "-c")
         {
-            Description = "Path to the configuration file.",
-            DefaultValueFactory = _ => ConfigurationLoader.DefaultFileName,
+            Description = "Path to the configuration file. Default: docgen.json if it exists; otherwise use command-line configuration.",
         };
-        var outputOption = new Option<string?>("--output", "-o") { Description = "Output directory. Overrides the 'output' configuration value." };
-        var basePathOption = new Option<string?>("--base-path") { Description = "URL path where the site is deployed, such as /docs/. Overrides 'site.basePath'." };
-        var siteUrlOption = new Option<string?>("--site-url") { Description = "Absolute origin of the site, such as https://example.com. Overrides 'site.url'." };
         var offlineOption = new Option<bool>("--offline") { Description = "Use only cached packages and never contact package sources." };
         var noSourceLinksOption = new Option<bool>("--no-source-links") { Description = "Do not generate links to source files." };
-        var warnAsErrorOption = new Option<bool>("--warnaserror") { Description = "Treat warnings as errors." };
         var verbosityOption = new Option<Verbosity>("--verbosity", "-v")
         {
             Description = "Output verbosity: quiet, minimal, normal or detailed.",
@@ -150,31 +145,30 @@ internal sealed class CommandLineApplication
         var command = new Command("build", "Generate the site.")
         {
             configOption,
-            outputOption,
-            basePathOption,
-            siteUrlOption,
             offlineOption,
             noSourceLinksOption,
-            warnAsErrorOption,
             verbosityOption,
             watchOption,
             serveOption,
             portOption,
         };
 
+        var configurationOptions = new ConfigurationCommandLineOptions(command);
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var verbosity = parseResult.GetValue(verbosityOption);
-            var output = parseResult.GetValue(outputOption);
+            var overrides = configurationOptions.GetOverrides(parseResult);
+            var output = overrides.Values?.Output;
+            var config = parseResult.GetValue(configOption);
             var options = new BuildOptions
             {
-                ConfigurationFile = FullPath.FromPath(parseResult.GetValue(configOption)!),
+                ConfigurationFile = FullPath.FromPath(config ?? ConfigurationLoader.DefaultFileName),
+                AllowMissingConfigurationFile = config is null,
+                ConfigurationValues = overrides.Values,
                 OutputDirectory = output is null ? null : FullPath.FromPath(output),
-                BasePath = parseResult.GetValue(basePathOption),
-                SiteUrl = parseResult.GetValue(siteUrlOption),
                 Offline = parseResult.GetValue(offlineOption),
                 DisableSourceLinks = parseResult.GetValue(noSourceLinksOption),
-                WarningsAsErrors = parseResult.GetValue(warnAsErrorOption),
+                WarningsAsErrors = overrides.Values?.Diagnostics?.WarningsAsErrors ?? false,
             };
 
             var watch = parseResult.GetValue(watchOption);

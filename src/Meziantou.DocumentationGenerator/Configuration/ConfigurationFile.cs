@@ -153,6 +153,9 @@ internal sealed class ConfigurationFile
 
     internal sealed class DiagnosticsSection
     {
+        [Description("Report unresolved or ambiguous cref links as warnings instead of errors. The link text is still rendered without a link. Default: false.")]
+        public bool? AllowInvalidCref { get; set; }
+
         [Description("Treat warnings as errors.")]
         public bool? WarningsAsErrors { get; set; }
 
