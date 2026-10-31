@@ -118,7 +118,7 @@ Meziantou.DocumentationGenerator build --packages '[]' --references '[]' --allow
 | Property | Default | Description |
 | --- | --- | --- |
 | `id` | required except for folders | Package identifier. Omit when `path` is a folder to discover all packages in it. |
-| `version` | latest stable | Exact version (`1.2.3`, `1.2.3-beta.1`), [version range](https://learn.microsoft.com/nuget/concepts/package-versioning#version-ranges) (`[1.0,2.0)`) or floating version (`1.*`, `*`, `*-*`). See [package versions](#package-versions). |
+| `version` | latest stable; includes prereleases when `id` is omitted | Exact version (`1.2.3`, `1.2.3-beta.1`), [version range](https://learn.microsoft.com/nuget/concepts/package-versioning#version-ranges) (`[1.0,2.0)`) or floating version (`1.*`, `*`, `*-*`). See [package versions](#package-versions). |
 | `source` | NuGet.Config sources | Source URL or the name of a source defined in `NuGet.Config`. |
 | `path` | | Local `.nupkg` file, or folder containing `.nupkg` files (the highest version matching `version` is used for each package ID). No feed is queried. Cannot be combined with `source`. |
 | `targetFrameworks` | all | Target framework folders to document (`net8.0`, `netstandard2.0`). |
@@ -129,7 +129,8 @@ Meziantou.DocumentationGenerator build --packages '[]' --references '[]' --allow
 
 | `version` | Package used |
 | --- | --- |
-| omitted, `*` | Latest stable version |
+| omitted | Latest stable version for a named package; latest version including prereleases for automatic folder discovery without `id` |
+| `*` | Latest stable version |
 | `*-*` | Latest version, including prereleases |
 | `1.*`, `1.2.*-*` | Latest version matching the floating version (NuGet rules) |
 | `[1.0,2.0)`, `[1.0,)` | Highest version in the range. Prereleases only match when a bound is a prerelease (`[2.0.0-beta,3.0)`) |
@@ -337,7 +338,7 @@ To discover all package IDs automatically, omit `id`:
 {
   "version": 1,
   "packages": [
-    { "path": "artifacts/packages", "version": "*-*" }
+    { "path": "artifacts/packages" }
   ]
 }
 ```
@@ -346,6 +347,8 @@ Discovery reads the identities from the `.nuspec` metadata of every `.nupkg` at 
 of its file name. It does not search subdirectories, and ignores `.symbols.nupkg` and `.snupkg` symbol packages.
 The highest matching version of each ID is selected; an empty folder or an ID with no matching version is an error
 (`DG2001`), and invalid archives are reported rather than silently ignored. The same syntax works in `references`.
+When `version` is omitted, discovery uses `*-*` to include prereleases. Set `"version": "*"` explicitly to select
+only stable versions.
 `targetFrameworks`, `assemblies`, and `defineConstants` apply to every discovered package. A package ID must still
 appear only once across `packages` and `references`, including discovered packages (`DG1008`).
 

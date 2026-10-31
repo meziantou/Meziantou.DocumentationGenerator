@@ -230,8 +230,8 @@ public sealed class PackageAcquisitionTests
     {
         await using var temp = TemporaryDirectory.Create();
         new TestPackageBuilder("Contoso.Json", "1.0.0").Save(temp.FullPath / "packages");
-        var latest = new TestPackageBuilder("contoso.json", "2.0.0").Save(temp.FullPath / "packages", "renamed.NUPKG");
-        new TestPackageBuilder("Contoso.Json", "3.0.0-preview").Save(temp.FullPath / "packages");
+        new TestPackageBuilder("contoso.json", "2.0.0").Save(temp.FullPath / "packages", "renamed.NUPKG");
+        var latest = new TestPackageBuilder("Contoso.Json", "3.0.0-preview").Save(temp.FullPath / "packages");
         var other = new TestPackageBuilder("Other", "1.0.0").Save(temp.FullPath / "packages", "arbitrary.nupkg");
         new TestPackageBuilder("Nested", "1.0.0").Save(temp.FullPath / "packages" / "nested");
         temp.CreateTextFile("packages/ignored.symbols.nupkg", "not a zip");
@@ -247,7 +247,7 @@ public sealed class PackageAcquisitionTests
             }
             """, offline: true);
 
-        Assert.Equal(["Contoso.Json@2.0.0", "Other@1.0.0"], packages.Select(p => p.Identity));
+        Assert.Equal(["Contoso.Json@3.0.0-preview", "Other@1.0.0"], packages.Select(p => p.Identity));
         Assert.Equal([latest, other], packages.Select(p => p.Path));
         Assert.All(packages, package =>
         {
@@ -263,6 +263,7 @@ public sealed class PackageAcquisitionTests
     }
 
     [Theory]
+    [InlineData("*", "2.0.0")]
     [InlineData("*-*", "3.0.0-preview")]
     [InlineData("[1.0,2.0)", "1.0.0")]
     [InlineData("2.0.0", "2.0.0")]
@@ -285,6 +286,27 @@ public sealed class PackageAcquisitionTests
     }
 
     [Theory]
+    [InlineData("packages")]
+    [InlineData("references")]
+    public async Task LocalFolder_DiscoveryIncludesPrereleaseOnlyPackagesByDefault(string section)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        new TestPackageBuilder("PrereleaseOnly", "1.0.0-preview.1").Save(temp.FullPath / "packages");
+        temp.CreateTextFile("docs/index.md", "# Home");
+
+        var (packages, diagnostics) = await AcquireAsync(temp, $$"""
+            {"version":1,"content":{"root":"docs"},"{{section}}":[{"path":"packages"}]}
+            """, offline: true);
+
+        var package = Assert.Single(packages);
+        Assert.Equal("PrereleaseOnly", package.Id);
+        Assert.Equal("1.0.0-preview.1", package.Metadata.Version.ToNormalizedString());
+        Assert.Equal("*-*", package.Configuration.VersionText);
+        Assert.Equal(section == "references", package.Configuration.IsReference);
+        Assert.DoesNotContain(diagnostics, d => d.Severity >= DiagnosticSeverity.Warning);
+    }
+
+    [Theory]
     [InlineData("empty", "DG2001")]
     [InlineData("unmatched", "DG2001")]
     [InlineData("corrupt", "DG2003")]
@@ -295,7 +317,7 @@ public sealed class PackageAcquisitionTests
         await using var temp = TemporaryDirectory.Create();
         Directory.CreateDirectory(temp.FullPath / "packages");
         if (scenario == "unmatched")
-            new TestPackageBuilder("A", "1.0.0-preview").Save(temp.FullPath / "packages");
+            new TestPackageBuilder("A", "0.9.0-preview").Save(temp.FullPath / "packages");
         if (scenario == "corrupt")
             temp.CreateTextFile("packages/bad.nupkg", "not a zip");
         if (scenario == "invalid-id")
@@ -303,7 +325,7 @@ public sealed class PackageAcquisitionTests
         if (scenario == "unsafe")
             new TestPackageBuilder("A", "1.0.0").AddFile("../escape.txt", "unsafe").Save(temp.FullPath / "packages");
 
-        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "path": "packages" } ] }""");
+        var (packages, diagnostics) = await AcquireAsync(temp, """{ "version": 1, "packages": [ { "path": "packages", "version": "1.*-*" } ] }""");
 
         Assert.Empty(packages);
         var diagnostic = Assert.Single(diagnostics);

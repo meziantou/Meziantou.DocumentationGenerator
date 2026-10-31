@@ -396,7 +396,7 @@ internal static partial class ConfigurationLoader
                     isValid = false;
                 }
 
-                var versionText = string.IsNullOrWhiteSpace(section.Version) ? "*" : section.Version.Trim();
+                var versionText = string.IsNullOrWhiteSpace(section.Version) ? (section.Id is null ? "*-*" : "*") : section.Version.Trim();
                 if (!TryParseVersionRange(versionText, out var version))
                 {
                     Error(DiagnosticDescriptors.InvalidPackageReference, $"Invalid version '{section.Version}': use an exact version (1.2.3), a version range ([1.0,2.0)) or a floating version (1.*, *-*)", path + ".version");

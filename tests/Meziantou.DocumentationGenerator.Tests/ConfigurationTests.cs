@@ -402,7 +402,7 @@ public sealed class ConfigurationTests
         Assert.Null(package.Id);
         Assert.True(package.IsLocalFolder);
         Assert.Equal(temp.FullPath / "packages", package.LocalPath);
-        Assert.Equal("*", package.VersionText);
+        Assert.Equal("*-*", package.VersionText);
         var inputs = InputWatcher.GetInputs(configuration.ConfigurationFile, configuration);
         Assert.Contains(temp.FullPath / "packages", inputs.Directories);
     }

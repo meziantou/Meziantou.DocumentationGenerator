@@ -83,7 +83,8 @@ API reference of the package at `/api/contoso.json/`.
   except `--output`, which is resolved against the process working directory. Without a file, relative paths use
   the process working directory.
 - Package versions are exact NuGet versions (`1.2.3`, `1.2.3-beta.1`), version ranges (`[1.0,2.0)`) or floating
-  versions (`1.*`, `*-*`). An omitted version means `*`, the latest stable version. A version without range syntax
+  versions (`1.*`, `*-*`). An omitted version means `*`, the latest stable version, except automatic folder discovery
+  without an ID uses `*-*` to include prereleases. A version without range syntax
   is an exact match, not a minimum version as in a `PackageReference`. Ranges resolve to the highest matching version
   (floating versions follow NuGet rules). Invalid versions are rejected (`DG1004`).
 - Target framework filters use NuGet short folder names (`net8.0`, `netstandard2.0`). A filter that matches
