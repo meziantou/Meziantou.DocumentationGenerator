@@ -3,6 +3,7 @@ using Meziantou.DocumentationGenerator.Build;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
+using Element = Meziantou.Framework.WebPlatform.Dom.Element;
 
 namespace Meziantou.DocumentationGenerator.Tests;
 
@@ -150,6 +151,26 @@ public sealed partial class MarkdownTests
         var html = build.Context.Content.Pages.Single().Rendered!.Html;
         Assert.Contains("""<a href="/docs/api/contoso.guard/Utils.Guard.html">qualified</a>""", html);
         Assert.Contains(build.Diagnostics, d => d.Code == "DG4002" && d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'T:Utils.Guard' is ambiguous", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AmbiguousCref_CanBeAllowed()
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
+        await using var site = await SiteBuilder.BuildAsync([first, second], files: new()
+        {
+            ["docs/index.md"] = "# Home\n\n[ambiguous](cref:T:Utils.Guard) [qualified](cref:Contoso.Guard!T:Utils.Guard)",
+        }, arguments: ["--allow-invalid-cref"]);
+
+        Assert.Equal(0, site.Result.ExitCode, site.Result.AllOutput);
+        Assert.Contains("warning DG4002", site.Result.Output);
+        var html = site.ReadFile("index.html");
+        Assert.Contains("ambiguous", html);
+        var link = Assert.Single(HtmlDocumentLoader.Parse(html).QuerySelectorAll<Element>("article a"));
+        Assert.Equal("qualified", link.TextContent);
+        Assert.Equal("api/contoso.guard/Utils.Guard.html", link.GetAttribute("href"));
+        Assert.DoesNotContain("cref:", html);
     }
 
     [Fact]

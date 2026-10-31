@@ -107,7 +107,7 @@
             "type": "string"
           },
           "version": {
-            "description": "Package version: an exact version (1.2.3), a NuGet version range ([1.0,2.0)) or a floating version (1.*, *, *-*). The highest matching version is used. Default: the latest stable version.",
+            "description": "Package version: an exact version (1.2.3), a NuGet version range ([1.0,2.0)) or a floating version (1.*, *, *-*). The highest matching version is used. Default: the latest stable version, or the latest version including prereleases when id is omitted for folder discovery.",
             "type": "string"
           },
           "source": {
@@ -222,6 +222,10 @@
       "description": "Diagnostic settings.",
       "type": "object",
       "properties": {
+        "allowInvalidCref": {
+          "description": "Report unresolved or ambiguous cref links as warnings instead of errors. The link text is still rendered without a link. Default: false.",
+          "type": "boolean"
+        },
         "warningsAsErrors": {
           "description": "Treat warnings as errors.",
           "type": "boolean"

@@ -32,10 +32,13 @@ internal static partial class ConfigurationLoader
         RespectRequiredConstructorParameters = true,
     };
 
-    public static SiteConfiguration? Load(FullPath configurationFile, DiagnosticBag diagnostics, ConfigurationOverrides? overrides = null)
+    public static SiteConfiguration? Load(FullPath configurationFile, DiagnosticBag diagnostics, ConfigurationOverrides? overrides = null, bool allowMissingFile = false)
     {
         if (!File.Exists(configurationFile))
         {
+            if (allowMissingFile)
+                return Load(JsonSerializer.SerializeToUtf8Bytes(new ConfigurationFile { Version = ConfigurationFile.CurrentVersion }, SerializerOptions), configurationFile, diagnostics, overrides);
+
             diagnostics.Report(DiagnosticDescriptors.InputNotFound, $"Configuration file '{configurationFile.Name}' not found", new DiagnosticLocation { FilePath = configurationFile.Name });
             return null;
         }
@@ -90,6 +93,8 @@ internal static partial class ConfigurationLoader
 
     private static void ApplyOverrides(ConfigurationFile file, ConfigurationOverrides overrides)
     {
+        overrides.ApplyTo(file);
+
         if (overrides.OutputDirectory is { } output)
         {
             // An absolute path is kept as-is when combined with the configuration directory
@@ -391,7 +396,7 @@ internal static partial class ConfigurationLoader
                     isValid = false;
                 }
 
-                var versionText = string.IsNullOrWhiteSpace(section.Version) ? "*" : section.Version.Trim();
+                var versionText = string.IsNullOrWhiteSpace(section.Version) ? (section.Id is null ? "*-*" : "*") : section.Version.Trim();
                 if (!TryParseVersionRange(versionText, out var version))
                 {
                     Error(DiagnosticDescriptors.InvalidPackageReference, $"Invalid version '{section.Version}': use an exact version (1.2.3), a version range ([1.0,2.0)) or a floating version (1.*, *-*)", path + ".version");
@@ -725,6 +730,7 @@ internal static partial class ConfigurationLoader
             return new DiagnosticOptions
             {
                 WarningsAsErrors = section.WarningsAsErrors ?? false,
+                AllowInvalidCref = section.AllowInvalidCref ?? false,
                 SeverityOverrides = overrides.ToImmutable(),
             };
         }

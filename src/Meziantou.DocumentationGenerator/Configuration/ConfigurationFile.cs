@@ -99,7 +99,7 @@ internal sealed class ConfigurationFile
         [Description("NuGet package identifier. Omit when path is a folder to discover all packages in that folder.")]
         public string? Id { get; set; }
 
-        [Description("Package version: an exact version (1.2.3), a NuGet version range ([1.0,2.0)) or a floating version (1.*, *, *-*). The highest matching version is used. Default: the latest stable version.")]
+        [Description("Package version: an exact version (1.2.3), a NuGet version range ([1.0,2.0)) or a floating version (1.*, *, *-*). The highest matching version is used. Default: the latest stable version, or the latest version including prereleases when id is omitted for folder discovery.")]
         public string? Version { get; set; }
 
         [Description("Package source URL or name from NuGet.Config. Default: the sources from NuGet.Config.")]
@@ -153,6 +153,9 @@ internal sealed class ConfigurationFile
 
     internal sealed class DiagnosticsSection
     {
+        [Description("Report unresolved or ambiguous cref links as warnings instead of errors. The link text is still rendered without a link. Default: false.")]
+        public bool? AllowInvalidCref { get; set; }
+
         [Description("Treat warnings as errors.")]
         public bool? WarningsAsErrors { get; set; }
 
