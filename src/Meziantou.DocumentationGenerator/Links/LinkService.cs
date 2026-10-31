@@ -351,6 +351,7 @@ internal sealed partial class LinkService
         {
             ApiTypeModel type => type.DisplayName,
             ApiMemberModel { Category: ApiMemberCategory.Constructor } member => member.DeclaringType.DisplayName,
+            ApiMemberModel { ExtensionReceiverDisplayName: { } receiver } member => receiver + "." + member.Name,
             ApiMemberModel member => member.DeclaringType.DisplayName + "." + member.Name,
             _ => symbol.Name,
         };

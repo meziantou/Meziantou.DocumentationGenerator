@@ -109,7 +109,10 @@ internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagno
             DeclaringType = declaringType,
         };
 
+        // C# 14 extension members are shown as declared in their extension block instead of their implementation methods
         type.Members = [.. aggregate.Members
+            .Where(m => !IsExtensionImplementation(m))
+            .Concat(aggregate.ExtensionMembers)
             .Select(m => CreateMember(group, m, type))
             .Where(m => m is not null)
             .Select(m => m!)
@@ -140,6 +143,8 @@ internal sealed class ApiAggregator(ApiSymbolPolicy policy, DiagnosticBag diagno
             Category = ApiMemberModel.GetCategory((PublicApiMember)variants[0].Symbol, declaringType.PrimaryType),
         };
     }
+
+    private static bool IsExtensionImplementation(PublicApiAggregatedSymbol member) => member.Symbols.All(s => s is PublicApiMethod { ImplementedExtensionMember: not null });
 
     /// <summary>Variants restricted to the target frameworks where the symbol is documented, the most common declaration first.</summary>
     private ImmutableArray<ApiVariant> CreateVariants(ApiAssemblyGroup group, PublicApiAggregatedSymbol aggregate)

@@ -49,7 +49,8 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             return comment with { InheritDoc = null, InheritanceNote = "Inherited documentation forms a cycle." };
         }
 
-        if (!_resolved.Add((model, symbol.DocumentationId)) || (comment.InheritDoc is null && comment.Includes.IsEmpty && !HasNestedDirectives(comment)))
+        var extensionBlock = (symbol as PublicApiMember)?.ExtensionBlock;
+        if (!_resolved.Add((model, symbol.DocumentationId)) || (comment.InheritDoc is null && comment.Includes.IsEmpty && !HasNestedDirectives(comment) && extensionBlock is null))
             return comment;
 
         stack.Add(key);
@@ -63,6 +64,11 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             if (comment.InheritDoc is { } inheritDoc)
             {
                 comment = ResolveInheritDoc(model, symbol, comment, inheritDoc, stack);
+            }
+
+            if (extensionBlock is not null)
+            {
+                comment = AddExtensionBlockDocumentation(model, extensionBlock, comment);
             }
 
             provider.SetComment(model, symbol.DocumentationId, comment);
@@ -99,10 +105,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             return comment with { InheritDoc = null, InheritanceNote = $"Inherited documentation is not available ({description})." };
         }
 
-        // The implementation of an extension member inherits from its own declaration in the extension block
-        var inherited = cref is not null && ExtensionBlockIds.IsExtensionBlockMember(cref) && target.Model == model && target.Symbol.DocumentationId == symbol.DocumentationId
-            ? ResolveExtensionBlockMember(model, symbol, cref, stack)
-            : Resolve(target.Model, target.Symbol, stack);
+        var inherited = Resolve(target.Model, target.Symbol, stack);
         if (inherited.IsEmpty)
         {
             // Continue up the hierarchy when the direct source has no documentation of its own
@@ -164,69 +167,21 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
     }
 
     /// <summary>
-    /// Reads the documentation of a C# 14 extension member from its declaration in the extension block. The receiver
-    /// parameter and the type parameters of the block are documented on the marker type of the block.
+    /// The receiver parameter and the type parameters of a C# 14 extension block are documented on the marker type of the
+    /// block (<c>T:Contoso.Extensions.&lt;G&gt;$9F2C.&lt;M&gt;$1A3B</c>), and apply to each member of the block.
     /// </summary>
-    private DocumentationComment ResolveExtensionBlockMember(ApiAssemblyModel model, PublicApiSymbol symbol, string blockMemberId, List<string> stack)
+    private DocumentationComment AddExtensionBlockDocumentation(ApiAssemblyModel model, PublicApiExtensionBlock block, DocumentationComment comment)
     {
         var file = provider.GetFile(model);
-        var element = file?.Find(blockMemberId);
-        if (file is null || element is null)
-            return DocumentationComment.Empty with { Scope = model.Scope };
-
-        var key = model.Scope + "!" + blockMemberId + "@" + model.TargetFramework;
-        if (stack.Contains(key, StringComparer.Ordinal))
-        {
-            Report(model, DiagnosticDescriptors.InheritDocCycle, $"Inherited documentation forms a cycle: {string.Join(" -> ", stack.Append(key))}", Location(model, symbol));
-            return DocumentationComment.Empty with { Scope = model.Scope, InheritanceNote = "Inherited documentation forms a cycle." };
-        }
-
-        stack.Add(key);
-        try
-        {
-            var comment = DocumentationCommentParser.Parse(element, symbol, model.Scope, file.DisplayPath, model.IsReference ? new DiagnosticBag() : diagnostics);
-            if (!comment.Includes.IsEmpty || HasNestedDirectives(comment))
-            {
-                comment = ResolveIncludes(model, symbol, comment, element);
-            }
-
-            if (comment.InheritDoc is { } inheritDoc)
-            {
-                comment = ResolveInheritDoc(model, symbol, comment, inheritDoc, stack);
-            }
-
-            return AddExtensionReceiverDocumentation(file, symbol, blockMemberId, comment);
-        }
-        finally
-        {
-            stack.RemoveAt(stack.Count - 1);
-        }
-    }
-
-    private static DocumentationComment AddExtensionReceiverDocumentation(XmlDocumentationFile file, PublicApiSymbol symbol, string blockMemberId, DocumentationComment comment)
-    {
-        if (ExtensionBlockIds.GetGroupingTypeName(blockMemberId) is not { } groupingType)
+        var markerId = "T:" + block.DeclaringType.DocumentationId[2..] + "." + block.GroupingTypeMetadataName + "." + block.MarkerTypeMetadataName;
+        if (file?.Find(markerId) is not { } element)
             return comment;
 
-        // A grouping type has a marker per receiver declaration; the receiver is the first parameter of instance members
-        var markers = file.GetExtensionMarkers(groupingType).Select(e => DocumentationCommentParser.Parse(e, symbol: null, comment.Scope, file.DisplayPath, new DiagnosticBag())).ToList();
-        var receiverName = GetParameters(symbol).FirstOrDefault();
-        var marker = markers.FirstOrDefault(m => receiverName is not null && m.Parameters.Any(p => p.Name == receiverName)) ?? (markers.Count == 1 ? markers[0] : null);
-        if (marker is null)
-            return comment;
-
-        var parameterNames = DocumentationCommentParser.GetParameterNames(symbol);
-        var typeParameterNames = DocumentationCommentParser.GetTypeParameterNames(symbol);
-        static ImmutableArray<NamedSection> Prepend(ImmutableArray<NamedSection> blockSections, ImmutableArray<NamedSection> memberSections, IReadOnlySet<string>? validNames)
-        {
-            var added = blockSections.Where(s => validNames?.Contains(s.Name) != false && !memberSections.Any(m => m.Name == s.Name));
-            return [.. added, .. memberSections];
-        }
-
+        var marker = DocumentationCommentParser.Parse(element, symbol: null, model.Scope, file.DisplayPath, new DiagnosticBag());
         return comment with
         {
-            Parameters = Prepend(marker.Parameters, comment.Parameters, parameterNames),
-            TypeParameters = Prepend(marker.TypeParameters, comment.TypeParameters, typeParameterNames),
+            Parameters = [.. marker.Parameters.Where(p => !comment.Parameters.Any(m => m.Name == p.Name)), .. comment.Parameters],
+            TypeParameters = [.. marker.TypeParameters.Where(p => !comment.TypeParameters.Any(m => m.Name == p.Name)), .. comment.TypeParameters],
         };
     }
 
@@ -498,7 +453,12 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         return result;
     }
 
-    private static List<string> GetParameters(PublicApiSymbol symbol) => symbol switch
+    // An instance member of a C# 14 extension block is called with its receiver as first argument, as its implementation
+    private static List<string> GetParameters(PublicApiSymbol symbol) => symbol is PublicApiMember { ExtensionBlock: { } block, IsStatic: false }
+        ? [block.Receiver.Name ?? "", .. GetDeclaredParameters(symbol)]
+        : GetDeclaredParameters(symbol);
+
+    private static List<string> GetDeclaredParameters(PublicApiSymbol symbol) => symbol switch
     {
         PublicApiMethod method => [.. method.Parameters.Select(p => p.Name ?? "")],
         PublicApiProperty property => [.. property.Parameters.Select(p => p.Name ?? "")],
@@ -506,7 +466,11 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         _ => [],
     };
 
-    private static List<string> GetTypeParameters(PublicApiSymbol symbol) => symbol switch
+    private static List<string> GetTypeParameters(PublicApiSymbol symbol) => symbol is PublicApiMember { ExtensionBlock: { } block }
+        ? [.. block.GenericParameters.Select(p => p.Name), .. GetDeclaredTypeParameters(symbol)]
+        : GetDeclaredTypeParameters(symbol);
+
+    private static List<string> GetDeclaredTypeParameters(PublicApiSymbol symbol) => symbol switch
     {
         PublicApiMethod method => [.. method.GenericParameters.Select(p => p.Name)],
         PublicApiType type => [.. type.GenericParameters.Select(p => p.Name)],

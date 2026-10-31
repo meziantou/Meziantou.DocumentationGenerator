@@ -24,6 +24,12 @@ internal sealed class ApiCatalog
                 foreach (var member in type.Members)
                 {
                     Add(member);
+
+                    // References to the implementation of an extension member, such as M:Contoso.Extensions.get_Length(System.String), resolve to the member
+                    foreach (var implementationId in member.GetExtensionImplementationIds())
+                    {
+                        Add(implementationId, member);
+                    }
                 }
             }
         }
@@ -46,18 +52,6 @@ internal sealed class ApiCatalog
     }
 
     public IEnumerable<ApiTypeModel> GetAllTypes() => Assemblies.SelectMany(a => a.GetAllTypes());
-
-    /// <summary>
-    /// Makes <paramref name="symbol"/> reachable from another documentation ID, such as the ID of a C# 14 extension
-    /// member declared in its extension block (<c>M:Contoso.Extensions.&lt;G&gt;$9F2C.Run(System.Int32)</c>).
-    /// </summary>
-    public void AddAlias(string documentationId, ApiSymbolModel symbol)
-    {
-        if (FindByDocumentationId(documentationId).Contains(symbol))
-            return;
-
-        Add(documentationId, symbol);
-    }
 
     /// <summary><c>M:Contoso.Client.Convert``1(System.Object)</c> becomes <c>M:Contoso.Client.Convert</c>.</summary>
     public static string GetNameKey(string documentationId)

@@ -58,6 +58,7 @@ internal static class SearchIndexBuilder
                         ApiMemberCategory.Constructor => type.PrimaryType.Name,
                         ApiMemberCategory.Operator => ApiRenderHelper.GetMemberDisplayName(member),
                         ApiMemberCategory.Indexer => "this[]",
+                        _ when member.ExtensionReceiverDisplayName is { } receiver => receiver + "." + member.Name,
                         _ => member.Name,
                     };
                     var kind = member.Category switch
@@ -70,7 +71,9 @@ internal static class SearchIndexBuilder
                         _ => "field",
                     };
 
-                    items.Add(new SearchItem(type.DisplayName + "." + name, route.FilePath + "#" + UrlBuilder.EncodeFragment(anchor), kind, packageIndex, type.QualifiedDisplayName + "." + name, Frameworks(member)));
+                    // Extension members are searched as they are used: Encoding.UTF8WithoutPreamble, not Extensions.UTF8WithoutPreamble
+                    var title = member.ExtensionReceiverDisplayName is not null && member.Category is not ApiMemberCategory.Operator ? name : type.DisplayName + "." + name;
+                    items.Add(new SearchItem(title, route.FilePath + "#" + UrlBuilder.EncodeFragment(anchor), kind, packageIndex, type.QualifiedDisplayName + "." + name, Frameworks(member)));
                 }
             }
         }

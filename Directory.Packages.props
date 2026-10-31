@@ -9,7 +9,7 @@
     <PackageVersion Include="Meziantou.Framework.FullPath" Version="3.0.13" />
     <PackageVersion Include="Meziantou.Framework.HtmlSanitizer" Version="3.1.6" />
     <PackageVersion Include="Meziantou.Framework.Markdown" Version="1.0.4" />
-    <PackageVersion Include="Meziantou.Framework.PublicApiGenerator" Version="2.0.14" />
+    <PackageVersion Include="Meziantou.Framework.PublicApiGenerator" Version="2.0.15" />
     <PackageVersion Include="Meziantou.Framework.SyntaxHighlighting" Version="1.0.6" />
     <PackageVersion Include="Meziantou.Framework.WebPlatform" Version="1.0.4" />
     <PackageVersion Include="Meziantou.Framework.Yaml" Version="2.0.9" />

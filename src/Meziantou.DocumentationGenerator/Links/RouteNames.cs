@@ -33,10 +33,39 @@ internal static partial class RouteNames
     public static string GetTypePath(string packageId, string fileName) => "api/" + GetPackageSlug(packageId) + "/" + fileName + ".html";
 
     /// <summary>The member part of the documentation ID: <c>M:Contoso.Client.Send(System.Int32)</c> becomes <c>Send(System.Int32)</c>.</summary>
+    /// <remarks>
+    /// Members of C# 14 extension blocks are prefixed by their receiver type instead of the compiler-generated grouping type:
+    /// <c>P:Contoso.Extensions.&lt;G&gt;$9F2C.Length</c> becomes <c>string.Length</c>.
+    /// </remarks>
     public static string GetMemberAnchor(ApiMemberModel member)
     {
-        var typeName = member.DeclaringType.DocumentationId[2..];
-        var memberId = member.DocumentationId[2..];
+        var anchor = GetMemberAnchor(member.DeclaringType, member.DocumentationId);
+        if (member.ExtensionBlock is { } block && member.ExtensionReceiverKey is { } receiver)
+        {
+            var groupingPrefix = block.GroupingTypeMetadataName + ".";
+            return receiver + "." + (anchor.StartsWith(groupingPrefix, StringComparison.Ordinal) ? anchor[groupingPrefix.Length..] : anchor);
+        }
+
+        return anchor;
+    }
+
+    /// <summary>
+    /// Anchors that also lead to a member: the anchors of the implementation methods of an extension member, which were
+    /// its anchors before extension members were displayed as declared, such as <c>get_Length(System.String)</c>.
+    /// </summary>
+    public static IEnumerable<string> GetAdditionalMemberAnchors(ApiMemberModel member)
+    {
+        var anchor = GetMemberAnchor(member);
+        return member.GetExtensionImplementationIds()
+            .Select(id => GetMemberAnchor(member.DeclaringType, id))
+            .Where(id => !string.Equals(id, anchor, StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal);
+    }
+
+    private static string GetMemberAnchor(ApiTypeModel declaringType, string documentationId)
+    {
+        var typeName = declaringType.DocumentationId[2..];
+        var memberId = documentationId[2..];
         return memberId.StartsWith(typeName + ".", StringComparison.Ordinal) ? memberId[(typeName.Length + 1)..] : memberId;
     }
 
