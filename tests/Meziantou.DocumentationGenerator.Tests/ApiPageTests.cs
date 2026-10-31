@@ -198,6 +198,7 @@ public sealed class ApiPageTests
         var reference = Load(site, "api/packages/contoso.first.html");
         Assert.Equal("Contoso.First package", reference.QuerySelector("h1")!.TextContent);
         Assert.Equal("Description of Contoso.First", reference.QuerySelector("p.lead")!.TextContent);
+        Assert.StartsWith("https://www.nuget.org/packages/Contoso.First/", reference.QuerySelector(".api-metadata a.nuget-link")!.GetAttribute("href"), StringComparison.Ordinal);
         Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
         Assert.Equal(["Contoso.Second"], Load(site, "api/packages/contoso.second.html").QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
 
@@ -213,6 +214,8 @@ public sealed class ApiPageTests
         // A type page links to its package; a namespace of a single package has no package column
         var other = Load(site, "api/Contoso.Second.Other.html");
         Assert.Equal("packages/contoso.second.html", other.QuerySelector(".api-metadata a[href^='packages/']")!.GetAttribute("href"));
+        Assert.Equal("https://www.nuget.org/packages/Contoso.Second/1.0.0", other.QuerySelector(".api-metadata a.nuget-link")!.GetAttribute("href"));
+        Assert.Equal("1.0.0", other.QuerySelector(".api-metadata a.nuget-link")!.TextContent);
         Assert.Equal(["Name", "Description"], Load(site, "api/namespaces/Contoso.Second.html").QuerySelectorAll<Element>(".api-table th").Select(th => th.TextContent));
     }
 
@@ -240,14 +243,17 @@ public sealed class ApiPageTests
         await using var site = await SiteBuilder.BuildAsync([package]);
         var document = Load(site, "api/Contoso.Sources.Widget.html");
 
-        var typeLink = document.QuerySelector("article > .heading-row .source-link")!;
+        // The type's source is listed after its assembly and package
+        Assert.Null(document.QuerySelector("article > .heading-row .source-link"));
+        Assert.Equal(["Namespace", "Assembly", "Package", "Source", "Available in package assets"], document.QuerySelectorAll<Element>("dl.api-metadata > dt").Select(dt => dt.TextContent));
+        var typeLink = document.QuerySelector("dl.api-metadata .source-link")!;
         Assert.Equal("file", typeLink.GetAttribute("data-precision"));
-        Assert.Equal("file", typeLink.TextContent!.Trim());
-        Assert.Equal("Source file on GitHub", typeLink.GetAttribute("aria-label"));
+        Assert.Equal("Widget.cs", typeLink.TextContent!.Trim());
+        Assert.Equal("Widget.cs, source file on GitHub", typeLink.GetAttribute("aria-label"));
         var methodLink = document.GetElementById("Compute(System.Int32)")!.QuerySelector(".heading-row > .source-links > .source-link")!;
         Assert.Equal("line", methodLink.GetAttribute("data-precision"));
-        Assert.Equal("code", methodLink.TextContent!.Trim());
-        Assert.Equal("Source code on GitHub", methodLink.GetAttribute("aria-label"));
+        Assert.Equal("Widget.cs", methodLink.TextContent!.Trim());
+        Assert.Equal("Widget.cs, source code on GitHub", methodLink.GetAttribute("aria-label"));
         Assert.Equal($"https://github.com/contoso/library/blob/{SourceLinkTests.Commit}/src/Widget.cs#L6", methodLink.GetAttribute("href"));
     }
 
