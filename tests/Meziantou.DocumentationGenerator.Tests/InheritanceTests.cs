@@ -271,6 +271,64 @@ public sealed class InheritanceTests
         Assert.Contains(build.Diagnostics, d => d.Code == "DG6009" && d.Location?.Symbol == "M:Contoso.Include.Widget.Unsupported");
     }
 
+    [Fact]
+    public async Task DocumentationIssuesOfReferences_AreNotReported()
+    {
+        var referenceAssembly = TestCompiler.Compile("Contoso.Reference", """
+            namespace Contoso.Reference
+            {
+                public class Base
+                {
+                    public virtual void Run(int count) { }
+                    public void Cycle() { }
+                    public void Unresolved() { }
+                    public void Include() { }
+                    public void Escape() { }
+                }
+            }
+            """);
+        var undocumented = TestCompiler.Compile("Contoso.Reference.Undocumented", "namespace Contoso.Reference.Undocumented { public class Widget { } }");
+        var reference = new TestPackageBuilder("Contoso.Reference", "1.0.0")
+            .AddFile("lib/net8.0/Contoso.Reference.dll", referenceAssembly.Assembly)
+            .AddFile("lib/net8.0/Contoso.Reference.xml", """
+                <doc><members>
+                  <member name="T:Contoso.Reference.Base"><summary>Base.</summary><summary>Duplicate.</summary><unknown>x</unknown></member>
+                  <member name="T:Contoso.Reference.Base"><summary>Duplicate entry.</summary></member>
+                  <member name="M:Contoso.Reference.Base.Run(System.Int32)"><summary>Runs <paramref name="missing"/>.</summary><param name="other">x</param></member>
+                  <member name="M:Contoso.Reference.Base.Cycle"><inheritdoc cref="M:Contoso.Reference.Base.Cycle"/></member>
+                  <member name="M:Contoso.Reference.Base.Unresolved"><inheritdoc/></member>
+                  <member name="M:Contoso.Reference.Base.Include"><include file="docs/missing.xml" path="doc/item" /></member>
+                  <member name="M:Contoso.Reference.Base.Escape"><include file="../../../secret.xml" path="doc/item" /></member>
+                  <member name="M:Contoso.Reference.Internal.Member"><summary>Internal.</summary></member>
+                </members></doc>
+                """)
+            .AddFile("lib/net8.0/Contoso.Reference.Undocumented.dll", undocumented.Assembly);
+        var consumerAssembly = TestCompiler.Compile("Contoso.Consumer", """
+            namespace Contoso.Consumer
+            {
+                /// <summary>Derived.</summary>
+                public class Derived : Contoso.Reference.Base
+                {
+                    /// <inheritdoc/>
+                    public override void Run(int times) { }
+                }
+            }
+            """, new CompileOptions { References = [referenceAssembly] });
+        var consumer = new TestPackageBuilder("Contoso.Consumer", "1.0.0")
+            .AddFile("README.md", "x")
+            .AddFile("lib/net8.0/Contoso.Consumer.dll", consumerAssembly.Assembly)
+            .AddFile("lib/net8.0/Contoso.Consumer.xml", consumerAssembly.Xml);
+        await using var build = TestBuild.Create($$"""{ "version": 1, "packages": [ {{TestBuild.PackageReference(consumer)}} ], "references": [ {{TestBuild.PackageReference(reference)}} ] }""", [consumer, reference]);
+        await build.RunAsync(new AcquisitionStage(), new DiscoveryStage(), new ApiModelStage(), new ApiAggregationStage(), new LinkIndexStage(), new XmlDocumentationStage(), new InheritanceStage());
+
+        Assert.Contains("Runs", GetComment(build, "M:Contoso.Consumer.Derived.Run(System.Int32)").Summary!.Value, StringComparison.Ordinal);
+        var referenceDiagnostics = build.Diagnostics.Where(d => d.Location?.Package?.StartsWith("Contoso.Reference", StringComparison.Ordinal) == true || d.Location?.FilePath?.StartsWith("Contoso.Reference", StringComparison.Ordinal) == true).ToList();
+        Assert.DoesNotContain(referenceDiagnostics, d => d.Code.StartsWith("DG6", StringComparison.Ordinal) || d.Code == "DG3002");
+
+        // Unsafe input is reported whatever the package
+        Assert.Contains(referenceDiagnostics, d => d.Code == "DG5009" && d.Location?.Symbol == "M:Contoso.Reference.Base.Escape");
+    }
+
     private static DocumentationComment GetComment(TestBuild build, string documentationId)
     {
         var symbol = Assert.Single(build.Context.ApiCatalog.FindByDocumentationId(documentationId));
