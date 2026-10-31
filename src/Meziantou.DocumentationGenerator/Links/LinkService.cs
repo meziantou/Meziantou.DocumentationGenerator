@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.Diagnostics;
+using Meziantou.DocumentationGenerator.XmlDocs;
 using Meziantou.Framework.PublicApiGenerator;
 
 namespace Meziantou.DocumentationGenerator.Links;
@@ -142,7 +143,11 @@ internal sealed partial class LinkService
             value = value[(separator + 1)..];
         }
 
-        value = NormalizeGenericSyntax(value);
+        // Members of C# 14 extension blocks are named by the compiler, such as Contoso.Extensions.<G>$9F2C.Run(System.Int32)
+        if (!ExtensionBlockIds.IsCompilerGenerated(value))
+        {
+            value = NormalizeGenericSyntax(value);
+        }
         char? kind = null;
         if (value.Length > 2 && value[1] == ':')
         {

@@ -99,7 +99,10 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             return comment with { InheritDoc = null, InheritanceNote = $"Inherited documentation is not available ({description})." };
         }
 
-        var inherited = Resolve(target.Model, target.Symbol, stack);
+        // The implementation of an extension member inherits from its own declaration in the extension block
+        var inherited = cref is not null && ExtensionBlockIds.IsExtensionBlockMember(cref) && target.Model == model && target.Symbol.DocumentationId == symbol.DocumentationId
+            ? ResolveExtensionBlockMember(model, symbol, cref, stack)
+            : Resolve(target.Model, target.Symbol, stack);
         if (inherited.IsEmpty)
         {
             // Continue up the hierarchy when the direct source has no documentation of its own
@@ -155,8 +158,76 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             return null;
         }
 
+        // The cref may be an alias, such as the declaration of an extension member in its extension block
         description = "";
-        return GetSymbolForFramework(targets[0], cref, model.Asset.Framework);
+        return GetSymbolForFramework(targets[0], preferred.First(c => c.Assembly == targets[0]).DocumentationId, model.Asset.Framework);
+    }
+
+    /// <summary>
+    /// Reads the documentation of a C# 14 extension member from its declaration in the extension block. The receiver
+    /// parameter and the type parameters of the block are documented on the marker type of the block.
+    /// </summary>
+    private DocumentationComment ResolveExtensionBlockMember(ApiAssemblyModel model, PublicApiSymbol symbol, string blockMemberId, List<string> stack)
+    {
+        var file = provider.GetFile(model);
+        var element = file?.Find(blockMemberId);
+        if (file is null || element is null)
+            return DocumentationComment.Empty with { Scope = model.Scope };
+
+        var key = model.Scope + "!" + blockMemberId + "@" + model.TargetFramework;
+        if (stack.Contains(key, StringComparer.Ordinal))
+        {
+            Report(model, DiagnosticDescriptors.InheritDocCycle, $"Inherited documentation forms a cycle: {string.Join(" -> ", stack.Append(key))}", Location(model, symbol));
+            return DocumentationComment.Empty with { Scope = model.Scope, InheritanceNote = "Inherited documentation forms a cycle." };
+        }
+
+        stack.Add(key);
+        try
+        {
+            var comment = DocumentationCommentParser.Parse(element, symbol, model.Scope, file.DisplayPath, model.IsReference ? new DiagnosticBag() : diagnostics);
+            if (!comment.Includes.IsEmpty || HasNestedDirectives(comment))
+            {
+                comment = ResolveIncludes(model, symbol, comment, element);
+            }
+
+            if (comment.InheritDoc is { } inheritDoc)
+            {
+                comment = ResolveInheritDoc(model, symbol, comment, inheritDoc, stack);
+            }
+
+            return AddExtensionReceiverDocumentation(file, symbol, blockMemberId, comment);
+        }
+        finally
+        {
+            stack.RemoveAt(stack.Count - 1);
+        }
+    }
+
+    private static DocumentationComment AddExtensionReceiverDocumentation(XmlDocumentationFile file, PublicApiSymbol symbol, string blockMemberId, DocumentationComment comment)
+    {
+        if (ExtensionBlockIds.GetGroupingTypeName(blockMemberId) is not { } groupingType)
+            return comment;
+
+        // A grouping type has a marker per receiver declaration; the receiver is the first parameter of instance members
+        var markers = file.GetExtensionMarkers(groupingType).Select(e => DocumentationCommentParser.Parse(e, symbol: null, comment.Scope, file.DisplayPath, new DiagnosticBag())).ToList();
+        var receiverName = GetParameters(symbol).FirstOrDefault();
+        var marker = markers.FirstOrDefault(m => receiverName is not null && m.Parameters.Any(p => p.Name == receiverName)) ?? (markers.Count == 1 ? markers[0] : null);
+        if (marker is null)
+            return comment;
+
+        var parameterNames = DocumentationCommentParser.GetParameterNames(symbol);
+        var typeParameterNames = DocumentationCommentParser.GetTypeParameterNames(symbol);
+        static ImmutableArray<NamedSection> Prepend(ImmutableArray<NamedSection> blockSections, ImmutableArray<NamedSection> memberSections, IReadOnlySet<string>? validNames)
+        {
+            var added = blockSections.Where(s => validNames?.Contains(s.Name) != false && !memberSections.Any(m => m.Name == s.Name));
+            return [.. added, .. memberSections];
+        }
+
+        return comment with
+        {
+            Parameters = Prepend(marker.Parameters, comment.Parameters, parameterNames),
+            TypeParameters = Prepend(marker.TypeParameters, comment.TypeParameters, typeParameterNames),
+        };
     }
 
     private (ApiAssemblyModel, PublicApiSymbol)? FindImplicitSource(ApiAssemblyModel model, PublicApiSymbol symbol, out string description)
@@ -442,10 +513,10 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         _ => [],
     };
 
-    private DocumentationComment ResolveIncludes(ApiAssemblyModel model, PublicApiSymbol symbol, DocumentationComment comment)
+    private DocumentationComment ResolveIncludes(ApiAssemblyModel model, PublicApiSymbol symbol, DocumentationComment comment, XElement? element = null)
     {
         var file = provider.GetFile(model);
-        var member = file?.Find(symbol.DocumentationId);
+        var member = element ?? file?.Find(symbol.DocumentationId);
         if (member is null || model.Asset.XmlDocumentationEntry is not { } xmlEntry)
             return comment with { Includes = [] };
 

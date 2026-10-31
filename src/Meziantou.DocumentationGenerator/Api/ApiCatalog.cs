@@ -47,6 +47,18 @@ internal sealed class ApiCatalog
 
     public IEnumerable<ApiTypeModel> GetAllTypes() => Assemblies.SelectMany(a => a.GetAllTypes());
 
+    /// <summary>
+    /// Makes <paramref name="symbol"/> reachable from another documentation ID, such as the ID of a C# 14 extension
+    /// member declared in its extension block (<c>M:Contoso.Extensions.&lt;G&gt;$9F2C.Run(System.Int32)</c>).
+    /// </summary>
+    public void AddAlias(string documentationId, ApiSymbolModel symbol)
+    {
+        if (FindByDocumentationId(documentationId).Contains(symbol))
+            return;
+
+        Add(documentationId, symbol);
+    }
+
     /// <summary><c>M:Contoso.Client.Convert``1(System.Object)</c> becomes <c>M:Contoso.Client.Convert</c>.</summary>
     public static string GetNameKey(string documentationId)
     {
@@ -56,12 +68,14 @@ internal sealed class ApiCatalog
         return arity >= 0 ? key[..arity] : key;
     }
 
-    private void Add(ApiSymbolModel symbol)
+    private void Add(ApiSymbolModel symbol) => Add(symbol.DocumentationId, symbol);
+
+    private void Add(string documentationId, ApiSymbolModel symbol)
     {
-        AddTo(_symbolsByDocumentationId, symbol.DocumentationId, symbol);
+        AddTo(_symbolsByDocumentationId, documentationId, symbol);
         if (symbol is ApiMemberModel)
         {
-            AddTo(_symbolsByNameKey, GetNameKey(symbol.DocumentationId), symbol);
+            AddTo(_symbolsByNameKey, GetNameKey(documentationId), symbol);
         }
 
         static void AddTo(Dictionary<string, List<ApiSymbolModel>> dictionary, string key, ApiSymbolModel symbol)
