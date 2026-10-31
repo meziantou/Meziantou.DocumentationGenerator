@@ -32,7 +32,9 @@
     --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     --header-height: 3.5rem;
-    --sidebar-width: 18rem;
+    /* The side columns grow with the viewport so long type and namespace names do not wrap */
+    --sidebar-width: clamp(18rem, 22vw, 26rem);
+    --page-toc-width: clamp(14rem, 16vw, 20rem);
 }
 
 :root[data-theme="dark"] {
@@ -167,8 +169,13 @@ a:hover { text-decoration-thickness: 2px; }
 .site-title { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1.1rem; color: var(--color-text); text-decoration: none; }
 .site-logo { width: 1.75rem; height: 1.75rem; object-fit: contain; }
 .header-tools { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
-.header-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-.header-link { display: inline-flex; align-items: center; gap: 0.35rem; }
+.header-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+/* Header links read as navigation items rather than inline text links */
+.header-link { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.6rem; border-radius: 6px; color: var(--color-text); font-weight: 500; text-decoration: none; }
+.header-link:hover { background: var(--color-bg-muted); }
+/* Header links always point to other sites */
+.header-link::after { content: "↗"; font-size: 0.85em; color: var(--color-text-muted); }
+.header-links + .theme-picker { padding-left: 0.75rem; border-left: 1px solid var(--color-border); }
 .header-link-icon { line-height: 1; }
 .menu-button { display: none; }
 
@@ -213,11 +220,9 @@ button { cursor: pointer; }
 /* Layout */
 .site-body {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 14rem;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--page-toc-width);
     grid-template-areas: "sidebar content toc";
     align-items: start;
-    max-width: 96rem;
-    margin: 0 auto;
 }
 
 .sidebar-panel {
@@ -264,7 +269,7 @@ details[open] > .nav-toggle::before { transform: translateY(-0.15rem) rotate(135
 .sidebar .nav-external::after { content: " ↗"; }
 
 .content { grid-area: content; min-width: 0; padding: 1.5rem 2rem 3rem; }
-.page-toc { grid-area: toc; position: sticky; top: var(--header-height); padding: 1.5rem 1rem; font-size: 0.875rem; }
+.page-toc { grid-area: toc; position: sticky; top: var(--header-height); max-height: calc(100vh - var(--header-height)); overflow-y: auto; min-width: 0; padding: 1.5rem 1rem; font-size: 0.875rem; overflow-wrap: anywhere; }
 .page-toc h2 { font-size: 0.875rem; margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
 .page-toc ul { list-style: none; margin: 0; padding: 0; }
 .page-toc li.level-3 { padding-left: 0.75rem; }
