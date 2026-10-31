@@ -111,7 +111,7 @@ internal sealed partial class XmlDocRenderer(LinkService links, HighlightingServ
                 RenderSee(element, builder, context);
                 break;
             case "paramref":
-                builder.Append("<code class=\"paramref\">").Append(HtmlEncoding.Encode(element.Attribute("name")?.Value ?? "")).Append("</code>");
+                RenderParamRef(element.Attribute("name")?.Value ?? "", builder, context);
                 break;
             case "typeparamref":
                 builder.Append("<code class=\"typeparamref\">").Append(HtmlEncoding.Encode(element.Attribute("name")?.Value ?? "")).Append("</code>");
@@ -177,6 +177,27 @@ internal sealed partial class XmlDocRenderer(LinkService links, HighlightingServ
         }
 
         builder.Append("\">").Append(highlighting.Highlight(code, language)).Append("</code></pre>");
+    }
+
+    /// <summary>
+    /// Renders a parameter reference as code. A property without parameters can only reference the parameters of a
+    /// positional record (the compiler copies their documentation to the properties), which are its sibling properties,
+    /// so the reference links to that property when it has a page.
+    /// </summary>
+    private void RenderParamRef(string name, StringBuilder builder, XmlRenderContext context)
+    {
+        var code = "<code class=\"paramref\">" + HtmlEncoding.Encode(name) + "</code>";
+        if (name.Length > 0 && context.SymbolId is { } symbolId && symbolId.StartsWith("P:", StringComparison.Ordinal) && !symbolId.Contains('(', StringComparison.Ordinal) && symbolId.LastIndexOf('.', StringComparison.Ordinal) is var separator and > 2)
+        {
+            var resolution = links.Resolve(string.Concat(symbolId.AsSpan(0, separator + 1), name), context.Links);
+            if (resolution is { Kind: CrefResolutionKind.Resolved, Url: { } url })
+            {
+                builder.Append("<a href=\"").Append(HtmlEncoding.Encode(url)).Append("\">").Append(code).Append("</a>");
+                return;
+            }
+        }
+
+        builder.Append(code);
     }
 
     private void RenderSee(XElement element, StringBuilder builder, XmlRenderContext context)

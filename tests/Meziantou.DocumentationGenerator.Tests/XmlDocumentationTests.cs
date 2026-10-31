@@ -19,6 +19,14 @@ public sealed class XmlDocumentationTests
                 public T Get<T>(string key) => default!;
                 public class Nested<TItem> { public void Add(TItem item) { } }
             }
+
+            public sealed record Highlight(int Index, int Length, int Priority);
+
+            public sealed class Box
+            {
+                public Box(int size, int weight) { }
+                public int Weight => 0;
+            }
         }
         """;
 
@@ -134,6 +142,34 @@ public sealed class XmlDocumentationTests
         Assert.Contains(diagnostics, d => d.Code == "DG4008" && d.Severity == Diagnostics.DiagnosticSeverity.Error && d.Message.Contains("javascript:", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6006" && d.Message.Contains("<unknowntag>", StringComparison.Ordinal));
         Assert.Contains(diagnostics, d => d.Code == "DG6002" && d.Message.Contains("M:Contoso.Docs.Widget.Internal", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RecordPropertyReferencingSiblingParameter_IsValidAndLinksToProperty()
+    {
+        // The compiler copies the <param> of a positional record parameter to the generated property, including
+        // references to the other parameters of the primary constructor
+        await using var build = await BuildAsync("""
+            <doc><members>
+            <member name="T:Contoso.Docs.Highlight">
+              <summary>A highlight.</summary>
+              <param name="Index">The start.</param>
+              <param name="Length">The length from <paramref name="Index"/>.</param>
+              <param name="Priority">Applies to <paramref name="Index"/> and <paramref name="Length"/>.</param>
+            </member>
+            <member name="P:Contoso.Docs.Highlight.Length"><summary>The length from <paramref name="Index"/>.</summary></member>
+            <member name="P:Contoso.Docs.Highlight.Priority"><summary>Applies to <paramref name="Index"/> and <paramref name="Bogus"/>.</summary></member>
+            <member name="P:Contoso.Docs.Box.Weight"><summary>Depends on <paramref name="size"/>.</summary></member>
+            </members></doc>
+            """);
+
+        var html = Render(build, "P:Contoso.Docs.Highlight.Priority", c => c.Summary!);
+        Assert.Equal("<p>Applies to <a href=\"/api/contoso.docs/Contoso.Docs.Highlight.html#Index\"><code class=\"paramref\">Index</code></a> and <code class=\"paramref\">Bogus</code>.</p>", html);
+
+        _ = GetComment(build, "P:Contoso.Docs.Highlight.Length");
+        _ = GetComment(build, "P:Contoso.Docs.Box.Weight");
+        var invalidReferences = build.Diagnostics.Where(d => d.Code == "DG6007").Select(d => d.Message).Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(["The referenced parameter 'Bogus' does not exist", "The referenced parameter 'size' does not exist"], invalidReferences);
     }
 
     [Fact]

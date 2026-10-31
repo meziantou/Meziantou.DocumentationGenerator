@@ -106,7 +106,7 @@ internal static class DocumentationCommentParser
         return symbol switch
         {
             PublicApiMethod method => method.Parameters.Select(p => p.Name ?? "").ToHashSet(StringComparer.Ordinal),
-            PublicApiProperty property => property.Parameters.Select(p => p.Name ?? "").ToHashSet(StringComparer.Ordinal),
+            PublicApiProperty property => GetPropertyParameterNames(property),
             PublicApiType { DelegateInvokeMethod: { } invoke } => invoke.Parameters.Select(p => p.Name ?? "").ToHashSet(StringComparer.Ordinal),
 
             // Records and types with primary constructors document the constructor parameters on the type
@@ -114,6 +114,28 @@ internal static class DocumentationCommentParser
             null => null,
             _ => new HashSet<string>(StringComparer.Ordinal),
         };
+    }
+
+    /// <summary>
+    /// Returns the parameters a property documentation can reference. The compiler copies the <c>&lt;param&gt;</c> of a
+    /// positional record parameter to the generated property, so a property named like a constructor parameter can
+    /// also reference the other parameters of that constructor.
+    /// </summary>
+    private static HashSet<string> GetPropertyParameterNames(PublicApiProperty property)
+    {
+        var names = property.Parameters.Select(p => p.Name ?? "").ToHashSet(StringComparer.Ordinal);
+        if (names.Count == 0 && property.DeclaringType is { } type)
+        {
+            foreach (var constructor in type.Members.OfType<PublicApiMethod>().Where(m => m.MethodKind is PublicApiMethodKind.Constructor))
+            {
+                if (constructor.Parameters.Any(p => p.Name == property.Name))
+                {
+                    names.UnionWith(constructor.Parameters.Select(p => p.Name ?? ""));
+                }
+            }
+        }
+
+        return names;
     }
 
     public static IReadOnlySet<string>? GetTypeParameterNames(PublicApiSymbol? symbol)
