@@ -264,13 +264,13 @@ public sealed partial class MarkdownTests
         await using var build = await BuildAsync(files: new()
         {
             ["docs/index.md"] = """
-                <InstallNuGetPackage Ids="First.Package, Second.Package" />
+                <InstallNuGetPackage Id="First.Package, Second.Package" />
 
-                <installnugetpackage ids=' Second.Package , First.Package ' version="2.0.0-beta.1" />
+                <installnugetpackage id=' Second.Package , First.Package ' version="2.0.0-beta.1" />
 
-                <InstallNuGetPackage Ids="Single.Package" />
+                <InstallNuGetPackage Id="Single.Package" />
 
-                Or run <InstallNuGetPackage Ids="First.Package,Second.Package" /> in a terminal.
+                Or run <InstallNuGetPackage Id="First.Package,Second.Package" /> in a terminal.
                 """,
         });
 
@@ -286,18 +286,22 @@ public sealed partial class MarkdownTests
     }
 
     [Theory]
-    [InlineData("""<InstallNuGetPackage Ids="" />""", "invalid package identifier ''")]
-    [InlineData("""<InstallNuGetPackage Ids=" " />""", "invalid package identifier ''")]
-    [InlineData("""<InstallNuGetPackage Ids=",Valid" />""", "invalid package identifier ''")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid," />""", "invalid package identifier ''")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid,,Other" />""", "invalid package identifier ''")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid,a b" />""", "invalid package identifier 'a b'")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid,Other;echo" />""", "invalid package identifier 'Other;echo'")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid,Other" Version="invalid" />""", "invalid version 'invalid'")]
-    [InlineData("""<InstallNuGetPackage Id="Valid" Ids="Other" />""", "cannot declare both 'Id' and 'Ids'")]
-    [InlineData("""<InstallNuGetPackage Ids="Valid" ids="Other" />""", "declares the attribute 'ids' more than once")]
+    [InlineData("""<InstallNuGetPackage Id="" />""", "requires the 'Id' attribute")]
+    [InlineData("""<InstallNuGetPackage Id=" " />""", "requires the 'Id' attribute")]
+    [InlineData("""<InstallNuGetPackage Id=",Valid" />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Id="Valid," />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Id="Valid,,Other" />""", "invalid package identifier ''")]
+    [InlineData("""<InstallNuGetPackage Id="Valid,a b" />""", "invalid package identifier 'a b'")]
+    [InlineData("""<InstallNuGetPackage Id="Valid,Other;echo" />""", "invalid package identifier 'Other;echo'")]
+    [InlineData("""<InstallNuGetPackage Id="Valid,Other" Version="invalid" />""", "invalid version 'invalid'")]
+    [InlineData("""<InstallNuGetPackage Ids="Valid,Other" />""", "does not support the attribute 'Ids'")]
+    [InlineData("""<InstallNuGetPackage ids="Valid,Other" />""", "does not support the attribute 'ids'")]
+    [InlineData("""<InstallNuGetPackage Id="Valid" Ids="Other" />""", "does not support the attribute 'Ids'")]
+    [InlineData("""<InstallNuGetPackage Id="Valid" id="Other" />""", "declares the attribute 'id' more than once")]
     [InlineData("""<InstallDotnetTool Ids="Valid,Other" />""", "does not support the attribute 'Ids'")]
     [InlineData("""<NuGetReference Ids="Valid,Other" />""", "does not support the attribute 'Ids'")]
+    [InlineData("""<InstallDotnetTool Id="Valid,Other" />""", "invalid package identifier 'Valid,Other'")]
+    [InlineData("""<NuGetReference Id="Valid,Other" />""", "invalid package identifier 'Valid,Other'")]
     public async Task InvalidPackageCollections_AreErrors(string markdown, string message)
     {
         await using var build = await BuildAsync(files: new() { ["docs/index.md"] = markdown });

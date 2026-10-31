@@ -75,23 +75,23 @@ These elements are replaced when the site is generated. Names and attributes are
 | Element | Output |
 |---|---|
 | `<InstallNuGetPackage Id="Contoso.Client" />` | `dotnet package add Contoso.Client` |
-| `<InstallNuGetPackage Ids="Contoso.Client, Contoso.Extensions" />` | One `dotnet package add` command per package |
+| `<InstallNuGetPackage Id="Contoso.Client, Contoso.Extensions" />` | One `dotnet package add` command per package |
 | `<InstallDotnetTool Id="Contoso.Tool" />` | `dotnet tool install --global Contoso.Tool` |
 | `<NuGetReference Id="Contoso.Client" />` | A link to `https://www.nuget.org/packages/Contoso.Client`, with the NuGet icon |
 
 Attributes:
 
-- `Id` (required unless `Ids` is used): the package identifier.
-- `Ids` (`InstallNuGetPackage` only): a comma-separated collection of package identifiers, used instead of `Id`.
+- `Id` (required): the package identifier. For `InstallNuGetPackage`, it also accepts a
+  comma-separated collection of package identifiers.
   Whitespace around each identifier is ignored; empty or invalid identifiers are errors. Commands keep the input order.
 - `Version` (optional): adds `--version <version>` to the command, or links to that version on nuget.org.
-  When using `Ids`, the version applies to every package.
+  When using a collection in `Id`, the version applies to every package.
 - `Local="true"` (`InstallDotnetTool` only): installs the tool in the local tool manifest (`dotnet tool install Contoso.Tool`).
 
 Put `InstallNuGetPackage` and `InstallDotnetTool` on their own line, separated from other text by a blank line, to get a
 code block with a copy button. A collection renders as one block with a command on each line. Inside a paragraph, they
 render as inline code, with collection commands separated by `; `. `NuGetReference` can be used anywhere in
-text. An invalid element (missing or invalid `Id`, `Ids` or `Version`, both `Id` and `Ids`, unknown attribute) is removed
+text. An invalid element (missing or invalid `Id` or `Version`, unknown attribute) is removed
 and reported as `DG5013`.
 
 ### Links
