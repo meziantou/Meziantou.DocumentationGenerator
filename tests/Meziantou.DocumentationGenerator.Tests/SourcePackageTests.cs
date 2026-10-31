@@ -238,6 +238,25 @@ public sealed class SourcePackageTests
         Assert.StartsWith("public class PublicPart", publicPart.QuerySelector("pre.declaration")!.TextContent, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task SourcePackage_EmbeddedAttributeIsNotDocumentedButTheTypesItMarksAre()
+    {
+        // Same shape as Meziantou.Framework.Roslyn, which declares the attribute so the consuming project can use it
+        var package = new TestPackageBuilder("Contoso.Sources", "1.0.0")
+            .AddFile("contentFiles/cs/any/Contoso.Sources/Helper.cs", "namespace Contoso.Sources; [Microsoft.CodeAnalysis.Embedded] internal static class Helper { }")
+            .AddFile("contentFiles/cs/any/Contoso.Sources/EmbeddedAttribute.cs", "namespace Microsoft.CodeAnalysis; internal sealed partial class EmbeddedAttribute : System.Attribute { }");
+        await using var site = await SiteBuilder.BuildAsync([package]);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+
+        Assert.True(File.Exists(site.Output / "api" / "Contoso.Sources.Helper.html"));
+        Assert.False(File.Exists(site.Output / "api" / "Microsoft.CodeAnalysis.EmbeddedAttribute.html"));
+        Assert.False(File.Exists(site.Output / "api" / "namespaces" / "Microsoft.CodeAnalysis.html"));
+
+        var packagePage = HtmlDocumentLoader.Parse(site.ReadFile("api/packages/contoso.sources.html"));
+        var namespaces = packagePage.QuerySelectorAll<Element>("table.api-table tbody a").Select(a => a.TextContent).ToList();
+        Assert.Equal(["Contoso.Sources"], namespaces);
+    }
+
     [Theory]
     [InlineData("net8.0", new[] { "NET", "NET8_0", "NET5_0_OR_GREATER", "NET8_0_OR_GREATER", "NETCOREAPP", "NETCOREAPP3_1_OR_GREATER" }, new[] { "NET9_0_OR_GREATER", "NETSTANDARD" })]
     [InlineData("netstandard2.0", new[] { "NETSTANDARD", "NETSTANDARD2_0", "NETSTANDARD1_6_OR_GREATER", "NETSTANDARD2_0_OR_GREATER" }, new[] { "NETSTANDARD2_1_OR_GREATER", "NET" })]

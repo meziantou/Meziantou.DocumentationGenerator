@@ -15,7 +15,7 @@ internal sealed class ApiSymbolPolicy(ApiFilter filter)
     {
         for (var current = type; current is not null; current = current.DeclaringType)
         {
-            if (!IsAccessible(current))
+            if (!IsAccessible(current) || IsEmbeddedAttribute(current))
                 return false;
         }
 
@@ -59,6 +59,14 @@ internal sealed class ApiSymbolPolicy(ApiFilter filter)
         PublicApiMember member => IsDocumented(member),
         _ => false,
     };
+
+    /// <summary>
+    /// <c>Microsoft.CodeAnalysis.EmbeddedAttribute</c> is compiler infrastructure. Source packages often declare it so their types
+    /// can be marked <c>[Embedded]</c>, which would add a <c>Microsoft.CodeAnalysis</c> namespace to the API reference. The types it
+    /// marks are still documented: in a source package, they are the package's own API.
+    /// </summary>
+    private static bool IsEmbeddedAttribute(PublicApiType type)
+        => type is { Namespace: "Microsoft.CodeAnalysis", Name: "EmbeddedAttribute", DeclaringType: null };
 
     /// <summary>Protected members of sealed types cannot be accessed by consumers.</summary>
     private static bool IsAccessible(PublicApiSymbol symbol)

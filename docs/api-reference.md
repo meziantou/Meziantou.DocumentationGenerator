@@ -73,8 +73,10 @@ with its frameworks. With JavaScript, a filter hides the members of other framew
 Documented: public types; public, protected and protected internal members of visible types; explicit interface
 implementations of visible interfaces, and the internal symbols of [source packages](#source-packages). Not
 documented: other internal and private protected symbols, protected members of
-sealed types or structs, accessors (documented with their property or event), record `EqualityContract`, and
-compiler-generated types. Use [`api.include` and `api.exclude`](configuration.md#api) to filter further.
+sealed types or structs, accessors (documented with their property or event), record `EqualityContract`,
+compiler-generated types, and `Microsoft.CodeAnalysis.EmbeddedAttribute` (compiler infrastructure that
+source packages often declare; the types marked `[Embedded]` are documented). Use
+[`api.include` and `api.exclude`](configuration.md#api) to filter further.
 
 ## URLs and anchors
 
