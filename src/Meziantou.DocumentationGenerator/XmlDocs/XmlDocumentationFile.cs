@@ -13,11 +13,16 @@ internal sealed class XmlDocumentationFile
     public const long MaxCharacters = 64L * 1024 * 1024;
 
     private readonly Dictionary<string, XElement> _members;
+    private readonly Lazy<ILookup<string, XElement>> _extensionMarkers;
 
     private XmlDocumentationFile(string displayPath, Dictionary<string, XElement> members)
     {
         DisplayPath = displayPath;
         _members = members;
+        _extensionMarkers = new(() => members
+            .Select(member => (GroupingType: ExtensionBlockIds.GetGroupingTypeNameOfMarker(member.Key), Element: member.Value))
+            .Where(marker => marker.GroupingType is not null)
+            .ToLookup(marker => marker.GroupingType!, marker => marker.Element, StringComparer.Ordinal));
     }
 
     public string DisplayPath { get; }
@@ -66,6 +71,9 @@ internal sealed class XmlDocumentationFile
     }
 
     public XElement? Find(string documentationId) => _members.GetValueOrDefault(documentationId);
+
+    /// <summary>Documentation of the marker types of a C# 14 extension grouping type, which document the receiver and the type parameters of the block.</summary>
+    public IEnumerable<XElement> GetExtensionMarkers(string groupingTypeName) => _extensionMarkers.Value[groupingTypeName];
 
     internal static int? GetLine(XObject node) => node is IXmlLineInfo info && info.HasLineInfo() ? info.LineNumber : null;
 }
