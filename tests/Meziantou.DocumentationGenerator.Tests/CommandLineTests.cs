@@ -146,7 +146,7 @@ public sealed class CommandLineTests
     [Fact]
     public void ConfigurationOptions_ExposeAllProperties()
     {
-        const string json = """
+        const string Json = """
             {
               "$schema": "https://example.com/schema.json",
               "version": 1,
@@ -192,7 +192,7 @@ public sealed class CommandLineTests
         Assert.Empty(result.Errors);
         Assert.Equal(command.Options.Count, args.Length / 2);
         var actual = JsonSerializer.SerializeToNode(options.GetOverrides(result).Values, ConfigurationLoader.SerializerOptions);
-        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(json), actual), actual?.ToJsonString());
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(Json), actual), actual?.ToJsonString());
     }
 
     [Theory]
