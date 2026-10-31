@@ -3,7 +3,6 @@
     <article class="api-page" data-tfms="@Tfms(Type)">
         <div class="heading-row">
             <h1>@Type.DisplayName @Kind</h1>
-            @RenderSourceLinks(Type)
         </div>
         <dl class="api-metadata">
             <dt>Namespace</dt>
@@ -19,7 +18,13 @@
                 <dd>@(Type.Assembly.AssemblyName).dll</dd>
             }
             <dt>Package</dt>
-            <dd><a href="@Site.Links.GetPackageUrl(Type.Assembly.Package.Id)">@Type.Assembly.Package.Id</a> @Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString()</dd>
+            @{ var packageVersion = Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString(); }
+            <dd><a href="@Site.Links.GetPackageUrl(Type.Assembly.Package.Id)">@Type.Assembly.Package.Id</a> <a href="@LinkService.GetNuGetOrgPackageUrl(Type.Assembly.Package.Id, packageVersion)" class="nuget-link" rel="noopener" title="View @Type.Assembly.Package.Id @packageVersion on nuget.org">@packageVersion</a></dd>
+            @if (!Site.SourceLinks.GetLocations(Type).IsEmpty)
+            {
+                <dt>Source</dt>
+                <dd>@RenderSourceLinks(Type)</dd>
+            }
             <dt>Available in package assets</dt>
             <dd>@RenderAvailability(Type)</dd>
             @if (DeclaringTypeUrl is not null)
@@ -337,20 +342,22 @@
         }
     </text>;
 
+    private static string GetFileName(string path) => path[(path.LastIndexOf('/') + 1)..];
+
     private RenderFragment RenderSourceLinks(ApiSymbolModel symbol) => @<text>
         @{
             var locations = Site.SourceLinks.GetLocations(symbol);
         }
         @if (!locations.IsEmpty)
         {
-            @* Next to the heading, outside of it, so the heading text and its permalink stay the symbol name *@
+            @* For a member, next to the heading, outside of it, so the heading text and its permalink stay the symbol name *@
             <span class="source-links">
                 @foreach (var location in locations)
                 {
                     var isLine = location.Location.Precision is SourcePrecision.Line;
-                    var frameworks = locations.Length > 1 ? " (" + string.Join(", ", location.TargetFrameworks) + ")" : "";
-                    @* The GitHub icon is drawn by CSS; the accessible name contains the visible text *@
-                    <a class="source-link" href="@location.Location.Url" data-precision="@(isLine ? "line" : "file")" aria-label="@((isLine ? "Source code on GitHub" : "Source file on GitHub") + frameworks)" title="@(isLine ? "First line of the implementation; the declaration may be a few lines above" : "File containing the implementation")">@((isLine ? "code" : "file") + frameworks)</a>
+                    var text = GetFileName(location.Location.Path) + (locations.Length > 1 ? " (" + string.Join(", ", location.TargetFrameworks) + ")" : "");
+                    @* The GitHub icon is drawn by CSS; the accessible name starts with the visible text *@
+                    <a class="source-link" href="@location.Location.Url" data-precision="@(isLine ? "line" : "file")" aria-label="@(text + (isLine ? ", source code on GitHub" : ", source file on GitHub"))" title="@(location.Location.Path + (isLine ? ": first line of the implementation; the declaration may be a few lines above" : ": file containing the implementation"))">@text</a>
                 }
             </span>
         }

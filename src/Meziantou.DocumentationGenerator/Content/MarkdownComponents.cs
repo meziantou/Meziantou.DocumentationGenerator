@@ -23,7 +23,7 @@ internal static class MarkdownComponents
             new MarkdownComponent(MarkdownComponentKind.Command, string.Join("\n", ids.Select(id => $"dotnet package add {id}{FormatVersionOption(version)}")))),
         new("InstallDotnetTool", ["Id", "Version", "Local"], (ids, version, attributes) => CreateInstallDotnetTool(ids[0], version, attributes)),
         new("NuGetReference", ["Id", "Version"], (ids, version, _) =>
-            new MarkdownComponent(MarkdownComponentKind.PackageLink, ids[0], "https://www.nuget.org/packages/" + Uri.EscapeDataString(ids[0]) + (version is null ? "" : "/" + Uri.EscapeDataString(version.ToNormalizedString())))),
+            new MarkdownComponent(MarkdownComponentKind.PackageLink, ids[0], Links.LinkService.GetNuGetOrgPackageUrl(ids[0], version?.ToNormalizedString()))),
     }.ToFrozenDictionary(d => d.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

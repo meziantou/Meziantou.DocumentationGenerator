@@ -7,7 +7,7 @@
     }
     <dl class="api-metadata">
         <dt>Version</dt>
-        <dd>@Model.Package.Package.Metadata.Version.ToNormalizedString()</dd>
+        <dd><a href="@LinkService.GetNuGetOrgPackageUrl(Model.Id, Version)" class="nuget-link" rel="noopener" title="View @Model.Id @Version on nuget.org">@Version</a></dd>
     </dl>
     <table class="api-table">
         <thead><tr><th scope="col">Namespace</th><th scope="col">Types</th></tr></thead>
@@ -28,4 +28,6 @@
     public required string PackageId { get; set; }
 
     private ApiPackageModel Model => Site.GetPackageModel(PackageId);
+
+    private string Version => Model.Package.Package.Metadata.Version.ToNormalizedString();
 }
