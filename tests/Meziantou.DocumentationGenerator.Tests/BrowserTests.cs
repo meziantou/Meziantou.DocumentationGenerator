@@ -233,7 +233,9 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.False(await page.IsVisibleAsync("#sidebar"));
         Assert.Equal("false", await button.GetAttributeAsync("aria-expanded"));
         Assert.Equal("Expand table of contents", await button.GetAttributeAsync("aria-label"));
-        Assert.True((await page.Locator("main").BoundingBoxAsync())!.Width >= contentWidth + 200);
+        // The content uses the freed space, up to its maximum width
+        var contentMaxWidth = await page.EvaluateAsync<double>("() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--content-max-width')) * parseFloat(getComputedStyle(document.documentElement).fontSize)");
+        Assert.True((await page.Locator("main").BoundingBoxAsync())!.Width >= Math.Min(contentWidth + 200, contentMaxWidth));
         Assert.Equal(48, (await page.Locator(".sidebar-panel").BoundingBoxAsync())!.Width);
 
         await page.GotoAsync(fixture.RootServer.BaseUrl + "api/Contoso.Library.Client.html");

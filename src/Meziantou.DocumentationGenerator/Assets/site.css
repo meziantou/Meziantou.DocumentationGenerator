@@ -35,6 +35,8 @@
     /* The side columns grow with the viewport so long type and namespace names do not wrap */
     --sidebar-width: clamp(18rem, 22vw, 26rem);
     --page-toc-width: clamp(14rem, 16vw, 20rem);
+    /* Long lines are hard to read, so the main content stops growing past this width */
+    --content-max-width: 60rem;
 }
 
 :root[data-theme="dark"] {
@@ -220,8 +222,9 @@ button { cursor: pointer; }
 /* Layout */
 .site-body {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--page-toc-width);
-    grid-template-areas: "sidebar content toc";
+    /* The sidebar stays on the left; the content and "On this page" columns are centered in the remaining space */
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) minmax(0, var(--content-max-width)) var(--page-toc-width) minmax(0, 1fr);
+    grid-template-areas: "sidebar . content toc .";
     align-items: start;
 }
 
@@ -277,7 +280,7 @@ details[open] > .nav-toggle::before { transform: translateY(-0.15rem) rotate(135
 .page-toc a[aria-current="true"] { color: var(--color-link); border-left-color: var(--color-accent); }
 
 @media (max-width: 75rem) {
-    .site-body { grid-template-columns: var(--sidebar-width) minmax(0, 1fr); grid-template-areas: "sidebar content"; }
+    .site-body { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) minmax(0, var(--content-max-width)) minmax(0, 1fr); grid-template-areas: "sidebar . content ."; }
     .page-toc { display: none; }
 }
 
