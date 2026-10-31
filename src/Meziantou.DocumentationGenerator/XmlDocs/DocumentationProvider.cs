@@ -37,9 +37,9 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
                 var displayPath = group.Package.Package.Identity + "/" + entry;
                 var location = new DiagnosticLocation { Package = group.Package.Package.Identity, TargetFramework = model.TargetFramework, Assembly = model.Asset.AssemblyEntry };
                 using var stream = model.Asset.CompiledSource is { } compiled ? new MemoryStream(compiled.XmlDocumentation, writable: false) : archive.OpenRead(entry);
-                var file = XmlDocumentationFile.Load(stream, displayPath, diagnostics, location);
+                var file = XmlDocumentationFile.Load(stream, displayPath, GetDiagnostics(model), location);
                 _files[model] = file;
-                if (file is not null)
+                if (file is not null && !model.IsReference)
                 {
                     ReportUnmatchedEntries(model, file, location);
                 }
@@ -56,9 +56,15 @@ internal sealed class DocumentationProvider(DiagnosticBag diagnostics)
         {
             var file = GetFile(key.Model);
             var member = file?.Find(key.DocumentationId);
-            return member is null ? DocumentationComment.Empty with { Scope = key.Model.Scope } : DocumentationCommentParser.Parse(member, symbol, key.Model.Scope, file!.DisplayPath, diagnostics);
+            return member is null ? DocumentationComment.Empty with { Scope = key.Model.Scope } : DocumentationCommentParser.Parse(member, symbol, key.Model.Scope, file!.DisplayPath, GetDiagnostics(key.Model));
         });
     }
+
+    /// <summary>
+    /// Documentation quality issues of reference packages are not reported: their APIs are not published and their
+    /// authors are usually not the ones building the site.
+    /// </summary>
+    private DiagnosticBag GetDiagnostics(ApiAssemblyModel model) => model.IsReference ? new DiagnosticBag() : diagnostics;
 
     /// <summary>Replaces the documentation of a symbol, after inherited documentation and includes are resolved.</summary>
     public void SetComment(ApiAssemblyModel model, string documentationId, DocumentationComment comment) => _comments[(model, documentationId)] = comment;

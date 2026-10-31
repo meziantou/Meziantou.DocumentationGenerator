@@ -93,7 +93,7 @@ internal sealed class PackageDiscoverer(DiagnosticBag diagnostics)
 
                 var assemblyName = assemblyFileName[..^4];
                 var xml = FindXmlDocumentation(archive, assemblyEntry, assemblyName, framework, isReference);
-                if (xml is null)
+                if (xml is null && !package.Configuration.IsReference)
                 {
                     diagnostics.Report(DiagnosticDescriptors.MissingXmlDocumentation, $"No XML documentation file for '{assemblyEntry}'; API pages are generated without documentation", assetLocation);
                 }

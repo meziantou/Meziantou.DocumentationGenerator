@@ -45,7 +45,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         var key = model.Scope + "!" + symbol.DocumentationId + "@" + model.TargetFramework;
         if (stack.Contains(key, StringComparer.Ordinal) || stack.Count > MaxDepth)
         {
-            diagnostics.Report(DiagnosticDescriptors.InheritDocCycle, $"Inherited documentation forms a cycle: {string.Join(" -> ", stack.Append(key))}", Location(model, symbol));
+            Report(model, DiagnosticDescriptors.InheritDocCycle, $"Inherited documentation forms a cycle: {string.Join(" -> ", stack.Append(key))}", Location(model, symbol));
             return comment with { InheritDoc = null, InheritanceNote = "Inherited documentation forms a cycle." };
         }
 
@@ -95,7 +95,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
 
         if (source is not { } target)
         {
-            diagnostics.Report(DiagnosticDescriptors.InheritDocUnresolved, $"Cannot inherit the documentation of '{symbol.DocumentationId}': {description}", Location(model, symbol));
+            Report(model, DiagnosticDescriptors.InheritDocUnresolved, $"Cannot inherit the documentation of '{symbol.DocumentationId}': {description}", Location(model, symbol));
             return comment with { InheritDoc = null, InheritanceNote = $"Inherited documentation is not available ({description})." };
         }
 
@@ -105,7 +105,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             // Continue up the hierarchy when the direct source has no documentation of its own
             if (cref is null && inherited.InheritDoc is null)
             {
-                diagnostics.Report(DiagnosticDescriptors.InheritDocUnresolved, $"'{target.Symbol.DocumentationId}' has no documentation to inherit for '{symbol.DocumentationId}'", Location(model, symbol));
+                Report(model, DiagnosticDescriptors.InheritDocUnresolved, $"'{target.Symbol.DocumentationId}' has no documentation to inherit for '{symbol.DocumentationId}'", Location(model, symbol));
             }
 
             return comment with { InheritDoc = null, InheritanceNote = inherited.InheritanceNote ?? $"'{target.Symbol.DocumentationId}' has no documentation." };
@@ -118,7 +118,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             var selector = path.StartsWith("//", StringComparison.Ordinal) ? null : XmlSelector.TryParse(path.TrimStart('/'));
             if (selector is null)
             {
-                diagnostics.Report(DiagnosticDescriptors.UnsupportedSelector, $"The inheritdoc path '{path}' is not supported; supported paths are element steps with optional [@attribute='value'] predicates", Location(model, symbol));
+                Report(model, DiagnosticDescriptors.UnsupportedSelector, $"The inheritdoc path '{path}' is not supported; supported paths are element steps with optional [@attribute='value'] predicates", Location(model, symbol));
                 return comment with { InheritDoc = null, InheritanceNote = "Inherited documentation uses an unsupported path." };
             }
 
@@ -225,7 +225,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
 
                     if (interfaceMatches.Count > 1)
                     {
-                        diagnostics.Report(DiagnosticDescriptors.SeveralInheritanceCandidates, $"Several interfaces provide documentation for '{member.DocumentationId}'; '{interfaceMatches[0].Item2.DocumentationId}' is used", Location(model, member));
+                        Report(model, DiagnosticDescriptors.SeveralInheritanceCandidates, $"Several interfaces provide documentation for '{member.DocumentationId}'; '{interfaceMatches[0].Item2.DocumentationId}' is used", Location(model, member));
                     }
 
                     return interfaceMatches.Count > 0 ? interfaceMatches[0] : null;
@@ -463,7 +463,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             var location = Location(model, symbol);
             if (depth >= MaxIncludeDepth)
             {
-                diagnostics.Report(DiagnosticDescriptors.IncludeUnresolved, "Includes are nested too deeply", location);
+                Report(model, DiagnosticDescriptors.IncludeUnresolved, "Includes are nested too deeply", location);
                 include.Remove();
                 continue;
             }
@@ -472,7 +472,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             var selector = XmlSelector.TryParse(include.Attribute("path")?.Value);
             if (fileName is null || selector is null)
             {
-                diagnostics.Report(DiagnosticDescriptors.UnsupportedSelector, $"The include path '{include.Attribute("path")?.Value}' is not supported", location);
+                Report(model, DiagnosticDescriptors.UnsupportedSelector, $"The include path '{include.Attribute("path")?.Value}' is not supported", location);
                 include.Remove();
                 continue;
             }
@@ -482,14 +482,14 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             var actual = entry is null ? null : archive.FindEntry(entry);
             if (entry is null)
             {
-                diagnostics.Report(DiagnosticDescriptors.PathEscapesRoot, $"The included file '{fileName}' is outside the package", location);
+                Report(model, DiagnosticDescriptors.PathEscapesRoot, $"The included file '{fileName}' is outside the package", location);
                 include.Remove();
                 continue;
             }
 
             if (actual is null || archive.GetLength(actual) > MaxIncludeFileSize)
             {
-                diagnostics.Report(DiagnosticDescriptors.IncludeUnresolved, $"The included file '{fileName}' is not in the package or is too large", location);
+                Report(model, DiagnosticDescriptors.IncludeUnresolved, $"The included file '{fileName}' is not in the package or is too large", location);
                 include.Remove();
                 continue;
             }
@@ -503,7 +503,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             }
             catch (XmlException ex)
             {
-                diagnostics.Report(DiagnosticDescriptors.IncludeUnresolved, $"The included file '{fileName}' is not valid XML: {ex.Message}", location);
+                Report(model, DiagnosticDescriptors.IncludeUnresolved, $"The included file '{fileName}' is not valid XML: {ex.Message}", location);
                 include.Remove();
                 continue;
             }
@@ -511,7 +511,7 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
             var selected = selector.SelectFromDocument(document);
             if (selected.Count == 0)
             {
-                diagnostics.Report(DiagnosticDescriptors.IncludeUnresolved, $"The include path '{include.Attribute("path")?.Value}' selects nothing in '{fileName}'", location);
+                Report(model, DiagnosticDescriptors.IncludeUnresolved, $"The include path '{include.Attribute("path")?.Value}' selects nothing in '{fileName}'", location);
                 include.Remove();
                 continue;
             }
@@ -550,6 +550,18 @@ internal sealed class InheritanceResolver(ApiCatalog catalog, DocumentationProvi
         }
 
         return string.Join('/', segments);
+    }
+
+    /// <summary>
+    /// Reports a documentation issue of <paramref name="model"/>. Issues of reference packages are not reported, as their
+    /// APIs are not published; safety diagnostics are always reported.
+    /// </summary>
+    private void Report(ApiAssemblyModel model, DiagnosticDescriptor descriptor, string message, DiagnosticLocation location)
+    {
+        if (model.IsReference && !descriptor.IsSafetyCritical)
+            return;
+
+        diagnostics.Report(descriptor, message, location);
     }
 
     private static DiagnosticLocation Location(ApiAssemblyModel model, PublicApiSymbol symbol)
