@@ -19,7 +19,7 @@ internal static class MarkdownComponents
 
     private static readonly FrozenDictionary<string, Definition> Definitions = new Definition[]
     {
-        new("InstallNuGetPackage", ["Id", "Ids", "Version"], (ids, version, _) =>
+        new("InstallNuGetPackage", ["Id", "Version"], (ids, version, _) =>
             new MarkdownComponent(MarkdownComponentKind.Command, string.Join("\n", ids.Select(id => $"dotnet package add {id}{FormatVersionOption(version)}")))),
         new("InstallDotnetTool", ["Id", "Version", "Local"], (ids, version, attributes) => CreateInstallDotnetTool(ids[0], version, attributes)),
         new("NuGetReference", ["Id", "Version"], (ids, version, _) =>
@@ -97,27 +97,15 @@ internal static class MarkdownComponents
             }
         }
 
-        string[] ids;
-        if (attributes.TryGetValue("Ids", out var idsText))
+        if (!attributes.TryGetValue("Id", out var idText) || idText.Length == 0)
         {
-            if (attributes.ContainsKey("Id"))
-            {
-                error = $"<{definition.Name}> cannot declare both 'Id' and 'Ids'";
-                return true;
-            }
-
-            ids = idsText.Split(',', StringSplitOptions.TrimEntries);
+            error = $"<{definition.Name}> requires the 'Id' attribute";
+            return true;
         }
-        else
-        {
-            if (!attributes.TryGetValue("Id", out var id) || id.Length == 0)
-            {
-                error = $"<{definition.Name}> requires the 'Id' attribute";
-                return true;
-            }
 
-            ids = [id];
-        }
+        string[] ids = definition.Name == "InstallNuGetPackage"
+            ? idText.Split(',', StringSplitOptions.TrimEntries)
+            : [idText];
 
         foreach (var id in ids)
         {
