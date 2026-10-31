@@ -76,10 +76,10 @@ public sealed partial class DocumentationTests(InstalledToolFixture fixture)
         Assert.Equal(0, build.ExitCode, build.AllOutput);
         var output = temp.FullPath / "artifacts" / "site";
         Assert.Empty(SiteCrawler.Crawl(output, "/", siteUrl: null));
-        var greeter = await File.ReadAllTextAsync(output / "api" / "sample.library" / "Sample.Library.Greeter.html", cancellationToken);
+        var greeter = await File.ReadAllTextAsync(output / "api" / "Sample.Library.Greeter.html", cancellationToken);
         Assert.Contains("net10.0", greeter);
         Assert.Contains("net11.0", greeter);
-        var loud = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "sample.library" / "Sample.Library.LoudGreeter.html", cancellationToken));
+        var loud = HtmlDocumentLoader.Parse(await File.ReadAllTextAsync(output / "api" / "Sample.Library.LoudGreeter.html", cancellationToken));
         Assert.Equal("Returns a greeting using a custom salutation.", loud.GetElementById("Greet(System.String)")!.QuerySelector(".summary")!.TextContent!.Trim());
     }
 

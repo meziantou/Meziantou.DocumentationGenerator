@@ -4,9 +4,9 @@
     <p>The page you requested does not exist. It may have been moved or removed.</p>
     <ul>
         <li><a href="@Site.Links.HomeUrl">Go to the home page</a></li>
-        @foreach (var package in Site.Catalog.Packages.Where(p => !p.Namespaces.IsEmpty))
+        @if (Site.Catalog.HasApi)
         {
-            <li><a href="@Site.Links.GetPackageUrl(package.Id)">@package.Id API reference</a></li>
+            <li><a href="@Site.Links.ApiReferenceUrl">Go to the API reference</a></li>
         }
     </ul>
     <p>You can also use the search box at the top of the page.</p>

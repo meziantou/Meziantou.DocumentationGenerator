@@ -68,7 +68,8 @@ To install the tool globally instead, use `dotnet tool install --global Mezianto
 }
 ```
 
-Each package gets its own section in the API reference. The `docs` directory contains Markdown pages; `docs/index.md` is
+The API reference is organized by namespace, merging the namespaces of every package; each package also has a page
+listing its namespaces. The `docs` directory contains Markdown pages; `docs/index.md` is
 the home page and the folder structure of `docs` defines the navigation.
 
 ## Commands

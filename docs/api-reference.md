@@ -80,16 +80,19 @@ compiler-generated types. Use [`api.include` and `api.exclude`](configuration.md
 
 | Page | URL |
 | --- | --- |
-| Package API reference | `/api/{package}/`, where `{package}` is the lowercase package ID |
-| Namespace | `/api/{package}/namespaces/{Namespace}.html` |
-| Type | `/api/{package}/{Namespace}.{Type}.html`, generic arity as `-N` (`Tree-1.Node.html`) |
+| API reference | `/api/`: the namespaces of every package, then the packages |
+| Package | `/api/packages/{package}.html`, where `{package}` is the lowercase package ID |
+| Namespace | `/api/namespaces/{Namespace}.html`, listing the types of every package |
+| Type | `/api/{Namespace}.{Type}.html`, generic arity as `-N` (`Tree-1.Node.html`) |
 | Member | type page + `#` + the member part of the documentation ID (`#Send(System.String)`, `#%23ctor`) |
 | Overloads | type page + `#{Name}-overloads` |
 
-URLs only depend on package identifiers, namespaces and type names. They do not change when titles change, when the
-order of the inputs changes, or when target frameworks are added. Two types mapping to the same file (for instance in
-two assemblies of a package, or names differing only by case) are disambiguated with the assembly name, then a hash
-(`DG4004`); such URLs are only stable while the set of colliding types is unchanged.
+The API reference starts at the namespace: namespace and type URLs do not contain the package, and a namespace shared
+by several packages has a single page (with a Package column). URLs only depend on namespaces and type names (package
+identifiers for package pages). They do not change when titles change, when the order of the inputs changes, or when
+target frameworks are added. Two types mapping to the same file (for instance the same type in two packages, or names
+differing only by case) are disambiguated with the assembly name, then a hash (`DG4004`); such URLs are only stable
+while the set of colliding types is unchanged.
 
 ## Missing inputs
 

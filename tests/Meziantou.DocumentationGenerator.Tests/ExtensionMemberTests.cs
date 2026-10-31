@@ -126,7 +126,7 @@ public sealed class ExtensionMemberTests
     {
         await using var build = await BuildAsync();
 
-        Assert.Equal("<p>See <a href=\"/api/contoso.ext/Contoso.Ext.StringExtensions.html#string.Repeat(System.Int32)\"><code>string.Repeat</code></a>.</p>", RenderSummary(build, "T:Contoso.Ext.Consumer"));
+        Assert.Equal("<p>See <a href=\"/api/Contoso.Ext.StringExtensions.html#string.Repeat(System.Int32)\"><code>string.Repeat</code></a>.</p>", RenderSummary(build, "T:Contoso.Ext.Consumer"));
 
         var alias = GetComment(build, "M:Contoso.Ext.Consumer.RepeatAlias(System.String,System.Int32)");
         Assert.Equal("<p>Repeats <code class=\"paramref\">text</code> <code class=\"paramref\">times</code> times.</p>", RenderSummary(build, "M:Contoso.Ext.Consumer.RepeatAlias(System.String,System.Int32)"));
@@ -157,7 +157,7 @@ public sealed class ExtensionMemberTests
     {
         await using var site = await SiteBuilder.BuildAsync([CreatePackage()]);
         Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
-        var document = HtmlDocumentLoader.Parse(site.ReadFile("api/contoso.ext/Contoso.Ext.StringExtensions.html"));
+        var document = HtmlDocumentLoader.Parse(site.ReadFile("api/Contoso.Ext.StringExtensions.html"));
 
         // Extension properties are properties, with a single entry for the getter and the setter, and every member shows its receiver
         Assert.Equal(["Properties", "Methods"], document.QuerySelectorAll<Element>("article > section > h2").Select(h => h.TextContent));

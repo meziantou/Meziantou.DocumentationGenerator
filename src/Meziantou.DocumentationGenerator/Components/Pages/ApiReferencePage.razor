@@ -1,0 +1,38 @@
+@inject SiteRenderContext Site
+<SiteLayout Title="API reference" Description="@Description" PagePath="@RouteNames.ApiReferencePath" Headings="@Headings">
+    <h1>API reference</h1>
+    <h2 id="namespaces">Namespaces</h2>
+    <table class="api-table">
+        <thead><tr><th scope="col">Namespace</th><th scope="col">Types</th></tr></thead>
+        <tbody>
+            @foreach (var ns in Site.Catalog.Namespaces)
+            {
+                <tr>
+                    <td><a href="@Site.Links.GetNamespaceUrl(ns.Name)">@(ns.IsGlobal ? "Global namespace" : ns.Name)</a></td>
+                    <td>@ns.Types.Length</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <h2 id="packages">Packages</h2>
+    <table class="api-table">
+        <thead><tr><th scope="col">Package</th><th scope="col">Description</th></tr></thead>
+        <tbody>
+            @foreach (var package in Packages)
+            {
+                <tr>
+                    <td><a href="@Site.Links.GetPackageUrl(package.Id)">@package.Id</a></td>
+                    <td>@package.Description</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</SiteLayout>
+
+@code {
+    private IEnumerable<ApiPackageModel> Packages => Site.Catalog.Packages.Where(p => !p.Namespaces.IsEmpty);
+
+    private string Description => "API reference of " + string.Join(", ", Packages.Select(p => p.Id)) + ".";
+
+    private static IReadOnlyList<PageHeading> Headings => [new PageHeading(2, "namespaces", "Namespaces"), new PageHeading(2, "packages", "Packages")];
+}

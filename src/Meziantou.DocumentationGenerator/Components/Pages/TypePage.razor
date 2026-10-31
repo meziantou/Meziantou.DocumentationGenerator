@@ -7,7 +7,7 @@
         </div>
         <dl class="api-metadata">
             <dt>Namespace</dt>
-            <dd><a href="@Site.Links.GetNamespaceUrl(Type.Assembly.Package.Id, Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
+            <dd><a href="@Site.Links.GetNamespaceUrl(Type.Namespace)">@(Type.Namespace.Length == 0 ? "Global namespace" : Type.Namespace)</a></dd>
             @if (Type.Assembly.IsSourcePackage)
             {
                 <dt>Assembly</dt>
@@ -19,7 +19,7 @@
                 <dd>@(Type.Assembly.AssemblyName).dll</dd>
             }
             <dt>Package</dt>
-            <dd>@Type.Assembly.Package.Id @Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString()</dd>
+            <dd><a href="@Site.Links.GetPackageUrl(Type.Assembly.Package.Id)">@Type.Assembly.Package.Id</a> @Type.Assembly.Package.Package.Metadata.Version.ToNormalizedString()</dd>
             <dt>Available in package assets</dt>
             <dd>@RenderAvailability(Type)</dd>
             @if (DeclaringTypeUrl is not null)

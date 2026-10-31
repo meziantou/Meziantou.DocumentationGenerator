@@ -128,25 +128,39 @@ public sealed class NavigationTests
 
         var api = build.Context.Navigation.Root[^1];
         Assert.Equal("API reference", api.Title);
-        Assert.True(api.IsGroup);
-        var package = Assert.Single(api.Children);
-        Assert.Equal("Contoso.Library", package.Title);
-        Assert.Equal("package", package.Kind);
-        Assert.Equal("/docs/api/contoso.library/", package.Url);
-        Assert.Equal(package.Url, api.Url);
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], package.Children.Select(n => n.Title));
-        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], package.Children[1].Children.Select(n => n.Title));
+        Assert.False(api.IsGroup);
+        Assert.Equal("api", api.Kind);
+        Assert.Equal("/docs/api/", api.Url);
+        Assert.Equal("api/index.html", api.PagePath);
+
+        // Namespaces are the first level, without a package level
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], api.Children.Select(n => n.Title));
+        Assert.All(api.Children, n => Assert.Equal("namespace", n.Kind));
+        Assert.Equal("/docs/api/namespaces/Contoso.Library.Collections.html", api.Children[1].Url);
+        Assert.Equal(["Tree<T>", "Tree<T>.Node", "Tree<T>.Node.Child<TKey>"], api.Children[1].Children.Select(n => n.Title));
+    }
+
+    [Fact]
+    public async Task ApiReference_MergesNamespacesOfAllPackages()
+    {
+        var first = new TestPackageBuilder("Contoso.Guard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.Guard.dll", LinkServiceTests.Guard.Value.Assembly);
+        var second = new TestPackageBuilder("Contoso.OtherGuard", "1.0.0").AddFile("README.md", "x").AddFile("lib/net8.0/Contoso.OtherGuard.dll", LinkServiceTests.OtherGuard.Value.Assembly);
+        await using var build = await BuildAsync(packages: [first, second]);
+
+        var ns = Assert.Single(build.Context.Navigation.Root[^1].Children);
+        Assert.Equal("Utils", ns.Title);
+        Assert.Equal(["/docs/api/Utils.Guard--Contoso.Guard.html", "/docs/api/Utils.Guard--Contoso.OtherGuard.html"], ns.Children.Select(n => n.Url));
     }
 
     [Fact]
     public async Task ApiPages_UseTheSiteNavigation()
     {
         await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
-        var navigation = build.Context.Navigation.GetPageNavigation("api/contoso.library/Contoso.Library.Client.html");
+        var navigation = build.Context.Navigation.GetPageNavigation("api/Contoso.Library.Client.html");
 
         Assert.Equal(["Imaging", "Other", "API reference"], navigation.Sidebar.Select(n => n.Title));
-        Assert.Equal(["API reference", "Contoso.Library", "Contoso.Library", "Client"], navigation.ActiveTrail.Select(n => n.Title));
-        Assert.Equal(["Documentation", "API reference", "Contoso.Library", "Contoso.Library"], navigation.Breadcrumbs.Select(n => n.Title));
+        Assert.Equal(["API reference", "Contoso.Library", "Client"], navigation.ActiveTrail.Select(n => n.Title));
+        Assert.Equal(["Documentation", "API reference", "Contoso.Library"], navigation.Breadcrumbs.Select(n => n.Title));
         Assert.Null(navigation.Previous);
         Assert.Null(navigation.Next);
     }

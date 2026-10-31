@@ -14,6 +14,11 @@ internal sealed class ApiCatalog
     {
         Assemblies = assemblies;
         Packages = packages;
+        Namespaces = [.. packages
+            .SelectMany(p => p.Namespaces)
+            .GroupBy(ns => ns.Name, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g => new ApiNamespaceModel(g.Key, [.. g.SelectMany(ns => ns.Types).OrderBy(t => t.MetadataName, StringComparer.Ordinal).ThenBy(t => t.Assembly.Scope, StringComparer.Ordinal)]))];
         _symbolsByDocumentationId = new Dictionary<string, List<ApiSymbolModel>>(StringComparer.Ordinal);
         _symbolsByNameKey = new Dictionary<string, List<ApiSymbolModel>>(StringComparer.Ordinal);
         foreach (var assembly in assemblies)
@@ -38,6 +43,14 @@ internal sealed class ApiCatalog
     public ImmutableArray<ApiAssemblyGroup> Assemblies { get; }
     /// <summary>Published packages with an API, in configuration order.</summary>
     public ImmutableArray<ApiPackageModel> Packages { get; }
+
+    /// <summary>Namespaces of the published packages sorted ordinally, each merging the types of every package that contributes to it.</summary>
+    public ImmutableArray<ApiNamespaceModel> Namespaces { get; }
+
+    /// <summary><see langword="true"/> when at least one published package has an API.</summary>
+    public bool HasApi => !Namespaces.IsEmpty;
+
+    public ApiNamespaceModel? FindNamespace(string name) => Namespaces.FirstOrDefault(ns => string.Equals(ns.Name, name, StringComparison.Ordinal));
 
     /// <summary>Returns the symbols with the given documentation ID in every assembly, in assembly order.</summary>
     public IReadOnlyList<ApiSymbolModel> FindByDocumentationId(string documentationId)

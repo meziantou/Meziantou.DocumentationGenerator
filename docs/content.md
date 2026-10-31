@@ -120,8 +120,9 @@ generated HTML is validated afterwards: every internal `href`, `src` and fragmen
   namespaces.
 - `cref:M:Contoso.Json.JsonReader.Read`: without parameters, links to the overloads of the method.
 - `cref:Contoso.Collections.Tree{T}` or `cref:Contoso.Collections.Tree<T>.Node`: generic types.
-- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol. It also
-  applies to namespaces: `cref:Contoso.Json!N:Contoso` or `cref:Contoso.Json!Contoso`.
+- `cref:Contoso.Json!T:Utils.Guard`: restricts the lookup to a package when several packages define the symbol.
+  Namespaces have a single page for every package, so they never need a package; `cref:Contoso.Json!N:Contoso` is
+  accepted and only requires that the package contributes to the namespace.
 
 References are resolved first in the current assembly, then in the current package, then in every package. Several
 matches at the same level are ambiguous (`DG4002`); unresolved references are an error (`DG4001`). Symbols
@@ -178,9 +179,8 @@ slug: guides
   Other keys are ignored. It is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 - Without `_folder.yml` or without `title`, the title is the folder name without its number prefix (`03-Guides` →
   `Guides`) and `DG5011` is reported.
-- The last section is the generated API reference: an `API reference` group, linking to the API reference of the first
-  package, with one entry per package, in configuration order, linking to `api/{package}/index.html`, then its
-  namespaces and their types, sorted ordinally.
+- The last section is the generated API reference: an `API reference` entry, linking to `api/index.html`, with the
+  namespaces of every package and their types, sorted ordinally.
 - Previous and next links only go through authored pages.
 
 ## XML documentation

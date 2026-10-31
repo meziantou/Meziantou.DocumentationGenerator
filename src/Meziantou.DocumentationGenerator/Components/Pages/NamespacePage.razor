@@ -1,5 +1,5 @@
 @inject SiteRenderContext Site
-<SiteLayout Title="@Title" Description="@($"Types of the {DisplayName} namespace.")" PagePath="@RouteNames.GetNamespacePath(PackageId, Namespace)" Headings="@Headings">
+<SiteLayout Title="@Title" Description="@($"Types of the {DisplayName} namespace.")" PagePath="@RouteNames.GetNamespacePath(Namespace)" Headings="@Headings">
     <h1>@Title</h1>
     @if (Model.Types.IsEmpty)
     {
@@ -9,12 +9,25 @@
     {
         <h2 id="@group.Id">@group.Title</h2>
         <table class="api-table">
-            <thead><tr><th scope="col">Name</th><th scope="col">Description</th></tr></thead>
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    @if (HasSeveralPackages)
+                    {
+                        <th scope="col">Package</th>
+                    }
+                    <th scope="col">Description</th>
+                </tr>
+            </thead>
             <tbody>
                 @foreach (var type in group.Types)
                 {
                     <tr data-tfms="@string.Join(' ', type.Availability.TargetFrameworks)">
                         <td><a href="@Site.Links.GetUrl(type)">@type.DisplayName</a></td>
+                        @if (HasSeveralPackages)
+                        {
+                            <td><a href="@Site.Links.GetPackageUrl(type.Assembly.Package.Id)">@type.Assembly.Package.Id</a></td>
+                        }
                         <td>@Helper.Summary(type)</td>
                     </tr>
                 }
@@ -25,9 +38,6 @@
 
 @code {
     [Parameter, EditorRequired]
-    public required string PackageId { get; set; }
-
-    [Parameter, EditorRequired]
     public required string Namespace { get; set; }
 
     private ApiRenderHelper Helper => new(Site);
@@ -36,7 +46,10 @@
 
     private string Title => Namespace.Length == 0 ? "Global namespace" : Namespace + " namespace";
 
-    private ApiNamespaceModel Model => Site.GetPackageModel(PackageId).Namespaces.Single(n => n.Name == Namespace);
+    private ApiNamespaceModel Model => Site.Catalog.FindNamespace(Namespace)!;
+
+    /// <summary>The package of each type is only shown when several packages contribute to the namespace.</summary>
+    private bool HasSeveralPackages => Model.Types.Select(t => t.Assembly.Package.Id).Distinct(StringComparer.OrdinalIgnoreCase).Skip(1).Any();
 
     private IEnumerable<(string Id, string Title, IReadOnlyList<ApiTypeModel> Types)> Groups => Model.Types
         .GroupBy(ApiRenderHelper.GetTypeKind)
