@@ -48,7 +48,7 @@ public sealed class PublicationTests
               <p>  Some   text  <a href="/guides/a.html">link</a></p>
               <img src="/images/a.png">
             </body></html>
-            """, url => url.StartsWith('/') ? "." + url : url);
+            """, url => url.StartsWith('/', StringComparison.Ordinal) ? "." + url : url);
 
         Assert.Contains("href=\"./assets/site.css\"", html, StringComparison.Ordinal);
         Assert.Contains("<a href=\"./guides/a.html\">link</a>", html, StringComparison.Ordinal);
