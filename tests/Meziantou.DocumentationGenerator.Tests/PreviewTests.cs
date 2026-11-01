@@ -94,7 +94,7 @@ public sealed partial class PreviewTests
         using var client = new HttpClient();
         var html = await client.GetStringAsync(url, TestContext.Current.CancellationToken);
         Assert.Contains("First version", html, StringComparison.Ordinal);
-        Assert.EndsWith($"<script src=\"{PreviewServer.LiveReloadScriptPath}\"></script>", html, StringComparison.Ordinal);
+        Assert.Contains($"<script src=\"{PreviewServer.LiveReloadScriptPath}\"></script></body>", html, StringComparison.Ordinal);
         // The generated files are not modified
         Assert.DoesNotContain(PreviewServer.LiveReloadScriptPath, File.ReadAllText(temp.FullPath / "_site" / "index.html"), StringComparison.Ordinal);
 

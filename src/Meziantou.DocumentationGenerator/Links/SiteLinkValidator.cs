@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Meziantou.DocumentationGenerator.Diagnostics;
 
 namespace Meziantou.DocumentationGenerator.Links;
@@ -11,12 +12,40 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
 {
     private readonly Dictionary<string, HashSet<string>> _anchors = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _sourcePaths = new(StringComparer.Ordinal);
-    private readonly List<(string Page, string Href)> _links = [];
+    private readonly List<(string Page, LinkTarget[] Links)> _pageLinks = [];
+
+    // Most pages of a directory share the same links (e.g. the navigation), so a link is resolved once per directory
+    private readonly ConcurrentDictionary<(string Directory, string Href), LinkTarget> _targets = new();
     private readonly Lock _lock = new();
 
     /// <param name="sourcePath">Display path of the file the page is generated from, such as an authored Markdown file.</param>
     public void AddFile(string filePath, IEnumerable<string> anchorIds, IEnumerable<string> hrefs, string? sourcePath = null)
     {
+        var anchors = new HashSet<string>(StringComparer.Ordinal);
+        List<string>? duplicates = null;
+        foreach (var id in anchorIds)
+        {
+            if (!anchors.Add(id))
+            {
+                (duplicates ??= []).Add(id);
+            }
+        }
+
+        var pageUrl = urls.GetUrl(filePath);
+        var directory = pageUrl[..(pageUrl.LastIndexOf('/', StringComparison.Ordinal) + 1)];
+        var targets = new HashSet<LinkTarget>(ReferenceEqualityComparer.Instance);
+        foreach (var href in hrefs)
+        {
+            // An anchor of the page does not depend on the directory, and a query is relative to the page itself
+            var key = href.StartsWith('#', StringComparison.Ordinal) ? ("", href) : href.StartsWith('?', StringComparison.Ordinal) ? (pageUrl, href) : (directory, href);
+            if (!_targets.TryGetValue(key, out var target))
+            {
+                target = _targets.GetOrAdd(key, Resolve(key.Item1, href));
+            }
+
+            targets.Add(target);
+        }
+
         lock (_lock)
         {
             if (sourcePath is not null)
@@ -24,20 +53,16 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
                 _sourcePaths[filePath] = sourcePath;
             }
 
-            var anchors = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var id in anchorIds)
+            if (duplicates is not null)
             {
-                if (!anchors.Add(id))
+                foreach (var id in duplicates)
                 {
                     diagnostics.Report(DiagnosticDescriptors.DuplicateAnchor, $"The identifier '{id}' is used more than once in '{filePath}'", GetLocation(filePath));
                 }
             }
 
             _anchors[filePath] = anchors;
-            foreach (var href in hrefs)
-            {
-                _links.Add((filePath, href));
-            }
+            _pageLinks.Add((filePath, [.. targets]));
         }
     }
 
@@ -45,12 +70,16 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
     {
         lock (_lock)
         {
-            foreach (var (page, href) in _links.Distinct().OrderBy(l => l.Page, StringComparer.Ordinal).ThenBy(l => l.Href, StringComparer.Ordinal))
+            // The diagnostic bag sorts the diagnostics, so the pages can be validated in any order
+            foreach (var (page, targets) in _pageLinks)
             {
-                var error = GetError(page, href);
-                if (error is not null)
+                foreach (var target in targets)
                 {
-                    diagnostics.Report(DiagnosticDescriptors.BrokenLink, $"Broken link '{href}' in '{page}': {error}", GetLocation(page));
+                    var error = GetError(page, target);
+                    if (error is not null)
+                    {
+                        diagnostics.Report(DiagnosticDescriptors.BrokenLink, $"Broken link '{target.Href}' in '{page}': {error}", GetLocation(page));
+                    }
                 }
             }
         }
@@ -58,34 +87,50 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
 
     private DiagnosticLocation GetLocation(string filePath) => new() { FilePath = _sourcePaths.GetValueOrDefault(filePath, filePath) };
 
-    private string? GetError(string page, string href)
+    private string? GetError(string page, LinkTarget target)
+    {
+        if (target.Error is not null)
+            return target.Error;
+
+        if (target.FilePath is null)
+            return target.Fragment is null ? null : CheckAnchor(page, target.Fragment);
+
+        if (!_anchors.ContainsKey(target.FilePath))
+            return $"'{target.FilePath}' is not generated";
+
+        return target.Fragment is null ? null : CheckAnchor(target.FilePath, target.Fragment);
+    }
+
+    /// <summary>Resolves a link of a page; the result does not depend on the other generated files.</summary>
+    /// <param name="baseUrl">The URL of the page, or of its directory (ending with a slash) when the link does not depend on the file name.</param>
+    private LinkTarget Resolve(string baseUrl, string href)
     {
         if (href.Length == 0)
-            return "empty link";
+            return LinkTarget.Invalid(href, "empty link");
 
         if (href.StartsWith('#', StringComparison.Ordinal))
-            return CheckAnchor(page, Uri.UnescapeDataString(href[1..]));
+            return new LinkTarget(href, Error: null, FilePath: null, Uri.UnescapeDataString(href[1..]));
 
         if (Uri.TryCreate(href, UriKind.Absolute, out var absolute) && !href.StartsWith('/', StringComparison.Ordinal))
         {
-            return absolute.Scheme is "http" or "https" or "mailto" ? null : $"the scheme '{absolute.Scheme}' is not allowed";
+            return absolute.Scheme is "http" or "https" or "mailto" ? LinkTarget.External(href) : LinkTarget.Invalid(href, $"the scheme '{absolute.Scheme}' is not allowed");
         }
 
-        if (!href.StartsWith('/', StringComparison.Ordinal))
+        var url = href;
+        if (!url.StartsWith('/', StringComparison.Ordinal))
         {
-            var pageUrl = new Uri("https://docgen.invalid" + urls.GetUrl(page));
-            if (!Uri.TryCreate(pageUrl, href, out var resolved))
-                return "invalid relative URL";
+            if (!Uri.TryCreate(new Uri("https://docgen.invalid" + baseUrl), url, out var resolved))
+                return LinkTarget.Invalid(href, "invalid relative URL");
 
-            href = resolved.PathAndQuery + resolved.Fragment;
+            url = resolved.PathAndQuery + resolved.Fragment;
         }
 
-        if (href.StartsWith("//", StringComparison.Ordinal))
-            return null;
+        if (url.StartsWith("//", StringComparison.Ordinal))
+            return LinkTarget.External(href);
 
-        var (path, fragment) = Split(href);
+        var (path, fragment) = Split(url);
         if (!path.StartsWith(urls.BasePath.Value, StringComparison.Ordinal))
-            return $"the link is outside the base path '{urls.BasePath.Value}'";
+            return LinkTarget.Invalid(href, $"the link is outside the base path '{urls.BasePath.Value}'");
 
         var filePath = Uri.UnescapeDataString(path[urls.BasePath.Value.Length..]);
         if (filePath.Length == 0 || filePath.EndsWith('/', StringComparison.Ordinal))
@@ -93,10 +138,7 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
             filePath += "index.html";
         }
 
-        if (!_anchors.ContainsKey(filePath))
-            return $"'{filePath}' is not generated";
-
-        return fragment is null ? null : CheckAnchor(filePath, fragment);
+        return new LinkTarget(href, Error: null, filePath, fragment);
     }
 
     private string? CheckAnchor(string filePath, string anchor)
@@ -124,5 +166,14 @@ internal sealed class SiteLinkValidator(UrlBuilder urls, DiagnosticBag diagnosti
         }
 
         return (href, fragment);
+    }
+
+    /// <summary>A resolved link: an error found without the other generated files, or the file and the anchor it targets.</summary>
+    /// <param name="FilePath">The targeted file, or <see langword="null"/> for an anchor of the page or an external link.</param>
+    private sealed record LinkTarget(string Href, string? Error, string? FilePath, string? Fragment)
+    {
+        public static LinkTarget Invalid(string href, string error) => new(href, error, FilePath: null, Fragment: null);
+
+        public static LinkTarget External(string href) => new(href, Error: null, FilePath: null, Fragment: null);
     }
 }

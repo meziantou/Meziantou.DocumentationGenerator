@@ -9,6 +9,8 @@ namespace Meziantou.DocumentationGenerator.Links;
 /// </summary>
 internal sealed class UrlBuilder(UrlBasePath basePath)
 {
+    private static readonly System.Buffers.SearchValues<char> SafePathCharacters = System.Buffers.SearchValues.Create("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/");
+
     public UrlBasePath BasePath { get; } = basePath;
 
     public string GetUrl(string filePath, string? fragment = null, string? query = null)
@@ -43,9 +45,10 @@ internal sealed class UrlBuilder(UrlBasePath basePath)
         if (!url.StartsWith(BasePath.Value, StringComparison.Ordinal) || url.StartsWith("//", StringComparison.Ordinal))
             return url;
 
-        var target = url[BasePath.Value.Length..];
-        var suffixIndex = target.IndexOfAny(['?', '#']);
-        var suffix = suffixIndex < 0 ? "" : target[suffixIndex..];
+        // Called for every link of every page: the result is built without intermediate strings
+        var target = url.AsSpan(BasePath.Value.Length);
+        var suffixIndex = target.IndexOfAny('?', '#');
+        var suffix = suffixIndex < 0 ? [] : target[suffixIndex..];
         var targetPath = suffixIndex < 0 ? target : target[..suffixIndex];
         var directoryEnd = filePath.LastIndexOf('/', StringComparison.Ordinal);
         var directory = directoryEnd < 0 ? "" : EncodePath(filePath[..(directoryEnd + 1)]);
@@ -58,13 +61,21 @@ internal sealed class UrlBuilder(UrlBasePath basePath)
             }
         }
 
-        var relative = string.Concat(Enumerable.Repeat("../", directory[commonLength..].Count(c => c == '/'))) + targetPath[commonLength..];
-        if (relative.Length == 0)
-        {
-            relative = "./";
-        }
+        var depth = directory.AsSpan(commonLength).Count('/');
+        var rest = targetPath[commonLength..];
+        if (depth == 0 && rest.IsEmpty)
+            return string.Concat("./", suffix);
 
-        return relative + suffix;
+        var length = (depth * 3) + rest.Length + suffix.Length;
+        return string.Create(length, (depth, url, Offset: url.Length - rest.Length - suffix.Length), static (span, state) =>
+        {
+            for (var i = 0; i < state.depth; i++)
+            {
+                "../".CopyTo(span[(i * 3)..]);
+            }
+
+            state.url.AsSpan(state.Offset).CopyTo(span[(state.depth * 3)..]);
+        });
     }
 
     /// <summary>Returns the absolute URL of a page, or <see langword="null"/> when no site URL is configured.</summary>
@@ -78,6 +89,9 @@ internal sealed class UrlBuilder(UrlBasePath basePath)
 
     public static string EncodePath(string path)
     {
+        if (!path.AsSpan().ContainsAnyExcept(SafePathCharacters))
+            return path;
+
         var builder = new StringBuilder(path.Length);
         foreach (var rune in path.EnumerateRunes())
         {

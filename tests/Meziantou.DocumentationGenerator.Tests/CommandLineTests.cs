@@ -154,7 +154,7 @@ public sealed class CommandLineTests
                 "title": "CLI title", "description": "CLI description", "language": "fr", "basePath": "/docs/",
                 "url": "https://example.com", "logo": "logo.png", "favicon": "favicon.ico", "socialImage": "social.png",
                 "robots": "disallow", "footer": "CLI footer",
-                "headerLinks": [{"text":"GitHub","url":"https://github.com","icon":"GH"}]
+                "headerLinks": [{"text":"GitHub","url":"https://github.com","icon":"GH"}], "minifyHtml": true
               },
               "output": "output", "cacheDirectory": "cache",
               "packages": [{"id":"Contoso","version":"1.0","source":"https://example.com/v3/index.json","path":"packages",
@@ -175,7 +175,7 @@ public sealed class CommandLineTests
             "--site-base-path", "/docs/", "--site-url", "https://example.com", "--site-logo", "logo.png",
             "--site-favicon", "favicon.ico", "--site-social-image", "social.png", "--site-robots", "disallow",
             "--site-footer", "CLI footer", "--site-header-links", """[{"text":"GitHub","url":"https://github.com","icon":"GH"}]""",
-            "--output", "output", "--cache-directory", "cache",
+            "--site-minify-html", "true", "--output", "output", "--cache-directory", "cache",
             "--packages", """[{"id":"Contoso","version":"1.0","source":"https://example.com/v3/index.json","path":"packages","targetFrameworks":["net8.0"],"assemblies":["Contoso.dll"],"defineConstants":["CUSTOM"]}]""",
             "--references", """[{"id":"Reference","version":"2.*","source":"local","path":"refs","targetFrameworks":["net9.0"],"assemblies":["Reference.dll"],"defineConstants":["REFERENCE"]}]""",
             "--content-root", "pages", "--content-assets", """["CNAME"]""", "--content-exclude", """["**/AGENTS.md"]""",

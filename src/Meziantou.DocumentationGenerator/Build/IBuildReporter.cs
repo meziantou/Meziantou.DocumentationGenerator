@@ -7,5 +7,8 @@ internal interface IBuildReporter
 
     void StageCompleted(string name, TimeSpan duration);
 
+    /// <summary>Reports a progress or timing message shown with the normal verbosity.</summary>
+    void Info(string message);
+
     void Verbose(string message);
 }

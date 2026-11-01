@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using System.Globalization;
+using System.Runtime.ExceptionServices;
+using System.Threading.Channels;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
@@ -61,48 +62,89 @@ internal sealed class RenderStage : IBuildStage
             SocialImageUrl = socialImage,
         };
 
-        // Components use shared site services, so render them sequentially to keep diagnostics deterministic.
+        // Components use shared site services, so they are rendered sequentially to keep diagnostics deterministic. The
+        // other steps of a page (link extraction, minification, writing) are independent and run on the other cores.
         await using var renderer = new RazorRenderer(services => services.AddSingleton(site));
         var minifier = new HtmlMinifier(styleSheet);
+        var minifyHtml = context.Configuration.Site.MinifyHtml;
         var sourcePaths = context.Content.Pages.ToDictionary(p => p.Route.FilePath, p => p.DisplayPath, StringComparer.Ordinal);
-        var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 4), CancellationToken = cancellationToken };
-        var renderingTime = TimeSpan.Zero;
-        var linkExtractionTime = TimeSpan.Zero;
-        var minificationTime = TimeSpan.Zero;
-        var writingTime = TimeSpan.Zero;
-        // Bound the number of HTML documents in memory; only minification is independent of the shared site services.
-        foreach (var pages in SitePageCatalog.GetPages(site).Chunk(parallelOptions.MaxDegreeOfParallelism))
+        var pages = SitePageCatalog.GetPages(site).ToArray();
+        var statistics = new RenderStatistics(pages) { MinifyHtml = minifyHtml };
+        var workerCount = Environment.ProcessorCount;
+
+        // Bound the number of HTML documents in memory
+        var channel = Channel.CreateBounded<int>(new BoundedChannelOptions(workerCount * 2) { SingleWriter = true });
+        var htmlPages = new string?[pages.Length];
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var stageStarted = Stopwatch.GetTimestamp();
+        var producer = Task.Run(async () =>
         {
-            var htmlPages = new string[pages.Length];
-            for (var i = 0; i < pages.Length; i++)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var page = pages[i];
-                var renderStarted = Stopwatch.GetTimestamp();
-                var html = await renderer.RenderAsync(page.Component, page.Parameters);
-                htmlPages[i] = html.ReplaceLineEndings("\n");
-                renderingTime += Stopwatch.GetElapsedTime(renderStarted);
+                for (var i = 0; i < pages.Length; i++)
+                {
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    var page = pages[i];
+                    var started = Stopwatch.GetTimestamp();
+                    var html = await renderer.RenderAsync(page.Component, page.Parameters);
+                    htmlPages[i] = html.ReplaceLineEndings("\n");
+                    statistics.Pages[i].Rendering = Stopwatch.GetElapsedTime(started);
+                    await channel.Writer.WriteAsync(i, cancellation.Token);
+                }
 
-                // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
-                var extractionStarted = Stopwatch.GetTimestamp();
-                validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(htmlPages[i]), HtmlLinkExtractor.GetLinks(htmlPages[i]).Select(url => links.Urls.GetRelativeUrl(page.FilePath, url)), sourcePaths.GetValueOrDefault(page.FilePath));
-                linkExtractionTime += Stopwatch.GetElapsedTime(extractionStarted);
+                channel.Writer.Complete();
             }
+            catch (Exception ex)
+            {
+                channel.Writer.Complete(ex);
+                throw;
+            }
+        }, cancellation.Token);
 
+        var consumer = Parallel.ForEachAsync(channel.Reader.ReadAllAsync(cancellation.Token), new ParallelOptions { MaxDegreeOfParallelism = workerCount, CancellationToken = cancellation.Token }, (i, _) =>
+        {
+            var page = pages[i];
+            var html = htmlPages[i]!;
+            htmlPages[i] = null;
+            ref var timing = ref statistics.Pages[i];
+
+            // Links are extracted from the rendered markup: the minified markup may omit the quotes of attribute values
             var started = Stopwatch.GetTimestamp();
-            Parallel.For(0, pages.Length, parallelOptions, i => htmlPages[i] = minifier.Minify(htmlPages[i], url => links.Urls.GetRelativeUrl(pages[i].FilePath, url)));
-            minificationTime += Stopwatch.GetElapsedTime(started);
-            started = Stopwatch.GetTimestamp();
-            for (var i = 0; i < pages.Length; i++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                staging.WriteText(pages[i].FilePath, htmlPages[i]);
-            }
+            validator.AddFile(page.FilePath, HtmlLinkExtractor.GetIds(html), HtmlLinkExtractor.GetLinks(html).Select(url => links.Urls.GetRelativeUrl(page.FilePath, url)), sourcePaths.GetValueOrDefault(page.FilePath));
+            timing.LinkExtraction = Stopwatch.GetElapsedTime(started);
 
-            writingTime += Stopwatch.GetElapsedTime(started);
+            started = Stopwatch.GetTimestamp();
+            string RewriteUrl(string url) => links.Urls.GetRelativeUrl(page.FilePath, url);
+            var minified = minifyHtml ? minifier.Minify(html, RewriteUrl) : HtmlMinifier.RewriteUrls(html, RewriteUrl);
+            timing.Minification = Stopwatch.GetElapsedTime(started);
+
+            started = Stopwatch.GetTimestamp();
+            staging.WriteText(page.FilePath, minified);
+            timing.Writing = Stopwatch.GetElapsedTime(started);
+            timing.RenderedSize = html.Length;
+            timing.MinifiedSize = minified.Length;
+            return ValueTask.CompletedTask;
+        });
+
+        try
+        {
+            await consumer;
+        }
+        catch
+        {
+            // Stop rendering, and report the rendering failure rather than the closed channel
+            await cancellation.CancelAsync();
+            await producer.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            if (producer.Exception?.InnerException is { } producerException && producerException is not OperationCanceledException)
+                ExceptionDispatchInfo.Throw(producerException);
+
+            throw;
         }
 
-        context.Reporter.Verbose(string.Create(CultureInfo.InvariantCulture, $"Page rendering: components {renderingTime.TotalMilliseconds:F0} ms; link extraction {linkExtractionTime.TotalMilliseconds:F0} ms; minification {minificationTime.TotalMilliseconds:F0} ms; writing {writingTime.TotalMilliseconds:F0} ms"));
+        await producer;
+        statistics.Elapsed = Stopwatch.GetElapsedTime(stageStarted);
+        statistics.WorkerCount = workerCount;
+        statistics.Report(context.Reporter);
 
         // The search index lists URLs relative to the base path; they are validated like links
         var indexPath = LinkService.AssetsDirectory + "/" + Search.SearchIndexBuilder.FileName;

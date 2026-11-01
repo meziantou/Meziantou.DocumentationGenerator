@@ -15,9 +15,17 @@ internal sealed class ConsoleBuildReporter(TextWriter output, Verbosity verbosit
 
     public void StageCompleted(string name, TimeSpan duration)
     {
-        if (verbosity >= Verbosity.Detailed)
+        if (verbosity >= Verbosity.Normal)
         {
-            output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{name} completed in {duration.TotalMilliseconds:F0} ms"));
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{name} completed in {BuildDuration.Format(duration)}"));
+        }
+    }
+
+    public void Info(string message)
+    {
+        if (verbosity >= Verbosity.Normal)
+        {
+            output.WriteLine(message);
         }
     }
 

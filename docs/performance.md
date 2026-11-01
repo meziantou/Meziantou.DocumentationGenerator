@@ -18,11 +18,19 @@ namespaces of a package.
 
 ## Page rendering
 
-Components are rendered sequentially to keep access to shared site services and diagnostic ordering deterministic.
-Each page's Razor renderer is disposed after its HTML is captured, so component trees do not accumulate for the entire
-site. HTML minification runs in batches of at most four pages (limited by the available processor count). Link extraction
-and output writes remain sequential, and the number of HTML documents being minified at once is bounded.
+Components are rendered sequentially to keep access to shared site services deterministic. Each page's Razor renderer
+is disposed after its HTML is captured, so component trees do not accumulate for the entire site. The other steps of a
+page (link extraction, URL rewriting, minification and file writing) are independent: they run on one thread per processor while the
+next pages are rendered, and the number of HTML documents waiting for them is bounded. The tool uses the server garbage
+collector, as these steps allocate a lot on several threads.
 
-Run `Meziantou.DocumentationGenerator build --verbosity detailed` to see stage durations and the page-rendering breakdown:
-component rendering, link extraction, minification, and file writing. Minification time is elapsed time for the batches,
-not the sum of worker times.
+Minification is disabled by default (`site.minifyHtml`). It is the most expensive step: it computes the styles of
+every element to know which whitespace can be removed, and only makes the pages about 10% smaller. Without it, pages
+are still parsed to make their URLs relative.
+
+Links are validated once per directory: the pages of a directory share most of their links (e.g. the navigation), so a
+link is resolved once and each page only keeps a reference to it.
+
+The build prints the duration of each stage and a breakdown of the page rendering: the time spent in each step for each
+kind of page (summed across threads), the size of the rendered and written markup, and the slowest pages. Use
+`--verbosity minimal` to hide them.
