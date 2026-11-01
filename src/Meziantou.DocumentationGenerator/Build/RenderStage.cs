@@ -66,9 +66,10 @@ internal sealed class RenderStage : IBuildStage
         // other steps of a page (link extraction, minification, writing) are independent and run on the other cores.
         await using var renderer = new RazorRenderer(services => services.AddSingleton(site));
         var minifier = new HtmlMinifier(styleSheet);
+        var minifyHtml = context.Configuration.Site.MinifyHtml;
         var sourcePaths = context.Content.Pages.ToDictionary(p => p.Route.FilePath, p => p.DisplayPath, StringComparer.Ordinal);
         var pages = SitePageCatalog.GetPages(site).ToArray();
-        var statistics = new RenderStatistics(pages);
+        var statistics = new RenderStatistics(pages) { MinifyHtml = minifyHtml };
         var workerCount = Environment.ProcessorCount;
 
         // Bound the number of HTML documents in memory
@@ -113,7 +114,8 @@ internal sealed class RenderStage : IBuildStage
             timing.LinkExtraction = Stopwatch.GetElapsedTime(started);
 
             started = Stopwatch.GetTimestamp();
-            var minified = minifier.Minify(html, url => links.Urls.GetRelativeUrl(page.FilePath, url));
+            string RewriteUrl(string url) => links.Urls.GetRelativeUrl(page.FilePath, url);
+            var minified = minifyHtml ? minifier.Minify(html, RewriteUrl) : HtmlMinifier.RewriteUrls(html, RewriteUrl);
             timing.Minification = Stopwatch.GetElapsedTime(started);
 
             started = Stopwatch.GetTimestamp();

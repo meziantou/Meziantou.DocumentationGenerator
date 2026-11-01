@@ -80,6 +80,9 @@ internal sealed class ConfigurationFile
 
         [Description("Links displayed on the right side of the header.")]
         public List<HeaderLinkSection>? HeaderLinks { get; set; }
+
+        [Description("Minify the generated HTML pages. Pages are about 10% smaller, but the build is slower. Default: false.")]
+        public bool? MinifyHtml { get; set; }
     }
 
     internal sealed class HeaderLinkSection

@@ -298,6 +298,7 @@ internal static partial class ConfigurationLoader
                 Robots = robots,
                 Footer = section.Footer,
                 HeaderLinks = ValidateHeaderLinks(section.HeaderLinks),
+                MinifyHtml = section.MinifyHtml ?? Default("$.site.minifyHtml", value: false),
             };
         }
 

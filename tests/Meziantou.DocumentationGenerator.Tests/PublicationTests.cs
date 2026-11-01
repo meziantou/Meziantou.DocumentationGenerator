@@ -39,6 +39,24 @@ public sealed class PublicationTests
     }
 
     [Fact]
+    public void RewriteUrls_RewritesUrlAttributesWithoutMinifying()
+    {
+        var html = HtmlMinifier.RewriteUrls("""
+            <!DOCTYPE html>
+            <html><head><link rel="stylesheet" href="/assets/site.css"></head>
+            <body>
+              <p>  Some   text  <a href="/guides/a.html">link</a></p>
+              <img src="/images/a.png">
+            </body></html>
+            """, url => url.StartsWith('/') ? "." + url : url);
+
+        Assert.Contains("href=\"./assets/site.css\"", html, StringComparison.Ordinal);
+        Assert.Contains("<a href=\"./guides/a.html\">link</a>", html, StringComparison.Ordinal);
+        Assert.Contains("src=\"./images/a.png\"", html, StringComparison.Ordinal);
+        Assert.Contains("<p>  Some   text  ", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ParallelMinification_IsByteIdenticalToSequentialMinification()
     {
         var minifier = new HtmlMinifier("""

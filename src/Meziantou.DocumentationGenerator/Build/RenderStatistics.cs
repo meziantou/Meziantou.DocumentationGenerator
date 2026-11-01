@@ -16,18 +16,21 @@ internal sealed class RenderStatistics(IReadOnlyList<PageRequest> pages)
 
     public int WorkerCount { get; set; }
 
+    public bool MinifyHtml { get; set; }
+
     public void Report(IBuildReporter reporter)
     {
         if (Pages.Length == 0)
             return;
 
         var total = Sum(Pages);
+        var postProcessing = MinifyHtml ? "minification" : "URL rewriting";
         reporter.Info(Format($"  {Pages.Length} pages rendered in {BuildDuration.Format(Elapsed)}; Razor rendering is sequential, the other steps run on {WorkerCount} thread(s)"));
-        reporter.Info(Format($"  Cumulative time: Razor rendering {BuildDuration.Format(total.Rendering)}, link extraction {BuildDuration.Format(total.LinkExtraction)}, minification {BuildDuration.Format(total.Minification)}, writing {BuildDuration.Format(total.Writing)}"));
-        reporter.Info(Format($"  Output size: {FormatSize(total.RenderedSize)} rendered, {FormatSize(total.MinifiedSize)} minified"));
+        reporter.Info(Format($"  Cumulative time: Razor rendering {BuildDuration.Format(total.Rendering)}, link extraction {BuildDuration.Format(total.LinkExtraction)}, {postProcessing} {BuildDuration.Format(total.Minification)}, writing {BuildDuration.Format(total.Writing)}"));
+        reporter.Info(Format($"  Output size: {FormatSize(total.RenderedSize)} rendered, {FormatSize(total.MinifiedSize)} written{(MinifyHtml ? " (minified)" : "")}"));
 
         var table = new StringBuilder();
-        table.AppendLine("  Page kind          Pages   Rendering  Link extraction  Minification   Writing  Avg. size");
+        table.AppendLine(Format($"  Page kind          Pages   Rendering  Link extraction  {(MinifyHtml ? "Minification" : "URL rewriting"),13}   Writing  Avg. size"));
         foreach (var group in Enumerable.Range(0, Pages.Length).GroupBy(i => pages[i].Component.Name, StringComparer.Ordinal).OrderByDescending(g => Sum(g.Select(i => Pages[i])).Total))
         {
             var sum = Sum(group.Select(i => Pages[i]));
@@ -79,7 +82,7 @@ internal sealed class RenderStatistics(IReadOnlyList<PageRequest> pages)
         public TimeSpan Minification;
         public TimeSpan Writing;
 
-        /// <summary>The number of characters of the rendered and minified markup.</summary>
+        /// <summary>The number of characters of the rendered and written markup.</summary>
         public long RenderedSize;
         public long MinifiedSize;
 

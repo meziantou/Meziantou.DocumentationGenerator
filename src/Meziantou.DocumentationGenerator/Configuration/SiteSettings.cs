@@ -18,4 +18,7 @@ internal sealed class SiteSettings
     public required RobotsPolicy Robots { get; init; }
     public string? Footer { get; init; }
     public required ImmutableArray<SiteHeaderLink> HeaderLinks { get; init; }
+
+    /// <summary>Minify the generated pages. Minification is the slowest step of the rendering.</summary>
+    public bool MinifyHtml { get; init; }
 }
