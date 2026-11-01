@@ -9,6 +9,8 @@
     <Description>Generate a fully static documentation site from NuGet packages and Markdown pages.</Description>
     <PackageTags>documentation;docfx;api-reference;static-site;nuget</PackageTags>
     <SearchReadmeFileAbove>true</SearchReadmeFileAbove>
+    <!-- Rendering allocates a lot on several threads; the workstation GC pauses them all and makes it about 2x slower -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="Assets\**\*" LogicalName="assets/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />

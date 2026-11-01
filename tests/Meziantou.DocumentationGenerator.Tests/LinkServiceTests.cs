@@ -318,6 +318,25 @@ public sealed class LinkServiceTests
     }
 
     [Fact]
+    public void LinkValidator_ReportsSharedLinksForEachPage()
+    {
+        var diagnostics = new DiagnosticBag();
+        var validator = new SiteLinkValidator(new UrlBuilder(UrlBasePath.Parse("/docs/")), diagnostics);
+        validator.AddFile("guides/a.html", ["a"], ["missing.html", "?q=1#a", "#a"]);
+        validator.AddFile("guides/b.html", ["b"], ["missing.html", "?q=1#a", "#a"]);
+        validator.Validate();
+
+        var messages = diagnostics.GetDiagnostics().Select(d => d.Message).Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(
+            [
+                "Broken link '#a' in 'guides/b.html': 'guides/b.html' has no element with the identifier 'a'",
+                "Broken link '?q=1#a' in 'guides/b.html': 'guides/b.html' has no element with the identifier 'a'",
+                "Broken link 'missing.html' in 'guides/a.html': 'guides/missing.html' is not generated",
+                "Broken link 'missing.html' in 'guides/b.html': 'guides/missing.html' is not generated",
+            ], messages);
+    }
+
+    [Fact]
     public void LinkValidator()
     {
         var diagnostics = new DiagnosticBag();

@@ -12,6 +12,10 @@ internal sealed class NullBuildReporter : IBuildReporter
     {
     }
 
+    public void Info(string message)
+    {
+    }
+
     public void Verbose(string message)
     {
     }

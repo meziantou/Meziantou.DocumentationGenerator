@@ -4,7 +4,7 @@
 
 Diagnostics have a stable code (see [diagnostics.md](diagnostics.md)), a severity, and the most precise location
 available: configuration file, line, column and JSON path; Markdown or `_folder.yml` file and line; package, target framework,
-assembly or symbol. Use `--verbosity detailed` to see informational diagnostics and stage timings.
+assembly or symbol. Use `--verbosity detailed` to see informational diagnostics. Stage timings are shown with the default verbosity.
 
 Diagnostics never contain credentials: URLs with user information and secret query parameters are redacted.
 
