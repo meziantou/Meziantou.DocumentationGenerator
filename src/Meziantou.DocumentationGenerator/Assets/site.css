@@ -32,8 +32,9 @@
     --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     --header-height: 3.5rem;
-    /* The side columns grow with the viewport so long type and namespace names do not wrap */
-    --sidebar-width: clamp(18rem, 22vw, 26rem);
+    /* The sidebar grows into the free space of large screens so long type and namespace names do not wrap */
+    --sidebar-min-width: 18rem;
+    --sidebar-max-width: 32rem;
     --page-toc-width: clamp(14rem, 16vw, 20rem);
     /* Long lines are hard to read, so the main content stops growing past this width */
     --content-max-width: 60rem;
@@ -222,8 +223,11 @@ button { cursor: pointer; }
 /* Layout */
 .site-body {
     display: grid;
-    /* The sidebar stays on the left; the content and "On this page" columns are centered in the remaining space */
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) minmax(0, var(--content-max-width)) var(--page-toc-width) minmax(0, 1fr);
+    /* The sidebar stays on the left; the content and "On this page" columns are centered in the remaining space.
+       The content column takes its width first (sized against the sidebar minimum), then the sidebar grows up to its
+       maximum, and only the space left after that goes to the centering columns. */
+    --content-width: min(var(--content-max-width), 100% - var(--sidebar-min-width) - var(--page-toc-width));
+    grid-template-columns: minmax(var(--sidebar-min-width), var(--sidebar-max-width)) minmax(0, 1fr) var(--content-width) var(--page-toc-width) minmax(0, 1fr);
     grid-template-areas: "sidebar . content toc .";
     align-items: start;
 }
@@ -243,7 +247,7 @@ button { cursor: pointer; }
 .js .sidebar-tools { display: flex; }
 .sidebar-collapse-button { display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; padding: 0; background: transparent; border-color: transparent; }
 .sidebar-collapse-button:hover { background: var(--color-bg-muted); }
-.sidebar-collapsed { --sidebar-width: 3rem; }
+.sidebar-collapsed { --sidebar-min-width: 3rem; --sidebar-max-width: 3rem; }
 .sidebar-collapsed .sidebar { display: none; }
 .sidebar-collapsed .sidebar-collapse-arrow { transform: translateX(29px) scaleX(-1); }
 
@@ -280,7 +284,7 @@ details[open] > .nav-toggle::before { transform: translateY(-0.15rem) rotate(135
 .page-toc a[aria-current="true"] { color: var(--color-link); border-left-color: var(--color-accent); }
 
 @media (max-width: 75rem) {
-    .site-body { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) minmax(0, var(--content-max-width)) minmax(0, 1fr); grid-template-areas: "sidebar . content ."; }
+    .site-body { --page-toc-width: 0px; grid-template-columns: minmax(var(--sidebar-min-width), var(--sidebar-max-width)) minmax(0, 1fr) var(--content-width) minmax(0, 1fr); grid-template-areas: "sidebar . content ."; }
     .page-toc { display: none; }
 }
 
