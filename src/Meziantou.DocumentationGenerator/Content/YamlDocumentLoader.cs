@@ -1,3 +1,4 @@
+using System.Globalization;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.Framework.Yaml;
 using Meziantou.Framework.Yaml.Model;
@@ -54,5 +55,24 @@ internal static class YamlDocumentLoader
     public static string? GetString(YamlMapping mapping, string key)
     {
         return mapping.TryGetValue(key, out var value) && value is YamlValue scalar ? scalar.Value : null;
+    }
+
+    /// <summary>Reads the optional integer <c>sortOrder</c> key. A missing or invalid value is 0; an invalid value is reported.</summary>
+    public static int GetSortOrder(YamlMapping mapping, string displayPath, DiagnosticBag diagnostics, DiagnosticDescriptor descriptor, int lineOffset = 0)
+    {
+        if (!mapping.TryGetValue("sortOrder", out var value))
+            return 0;
+
+        if (value is YamlValue { Value: { } text } && int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var result))
+            return result;
+
+        var location = GetLocation(value);
+        diagnostics.Report(descriptor, "'sortOrder' must be an integer; the default value 0 is used", new DiagnosticLocation
+        {
+            FilePath = displayPath,
+            Line = location is { } l ? l.Line + lineOffset : lineOffset > 0 ? lineOffset : null,
+            Column = location?.Column,
+        });
+        return 0;
     }
 }

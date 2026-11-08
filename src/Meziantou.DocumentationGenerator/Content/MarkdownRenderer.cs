@@ -57,7 +57,8 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
                 frontMatter = new FrontMatter(
                     YamlDocumentLoader.GetString(mapping, "title"),
                     YamlDocumentLoader.GetString(mapping, "description"),
-                    YamlDocumentLoader.GetString(mapping, "slug"));
+                    YamlDocumentLoader.GetString(mapping, "slug"),
+                    YamlDocumentLoader.GetSortOrder(mapping, displayPath, diagnostics, DiagnosticDescriptors.InvalidFrontMatter, lineOffset: block.Line + 1));
             }
             else if (element is not null)
             {

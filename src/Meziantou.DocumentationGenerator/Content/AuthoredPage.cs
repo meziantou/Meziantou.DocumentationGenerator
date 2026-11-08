@@ -24,4 +24,6 @@ internal sealed class AuthoredPage : IContentEntry
     public string? Description => Rendered?.Description ?? FrontMatter.Description;
 
     public string Name => Source.Name;
+
+    public int SortOrder => FrontMatter.SortOrder;
 }
