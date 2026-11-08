@@ -125,7 +125,7 @@ public sealed partial class DependencyGraphTests
             ["docs/guides/packages.md"] = "# Packages\n\n<DependencyGraph Packages=\"*\" />",
         });
 
-        Assert.True(site.Result.ExitCode == 0, site.Result.AllOutput);
+        Assert.Equal(0, site.Result.ExitCode);
         Assert.DoesNotContain("DG4003", site.Result.AllOutput, StringComparison.Ordinal);
         var html = site.ReadFile("guides/packages.html");
         Assert.Contains("href=\"../api/packages/contoso.core.html\"", html, StringComparison.Ordinal);
@@ -195,14 +195,14 @@ public sealed partial class DependencyGraphTests
     [Fact]
     public void Layout_LargeGraph_IsFast()
     {
-        var random = new Random(42);
+        // Pseudo-random edges, from a fixed formula so the test is deterministic
         var sizes = Enumerable.Range(0, 200).Select(_ => new LayoutSize(120, 32)).ToList();
-        var edges = Enumerable.Range(0, 600).Select(_ => (random.Next(200), random.Next(200))).Where(e => e.Item1 != e.Item2).Distinct().ToList();
+        var edges = Enumerable.Range(0, 600).Select(i => (i * 37 % 200, ((i * 91) + (i / 200 * 13)) % 200)).Where(e => e.Item1 != e.Item2).Distinct().ToList();
 
         var start = System.Diagnostics.Stopwatch.StartNew();
         var layout = LayeredGraphLayout.Compute(sizes, edges, topDown: false);
 
-        Assert.Equal(edges.Count, layout.Edges.Length);
+        Assert.HasCount(edges.Count, layout.Edges);
         Assert.InRange(start.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(10));
     }
 
@@ -225,7 +225,7 @@ public sealed partial class DependencyGraphTests
 
     private static string GetHtml(TestBuild build) => build.Context.Content.Pages.Single().Rendered!.Html;
 
-    private static List<string> GetNodeNames(string html) => [.. NodeNameRegex().Matches(html).Select(m => m.Groups[1].Value)];
+    private static List<string> GetNodeNames(string html) => [.. NodeNameRegex().Matches(html).Select(m => m.Groups["name"].Value)];
 
     private static async Task<TestBuild> BuildAsync(IReadOnlyList<TestPackageBuilder> packages, string markdown)
     {
@@ -242,7 +242,7 @@ public sealed partial class DependencyGraphTests
         return build;
     }
 
-    [GeneratedRegex("data-name=\"([^\"]+)\"", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex("data-name=\"(?<name>[^\"]+)\"", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NodeNameRegex();
 
     private sealed class LayoutComparer : IEqualityComparer<LayoutResult>
