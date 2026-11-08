@@ -289,6 +289,7 @@ internal static partial class ConfigurationLoader
             {
                 Title = string.IsNullOrWhiteSpace(section.Title) ? Default("$.site.title", "Documentation") : section.Title.Trim(),
                 Description = section.Description,
+                HomeTitle = string.IsNullOrWhiteSpace(section.HomeTitle) ? null : section.HomeTitle.Trim(),
                 Language = language,
                 BasePath = basePath,
                 SiteUrl = siteUrl,

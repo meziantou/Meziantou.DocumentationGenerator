@@ -7,6 +7,10 @@ internal sealed class SiteSettings
 {
     public required string Title { get; init; }
     public string? Description { get; init; }
+
+    /// <summary>Title of the home page entry of the sidebar, or <see langword="null"/> to list only an authored home page, under its own title.</summary>
+    public string? HomeTitle { get; init; }
+
     public required string Language { get; init; }
     public required UrlBasePath BasePath { get; init; }
 

@@ -8,7 +8,8 @@ namespace Meziantou.DocumentationGenerator.Navigation;
 
 /// <summary>
 /// Builds the navigation from the folders of the content directory, sorted by name, followed by the generated API
-/// reference: <c>API reference / {namespace} / {type}</c>.
+/// reference: <c>API reference / {namespace} / {type}</c>. The home page comes first when it is authored, or when
+/// <see cref="SiteSettings.HomeTitle"/> lists the generated one.
 /// </summary>
 internal sealed class NavigationBuilder(SiteConfiguration configuration, ContentModel content, ApiCatalog catalog, LinkService links)
 {
@@ -17,9 +18,14 @@ internal sealed class NavigationBuilder(SiteConfiguration configuration, Content
     public SiteNavigation Build()
     {
         var root = ImmutableArray.CreateBuilder<NavigationNode>();
+        var homeEntryTitle = configuration.Site.HomeTitle;
         if (content.HomePage is { } home)
         {
-            root.Add(CreatePageNode(home));
+            root.Add(new NavigationNode { Title = homeEntryTitle ?? home.Title, Url = home.Url, PagePath = home.Route.FilePath });
+        }
+        else if (homeEntryTitle is not null)
+        {
+            root.Add(new NavigationNode { Title = homeEntryTitle, Url = links.HomeUrl, PagePath = LinkService.HomePath });
         }
 
         if (content.Root is { } folder)

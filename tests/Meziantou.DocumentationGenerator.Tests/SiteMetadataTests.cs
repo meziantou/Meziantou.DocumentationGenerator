@@ -135,6 +135,26 @@ public sealed class SiteMetadataTests
         Assert.Equal(first.ReadFile("_assets/search-index.json"), second.ReadFile("_assets/search-index.json"));
     }
 
+    [Fact]
+    public async Task HomeTitle_ListsTheGeneratedHomePageInTheSidebar()
+    {
+        await using var site = await SiteBuilder.BuildAsync([], new() { ["docs/guide.md"] = "# Guide\n\nThe guide." }, extraConfiguration: """ "site": { "title": "Test site", "homeTitle": "Introduction" }, """);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+
+        var home = HtmlDocumentLoader.Parse(site.ReadFile("index.html"));
+        Assert.Equal("Test site", home.QuerySelector("main h1")!.TextContent);
+        Assert.NotNull(home.QuerySelector(".section-catalog a[href='guide.html']"));
+        var current = home.QuerySelector("#sidebar a[aria-current=page]")!;
+        Assert.Equal("Introduction", current.TextContent);
+        Assert.Same(current, home.QuerySelector("#sidebar a"));
+        Assert.Null(home.QuerySelector(".breadcrumbs"));
+        Assert.Equal("guide.html", home.QuerySelector(".pager-next")!.GetAttribute("href"));
+
+        var guide = HtmlDocumentLoader.Parse(site.ReadFile("guide.html"));
+        Assert.Equal("Guide", guide.QuerySelector("#sidebar a[aria-current=page]")!.TextContent);
+        Assert.Equal("./", guide.QuerySelector(".pager-previous")!.GetAttribute("href"));
+    }
+
     private static async Task<SiteBuilder> BuildAsync(string siteConfiguration, Dictionary<string, string>? extraFiles = null)
     {
         var files = new Dictionary<string, string>

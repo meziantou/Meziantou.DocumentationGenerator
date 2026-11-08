@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Meziantou.DocumentationGenerator.Build;
 using Meziantou.DocumentationGenerator.Navigation;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
@@ -122,6 +123,52 @@ public sealed class NavigationTests
     }
 
     [Fact]
+    public async Task GeneratedHomePage_IsNotListedByDefault()
+    {
+        await using var build = await BuildAsync();
+
+        Assert.Equal(["Imaging", "Other"], build.Context.Navigation.Root.Select(n => n.Title));
+        var home = build.Context.Navigation.GetPageNavigation("index.html");
+        Assert.Empty(home.ActiveTrail);
+        Assert.Null(home.Previous);
+        Assert.Null(home.Next);
+    }
+
+    [Fact]
+    public async Task HomeTitle_ListsTheGeneratedHomePageFirst()
+    {
+        await using var build = await BuildAsync(homeTitle: "Introduction");
+
+        var root = build.Context.Navigation.Root;
+        Assert.Equal(["Introduction", "Imaging", "Other"], root.Select(n => n.Title));
+        Assert.Equal("/docs/", root[0].Url);
+        Assert.Equal("index.html", root[0].PagePath);
+        Assert.False(root[0].IsGroup);
+
+        var home = build.Context.Navigation.GetPageNavigation("index.html");
+        Assert.True(home.IsActive(root[0]));
+        Assert.Empty(home.Breadcrumbs);
+        Assert.Null(home.Previous);
+        Assert.Equal("imaging/introduction.html", home.Next?.PagePath);
+
+        var first = build.Context.Navigation.GetPageNavigation("imaging/introduction.html");
+        Assert.Same(root[0], first.Previous);
+        Assert.Equal(["Documentation", "Imaging"], first.Breadcrumbs.Select(n => n.Title));
+        Assert.Equal("/docs/", first.Breadcrumbs[0].Url);
+    }
+
+    [Fact]
+    public async Task HomeTitle_RenamesTheAuthoredHomePage()
+    {
+        await using var build = await BuildAsync(homeTitle: "Introduction", extraFiles: new() { ["docs/index.md"] = "# Welcome" });
+
+        var root = build.Context.Navigation.Root;
+        Assert.Equal(["Introduction", "Imaging", "Other"], root.Select(n => n.Title));
+        Assert.Equal("index.html", root[0].PagePath);
+        Assert.True(build.Context.Navigation.GetPageNavigation("index.html").IsActive(root[0]));
+    }
+
+    [Fact]
     public async Task ApiReference_IsTheLastSection()
     {
         await using var build = await BuildAsync(packages: [ApiModelTests.CreateKitchenSinkPackage()]);
@@ -179,7 +226,7 @@ public sealed class NavigationTests
         Assert.Null(last.Next);
     }
 
-    private static async Task<TestBuild> BuildAsync(IReadOnlyList<TestPackageBuilder>? packages = null, bool expectSuccess = true, Dictionary<string, string>? extraFiles = null)
+    private static async Task<TestBuild> BuildAsync(IReadOnlyList<TestPackageBuilder>? packages = null, bool expectSuccess = true, Dictionary<string, string>? extraFiles = null, string? homeTitle = null)
     {
         packages ??= [];
         var files = new Dictionary<string, string>(Pages, StringComparer.Ordinal);
@@ -191,7 +238,7 @@ public sealed class NavigationTests
         var build = TestBuild.Create($$"""
             {
               "version": 1,
-              "site": { "basePath": "/docs/" },
+              "site": { "basePath": "/docs/"{{(homeTitle is null ? "" : $", \"homeTitle\": {JsonSerializer.Serialize(homeTitle)}")}} },
               "content": { "root": "docs", "exclude": [ "**/AGENTS.md" ] },
               "packages": [ {{string.Join(", ", packages.Select(p => TestBuild.PackageReference(p)))}} ]
             }

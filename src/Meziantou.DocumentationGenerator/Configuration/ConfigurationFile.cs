@@ -54,6 +54,9 @@ internal sealed class ConfigurationFile
         [Description("Site description used in metadata.")]
         public string? Description { get; set; }
 
+        [Description("Title of the home page entry, listed first in the sidebar. Without an authored index.md, the generated home page is only listed when this is set. With an index.md, it replaces the page title in the sidebar.")]
+        public string? HomeTitle { get; set; }
+
         [Description("Language of the content (BCP 47). Default: en.")]
         public string? Language { get; set; }
 
