@@ -18,7 +18,8 @@ prefix (`02-LoadingImages.md` → `LoadingImages`).
 
 The root `index.md` is the home page of the site (`index.html`). Other `index.md` files are ordinary pages. Without a
 root `index.md`, the home page lists the top-level folders (title and description of their `_folder.yml`, linking to
-their first page) and the top-level pages (title and description).
+their first page) and the top-level pages (title and description). This generated home page is not in the navigation
+unless `site.homeTitle` is set.
 
 ### Front matter
 
@@ -211,7 +212,13 @@ slug: guides
   `Guides`) and `DG5011` is reported.
 - The last section is the generated API reference: an `API reference` entry, linking to `api/index.html`, with the
   namespaces of every package and their types, sorted ordinally.
-- Previous and next links only go through authored pages.
+- The home page is the first entry: the root `index.md`, under its title, or the generated home page when
+  [`site.homeTitle`](configuration.md#site) is set. `site.homeTitle` also renames the entry of a root `index.md`.
+- Previous and next links only go through authored pages, and the home page when it is in the navigation.
+
+```json
+"site": { "title": "Contoso", "homeTitle": "Introduction" }
+```
 
 ## XML documentation
 

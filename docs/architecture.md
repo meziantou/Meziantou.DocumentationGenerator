@@ -310,7 +310,7 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
 - A folder is a non-clickable group. Only folders containing at least one page appear.
 - The root `index.md`, when present, is the home page and the first navigation entry. Without it, the generated home
   page lists the top-level folders (title and description, linking to their first page in name order) and the
-  top-level pages.
+  top-level pages; it is the first navigation entry only when `site.homeTitle` is set, which also names the entry.
 - Routes: each folder contributes its `_folder.yml` `slug`, otherwise its slugified title; the page contributes its
   front matter `slug`, otherwise its slugified title. `01-Imaging/05-LoadingAndSaving/02-LoadingImages.md` titled
   "Imaging" / "Loading and saving" / "Loading images" → `imaging/loading-and-saving/loading-images.html`. Slugify

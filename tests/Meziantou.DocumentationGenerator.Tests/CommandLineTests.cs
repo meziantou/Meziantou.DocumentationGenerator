@@ -151,7 +151,7 @@ public sealed class CommandLineTests
               "$schema": "https://example.com/schema.json",
               "version": 1,
               "site": {
-                "title": "CLI title", "description": "CLI description", "language": "fr", "basePath": "/docs/",
+                "title": "CLI title", "description": "CLI description", "homeTitle": "Introduction", "language": "fr", "basePath": "/docs/",
                 "url": "https://example.com", "logo": "logo.png", "favicon": "favicon.ico", "socialImage": "social.png",
                 "robots": "disallow", "footer": "CLI footer",
                 "headerLinks": [{"text":"GitHub","url":"https://github.com","icon":"GH"}], "minifyHtml": true
@@ -171,7 +171,7 @@ public sealed class CommandLineTests
         string[] args =
         [
             "--schema", "https://example.com/schema.json", "--version", "1",
-            "--site-title", "CLI title", "--site-description", "CLI description", "--site-language", "fr",
+            "--site-title", "CLI title", "--site-description", "CLI description", "--site-home-title", "Introduction", "--site-language", "fr",
             "--site-base-path", "/docs/", "--site-url", "https://example.com", "--site-logo", "logo.png",
             "--site-favicon", "favicon.ico", "--site-social-image", "social.png", "--site-robots", "disallow",
             "--site-footer", "CLI footer", "--site-header-links", """[{"text":"GitHub","url":"https://github.com","icon":"GH"}]""",

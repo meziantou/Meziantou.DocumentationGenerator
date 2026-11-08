@@ -93,6 +93,7 @@ Meziantou.DocumentationGenerator build --packages '[]' --references '[]' --allow
 | --- | --- | --- |
 | `title` | `Documentation` | Site title, used in the header and page titles. |
 | `description` | | Default page description. |
+| `homeTitle` | | Title of the home page entry, listed first in the sidebar. Without a root `index.md`, the generated home page is only listed when `homeTitle` is set (see [navigation](content.md#navigation)). With a root `index.md`, it replaces the page title in the sidebar. Breadcrumbs keep the site title. Also `--site-home-title`. |
 | `language` | `en` | Language of the content (`<html lang>`). |
 | `basePath` | `/` | Deployment path used for absolute metadata URLs and the local preview server. Internal HTML links are file-relative and do not require it. `docs`, `/docs` and `/docs/` are equivalent. |
 | `url` | | Absolute origin (`https://example.com`) used for canonical URLs, the sitemap and social previews. It must not contain a path: canonical URLs are `url` + `basePath` + page path. Without `url`, no canonical URL and no sitemap are generated. |
