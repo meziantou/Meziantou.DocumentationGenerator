@@ -11,42 +11,11 @@
     }
     else
     {
-        <ul class="section-catalog">
-            @foreach (var (title, url, description) in Sections)
-            {
-                <li class="section-card">
-                    <h2><a href="@url">@title</a></h2>
-                    @if (description is not null)
-                    {
-                        <p>@description</p>
-                    }
-                </li>
-            }
-        </ul>
+        @((MarkupString)EntryListHtml.Render(Sections, EntryListLayout.Cards, headingLevel: 2))
     }
 </SiteLayout>
 
 @code {
     /// <summary>Top-level folders and pages of the content directory, in name order. Folders link to their first page.</summary>
-    private IReadOnlyList<(string Title, string Url, string? Description)> Sections
-    {
-        get
-        {
-            var result = new List<(string, string, string?)>();
-            foreach (var entry in Site.Content.Root?.Entries ?? [])
-            {
-                switch (entry)
-                {
-                    case AuthoredPage page:
-                        result.Add((page.Title, page.Url, page.Description));
-                        break;
-                    case ContentFolder { FirstPage: { } first } folder:
-                        result.Add((folder.Title, first.Url, folder.Description));
-                        break;
-                }
-            }
-
-            return result;
-        }
-    }
+    private IReadOnlyList<EntryListItem> Sections => Site.Content.Root?.GetSectionItems() ?? [];
 }

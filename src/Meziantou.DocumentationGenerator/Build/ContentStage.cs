@@ -14,7 +14,7 @@ internal sealed class ContentStage : IBuildStage
         var assets = new SiteAssetRegistry(links);
         context.Assets = assets;
         RegisterConfiguredAssets(context, assets);
-        var processor = new ContentProcessor(context.Configuration, links, assets, context.Diagnostics, PackageDependencyIndex.Create(context.DiscoveredPackages));
+        var processor = new ContentProcessor(context.Configuration, links, assets, context.Diagnostics, PackageDependencyIndex.Create(context.DiscoveredPackages), context.ApiCatalog);
         context.Content = processor.Process(cancellationToken);
         return Task.CompletedTask;
     }
