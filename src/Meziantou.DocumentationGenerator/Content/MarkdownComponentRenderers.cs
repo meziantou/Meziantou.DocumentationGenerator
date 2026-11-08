@@ -26,7 +26,7 @@ internal static class MarkdownComponentRenderers
             if (obj.Component is not { } component)
                 return;
 
-            if (component.Kind is MarkdownComponentKind.DependencyGraph)
+            if (component.Kind is MarkdownComponentKind.DependencyGraph or MarkdownComponentKind.SectionList or MarkdownComponentKind.PackageList)
             {
                 if (obj.Placeholder is { } placeholder)
                 {

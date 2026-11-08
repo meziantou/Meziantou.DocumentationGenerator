@@ -19,7 +19,8 @@ prefix (`02-LoadingImages.md` → `LoadingImages`).
 The root `index.md` is the home page of the site (`index.html`). Other `index.md` files are ordinary pages. Without a
 root `index.md`, the home page lists the top-level folders (title and description of their `_folder.yml`, linking to
 their first page) and the top-level pages (title and description). This generated home page is not in the navigation
-unless `site.homeTitle` is set.
+unless `site.homeTitle` is set. A custom `index.md` can still show these lists with
+[`<SectionList />` and `<PackageList />`](#generated-lists).
 
 ### Front matter
 
@@ -80,6 +81,8 @@ These elements are replaced when the site is generated. Names and attributes are
 | `<InstallDotnetTool Id="Contoso.Tool" />` | `dotnet tool install --global Contoso.Tool` |
 | `<NuGetReference Id="Contoso.Client" />` | A link to `https://www.nuget.org/packages/Contoso.Client`, with the NuGet icon |
 | `<DependencyGraph Packages="*" />` | A graph of the dependencies between the documented packages (see [Dependency graphs](#dependency-graphs)) |
+| `<SectionList />` | The top-level folders and pages, like the generated home page (see [Generated lists](#generated-lists)) |
+| `<PackageList />` | The documented packages (see [Generated lists](#generated-lists)) |
 
 Attributes:
 
@@ -124,6 +127,38 @@ orange; selecting it again opens its page, and <kbd>Esc</kbd> clears the selecti
 name and zooms; <kbd>Ctrl</kbd> + wheel also zooms and dragging the background scrolls a large graph.
 
 The element must be on its own line, separated from other text by a blank line.
+
+#### Generated lists
+
+`<SectionList />` and `<PackageList />` insert the lists that the generator builds, so a custom home page can mix
+authored text with them and stay up to date:
+
+```markdown
+# Contoso
+
+Contoso is a set of libraries to send messages.
+
+## Guides
+
+<SectionList />
+
+## Packages
+
+<PackageList Packages="Contoso.*" Layout="Table" />
+```
+
+- `<SectionList />` lists the top-level folders (title and description of their `_folder.yml`, linking to their first
+  page) and the top-level pages (title and description), in name order. With the default layout, it is the list of the
+  generated home page.
+- `<PackageList />` lists the packages that have a public API, ordered by identifier, with their version and
+  description. Each package links to its page.
+  - `Packages` (optional, default `*`): comma-separated package identifiers. `*` matches any characters, and the
+    comparison is case-insensitive. A pattern that matches no package, or a site without package, is reported as
+    `DG5015`.
+- `Layout` (optional, both elements): `Cards` (default, a grid of cards), `List` (one line per entry) or `Table`
+  (like the API reference page). Other values are reported as `DG5013`.
+
+The elements must be on their own line, separated from other text by a blank line.
 
 ### Links
 

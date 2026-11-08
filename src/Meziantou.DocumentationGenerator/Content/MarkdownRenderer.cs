@@ -2,7 +2,9 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.DependencyGraphs;
+using Meziantou.DocumentationGenerator.Rendering;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
 using Meziantou.Framework.Markdown;
@@ -24,7 +26,7 @@ namespace Meziantou.DocumentationGenerator.Content;
 /// Supported extensions: CommonMark, pipe tables, task lists, heading identifiers (GitHub rules), YAML front matter,
 /// GitHub alerts, auto links, footnotes and emphasis extras.
 /// </summary>
-internal sealed partial class MarkdownRenderer(LinkService links, HighlightingService highlighting, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null)
+internal sealed partial class MarkdownRenderer(LinkService links, HighlightingService highlighting, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null, ApiCatalog? catalog = null)
 {
     private const string CrefScheme = "cref:";
 
@@ -103,7 +105,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         }
 
         RemoveInvalidComponents(document, source);
-        var trustedFragments = RenderDependencyGraphs(document, source);
+        var (trustedFragments, pendingSectionLists) = RenderTrustedComponents(document, source);
 
         foreach (var link in document.Descendants<LinkInline>().ToList())
         {
@@ -147,41 +149,103 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
             sanitized = sanitized.Replace("<p>" + placeholder + "</p>", fragment, StringComparison.Ordinal);
         }
 
-        return new RenderedMarkdown(sanitized, title, description, headings);
+        return new RenderedMarkdown(sanitized, title, description, headings) { PendingSectionLists = pendingSectionLists };
+    }
+
+    /// <summary>Replaces the placeholders of the <c>&lt;SectionList /&gt;</c> elements of <paramref name="rendered"/> with the entries of <paramref name="root"/>.</summary>
+    public static RenderedMarkdown RenderSectionLists(RenderedMarkdown rendered, ContentFolder root)
+    {
+        if (rendered.PendingSectionLists.IsEmpty)
+            return rendered;
+
+        var items = root.GetSectionItems();
+        var html = rendered.Html;
+        foreach (var (placeholder, layout) in rendered.PendingSectionLists)
+        {
+            html = html.Replace("<p>" + placeholder + "</p>", EntryListHtml.Render(items, layout, headingLevel: 3), StringComparison.Ordinal);
+        }
+
+        return rendered with { Html = html, PendingSectionLists = [] };
     }
 
     /// <summary>
-    /// Builds the SVG of each <c>&lt;DependencyGraph /&gt;</c>. The SVG is generated, not authored, and the sanitizer
-    /// would remove it: the component is rendered as a placeholder, replaced once the page is sanitized.
+    /// Builds the HTML of the generated components: the SVG of each <c>&lt;DependencyGraph /&gt;</c> and the lists of
+    /// <c>&lt;SectionList /&gt;</c> and <c>&lt;PackageList /&gt;</c>. This HTML is generated, not authored, and the
+    /// sanitizer would remove parts of it: the component is rendered as a placeholder, replaced once the page is sanitized.
+    /// Section lists are only replaced once every page is rendered (see <see cref="RenderSectionLists"/>).
     /// </summary>
-    private List<(string Placeholder, string Html)> RenderDependencyGraphs(MarkdownDocument document, MarkdownSource source)
+    private (List<(string Placeholder, string Html)> Fragments, ImmutableArray<(string Placeholder, EntryListLayout Layout)> PendingSectionLists) RenderTrustedComponents(MarkdownDocument document, MarkdownSource source)
     {
         var fragments = new List<(string Placeholder, string Html)>();
+        var pendingSectionLists = ImmutableArray.CreateBuilder<(string Placeholder, EntryListLayout Layout)>();
         foreach (var block in document.Descendants<MarkdownComponentBlock>())
         {
-            if (block.Component?.Graph is not { } request)
-                continue;
-
-            var index = packageDependencies ?? PackageDependencyIndex.Empty;
-            var graph = DependencyGraphBuilder.Build(request, index, links.TryGetPackageUrl);
             var location = new DiagnosticLocation { FilePath = source.DisplayPath, Line = block.Line + 1 };
-            if (index.Packages.IsEmpty)
+            string html;
+            switch (block.Component)
             {
-                diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, "<DependencyGraph> has no package to draw: the site documents no package", location);
-            }
-            else
-            {
-                foreach (var pattern in graph.UnmatchedPatterns)
-                {
-                    diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, $"<DependencyGraph> pattern '{pattern}' matches no documented package", location);
-                }
+                case { Graph: { } request }:
+                    html = RenderDependencyGraph(request, location);
+                    break;
+                case { Kind: MarkdownComponentKind.SectionList, List: { } list }:
+                    block.Placeholder = "component-" + Guid.NewGuid().ToString("N");
+                    pendingSectionLists.Add((block.Placeholder, list.Layout));
+                    continue;
+                case { Kind: MarkdownComponentKind.PackageList, List: { } list }:
+                    html = EntryListHtml.Render(GetPackageItems(list, location), list.Layout, headingLevel: 3, nameHeader: "Package");
+                    break;
+                default:
+                    continue;
             }
 
-            block.Placeholder = "dependency-graph-" + Guid.NewGuid().ToString("N");
-            fragments.Add((block.Placeholder, DependencyGraphSvgWriter.Write(graph, request.Direction)));
+            block.Placeholder = "component-" + Guid.NewGuid().ToString("N");
+            fragments.Add((block.Placeholder, html));
         }
 
-        return fragments;
+        return (fragments, pendingSectionLists.ToImmutable());
+    }
+
+    private string RenderDependencyGraph(DependencyGraphRequest request, DiagnosticLocation location)
+    {
+        var index = packageDependencies ?? PackageDependencyIndex.Empty;
+        var graph = DependencyGraphBuilder.Build(request, index, links.TryGetPackageUrl);
+        if (index.Packages.IsEmpty)
+        {
+            diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, "<DependencyGraph> has no package to draw: the site documents no package", location);
+        }
+        else
+        {
+            foreach (var pattern in graph.UnmatchedPatterns)
+            {
+                diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, $"<DependencyGraph> pattern '{pattern}' matches no documented package", location);
+            }
+        }
+
+        return DependencyGraphSvgWriter.Write(graph, request.Direction);
+    }
+
+    /// <summary>Packages with a public API (they have a page) matching the patterns, ordered by identifier.</summary>
+    private List<EntryListItem> GetPackageItems(EntryListRequest request, DiagnosticLocation location)
+    {
+        var packages = (catalog ?? ApiCatalog.Empty).Packages.Where(p => !p.Namespaces.IsEmpty).ToList();
+        if (packages.Count == 0)
+        {
+            diagnostics.Report(DiagnosticDescriptors.PackageListNoMatch, "<PackageList> has no package to list: the site documents no package with a public API", location);
+            return [];
+        }
+
+        foreach (var pattern in request.Patterns)
+        {
+            if (!packages.Any(p => DependencyGraphBuilder.IsMatch(pattern, p.Id)))
+            {
+                diagnostics.Report(DiagnosticDescriptors.PackageListNoMatch, $"<PackageList> pattern '{pattern}' matches no documented package", location);
+            }
+        }
+
+        return [.. packages
+            .Where(p => request.Patterns.Any(pattern => DependencyGraphBuilder.IsMatch(pattern, p.Id)))
+            .OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(p => new EntryListItem(p.Id, links.GetPackageUrl(p.Id), p.Description, p.Package.Package.Metadata.Version.ToNormalizedString()))];
     }
 
     /// <summary>Reports and removes component elements that the parser recognized but could not create.</summary>

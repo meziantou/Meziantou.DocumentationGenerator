@@ -10,7 +10,7 @@ namespace Meziantou.DocumentationGenerator.Content;
 /// <summary>
 /// Custom elements that authored Markdown can use, replaced when the site is generated:
 /// <c>&lt;InstallNuGetPackage Id="..." /&gt;</c>, <c>&lt;InstallDotnetTool Id="..." /&gt;</c>, <c>&lt;NuGetReference Id="..." /&gt;</c>
-/// and <c>&lt;DependencyGraph Packages="*" /&gt;</c>.
+/// <c>&lt;DependencyGraph Packages="*" /&gt;</c>, <c>&lt;SectionList /&gt;</c> and <c>&lt;PackageList /&gt;</c>.
 /// Element and attribute names are case-insensitive, like HTML. The Markdown parser recognizes them through
 /// <see cref="MarkdownComponentExtension"/>.
 /// </summary>
@@ -27,6 +27,8 @@ internal static class MarkdownComponents
         new("NuGetReference", ["Id", "Version"], attributes => CreateFromPackageIds("NuGetReference", attributes, allowCollection: false, (ids, version) =>
             new MarkdownComponent(MarkdownComponentKind.PackageLink, ids[0], Links.LinkService.GetNuGetOrgPackageUrl(ids[0], version?.ToNormalizedString())))),
         new("DependencyGraph", ["Packages", "External", "Direction"], CreateDependencyGraph, BlockOnly: true),
+        new("SectionList", ["Layout"], CreateSectionList, BlockOnly: true),
+        new("PackageList", ["Packages", "Layout"], CreatePackageList, BlockOnly: true),
     }.ToFrozenDictionary(d => d.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -139,13 +141,8 @@ internal static class MarkdownComponents
         if (!attributes.TryGetValue("Packages", out var packagesText) || packagesText.Length == 0)
             return (null, "<DependencyGraph> requires the 'Packages' attribute");
 
-        var patterns = packagesText.Split(',', StringSplitOptions.TrimEntries);
-        foreach (var pattern in patterns)
-        {
-            // A pattern is a package identifier in which '*' matches any characters
-            if (pattern.Length == 0 || !PackageIdValidator.IsValidPackageId(pattern.Replace('*', 'a')))
-                return (null, $"<DependencyGraph> has an invalid package pattern '{pattern}'");
-        }
+        if (!TryParsePackagePatterns("DependencyGraph", packagesText, out var patterns, out var patternError))
+            return (null, patternError);
 
         var external = false;
         if (attributes.TryGetValue("External", out var externalText) && !bool.TryParse(externalText, out external))
@@ -164,8 +161,65 @@ internal static class MarkdownComponents
             }
         }
 
-        var request = new DependencyGraphRequest([.. patterns.Distinct(StringComparer.OrdinalIgnoreCase)], external, direction);
+        var request = new DependencyGraphRequest([.. patterns], external, direction);
         return (new MarkdownComponent(MarkdownComponentKind.DependencyGraph, packagesText) { Graph = request }, null);
+    }
+
+    private static (MarkdownComponent? Component, string? Error) CreateSectionList(Dictionary<string, string> attributes)
+    {
+        if (!TryParseLayout("SectionList", attributes, out var layout, out var error))
+            return (null, error);
+
+        return (new MarkdownComponent(MarkdownComponentKind.SectionList, "") { List = new EntryListRequest(layout, []) }, null);
+    }
+
+    private static (MarkdownComponent? Component, string? Error) CreatePackageList(Dictionary<string, string> attributes)
+    {
+        if (!TryParseLayout("PackageList", attributes, out var layout, out var error))
+            return (null, error);
+
+        var packagesText = attributes.GetValueOrDefault("Packages", "*");
+        if (!TryParsePackagePatterns("PackageList", packagesText, out var patterns, out error))
+            return (null, error);
+
+        return (new MarkdownComponent(MarkdownComponentKind.PackageList, packagesText) { List = new EntryListRequest(layout, patterns) }, null);
+    }
+
+    /// <summary>Parses comma-separated package identifiers in which '*' matches any characters, without duplicates.</summary>
+    private static bool TryParsePackagePatterns(string name, string text, out string[] patterns, out string? error)
+    {
+        patterns = [.. text.Split(',', StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase)];
+        foreach (var pattern in patterns)
+        {
+            if (pattern.Length == 0 || !PackageIdValidator.IsValidPackageId(pattern.Replace('*', 'a')))
+            {
+                error = $"<{name}> has an invalid package pattern '{pattern}'";
+                return false;
+            }
+        }
+
+        error = null;
+        return true;
+    }
+
+    private static bool TryParseLayout(string name, Dictionary<string, string> attributes, out EntryListLayout layout, out string? error)
+    {
+        layout = EntryListLayout.Cards;
+        error = null;
+        if (!attributes.TryGetValue("Layout", out var text))
+            return true;
+
+        foreach (var value in Enum.GetValues<EntryListLayout>())
+        {
+            if (string.Equals(text, value.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                layout = value;
+                return true;
+            }
+        }
+
+        error = $"<{name}> has an invalid 'Layout' value '{text}'; expected Cards, List or Table";
+        return false;
     }
 
     private static MarkdownComponent? CreateInstallDotnetTool(string id, NuGetVersion? version, Dictionary<string, string> attributes)

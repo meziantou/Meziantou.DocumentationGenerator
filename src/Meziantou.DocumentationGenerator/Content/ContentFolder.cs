@@ -28,5 +28,29 @@ internal sealed class ContentFolder : IContentEntry
     /// <summary>The first page of the folder in name order, searching sub-folders.</summary>
     public AuthoredPage? FirstPage => Entries.Select(e => e as AuthoredPage ?? ((ContentFolder)e).FirstPage).FirstOrDefault(p => p is not null);
 
+    /// <summary>
+    /// Pages and sub-folders of this folder, in name order, as listed by the generated home page and
+    /// <c>&lt;SectionList /&gt;</c>. Sub-folders link to their first page; sub-folders without page and the home page
+    /// (the root <c>index.md</c>) are skipped.
+    /// </summary>
+    public IReadOnlyList<EntryListItem> GetSectionItems()
+    {
+        var result = new List<EntryListItem>();
+        foreach (var entry in Entries)
+        {
+            switch (entry)
+            {
+                case AuthoredPage page when page.Route.FilePath != Links.LinkService.HomePath:
+                    result.Add(new EntryListItem(page.Title, page.Url, page.Description));
+                    break;
+                case ContentFolder { FirstPage: { } first } folder:
+                    result.Add(new EntryListItem(folder.Title, first.Url, folder.Description));
+                    break;
+            }
+        }
+
+        return result;
+    }
+
     public override string ToString() => RelativePath;
 }

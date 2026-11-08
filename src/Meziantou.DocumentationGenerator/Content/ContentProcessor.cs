@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
+using Meziantou.DocumentationGenerator.Api;
 using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.DependencyGraphs;
 using Meziantou.DocumentationGenerator.Diagnostics;
@@ -13,11 +14,11 @@ namespace Meziantou.DocumentationGenerator.Content;
 /// Discovers the authored pages and their folders, registers their routes, and renders them. Pages are only the Markdown
 /// files of the content directory: nothing is generated from packages.
 /// </summary>
-internal sealed class ContentProcessor(SiteConfiguration configuration, LinkService links, SiteAssetRegistry assets, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null)
+internal sealed class ContentProcessor(SiteConfiguration configuration, LinkService links, SiteAssetRegistry assets, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null, ApiCatalog? catalog = null)
 {
     public const long MaxMarkdownSize = 4 * 1024 * 1024;
 
-    private readonly MarkdownRenderer _renderer = new(links, new HighlightingService(diagnostics), diagnostics, packageDependencies);
+    private readonly MarkdownRenderer _renderer = new(links, new HighlightingService(diagnostics), diagnostics, packageDependencies, catalog);
     private readonly Dictionary<FullPath, AuthoredPage> _pagesBySource = [];
     private readonly Dictionary<FullPath, ContentFolder> _foldersByPath = [];
     private readonly Dictionary<string, ContentFolder> _foldersByRoute = new(StringComparer.OrdinalIgnoreCase);
@@ -34,6 +35,12 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             var source = new MarkdownSource(page.DisplayPath, "", LinkContext.None, CreateLocalResolver(page.Source, content.Root, page.DisplayPath));
             page.Rendered = _renderer.Render(page.Document!, page.FrontMatter, source);
             page.Document = null;
+        }
+
+        // Section lists show the title and description of other pages, known once every page is rendered
+        foreach (var page in pages)
+        {
+            page.Rendered = MarkdownRenderer.RenderSectionLists(page.Rendered!, root);
         }
 
         return new ContentModel { Pages = pages, Root = root };

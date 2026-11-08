@@ -76,6 +76,7 @@ input and cannot be lowered.
 | `DG5012` | error | Invalid `slug` in front matter or `_folder.yml`: it must be a single URL segment without `/` or extension |
 | `DG5013` | error | Invalid Markdown component (such as `<InstallNuGetPackage />`): missing or invalid `Id` or `Version`, or unknown attribute; the element is removed |
 | `DG5014` | warning | A pattern of `<DependencyGraph Packages="..." />` matches no package configured in `packages`, or the site documents no package |
+| `DG5015` | warning | A pattern of `<PackageList Packages="..." />` matches no package with a public API, or the site documents no such package |
 | `DG6001` | warning | Malformed XML documentation file; API pages are generated without documentation |
 | `DG6002` | info | XML documentation entries that match no public symbol (usually internal members) |
 | `DG6003` | warning | `<inheritdoc>` cannot be resolved (missing or ambiguous target, or dependency not configured in `references`); a note is displayed |
