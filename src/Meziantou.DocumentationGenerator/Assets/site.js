@@ -222,6 +222,192 @@
         window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(update, 200); });
     }
 
+    // Dependency graphs: selecting a package highlights what it depends on and what depends on it, directly or not
+    function initDependencyGraphs() {
+        var figures = document.querySelectorAll('.dependency-graph');
+        for (var i = 0; i < figures.length; i++) initDependencyGraph(figures[i]);
+    }
+
+    function initDependencyGraph(figure) {
+        var svg = figure.querySelector('svg');
+        var viewport = figure.querySelector('.dependency-graph-viewport');
+        if (!svg || !viewport) return;
+
+        var nodes = figure.querySelectorAll('.dependency-graph-node');
+        var edges = figure.querySelectorAll('.dependency-graph-edge');
+        var filter = figure.querySelector('.dependency-graph-filter');
+        var naturalWidth = parseFloat(svg.getAttribute('width'));
+        var naturalHeight = parseFloat(svg.getAttribute('height'));
+        var scale = 1;
+        var selected = -1;
+
+        function parseList(value) {
+            return value ? value.split(' ').map(function (v) { return parseInt(v, 10); }) : [];
+        }
+
+        var dependencies = [], dependents = [];
+        for (var i = 0; i < nodes.length; i++) {
+            dependencies.push(parseList(nodes[i].getAttribute('data-dependencies')));
+            dependents.push(parseList(nodes[i].getAttribute('data-dependents')));
+        }
+
+        function closure(start, adjacency) {
+            var seen = {}, queue = adjacency[start].slice();
+            while (queue.length) {
+                var n = queue.shift();
+                if (seen[n] || n === start) continue;
+                seen[n] = true;
+                queue.push.apply(queue, adjacency[n]);
+            }
+            return seen;
+        }
+
+        function select(index) {
+            selected = index;
+            figure.classList.toggle('has-selection', index >= 0);
+            var down = index >= 0 ? closure(index, dependencies) : {};
+            var up = index >= 0 ? closure(index, dependents) : {};
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].classList.toggle('is-selected', i === index);
+                nodes[i].classList.toggle('is-dependency', !!down[i]);
+                nodes[i].classList.toggle('is-dependent', !!up[i]);
+            }
+            for (var j = 0; j < edges.length; j++) {
+                var from = parseInt(edges[j].getAttribute('data-from'), 10);
+                var to = parseInt(edges[j].getAttribute('data-to'), 10);
+                edges[j].classList.toggle('is-dependency', index >= 0 && (from === index || !!down[from]) && !!down[to]);
+                edges[j].classList.toggle('is-dependent', index >= 0 && (to === index || !!up[to]) && !!up[from]);
+            }
+            if (index >= 0) {
+                var name = nodes[index].getAttribute('data-name');
+                announce(name + ': ' + Object.keys(down).length + ' dependencies, ' + Object.keys(up).length + ' dependents. Select it again to open its page.');
+            }
+        }
+
+        // The first click selects a package, a second click opens its page; a modified click always opens it
+        figure.addEventListener('click', function (event) {
+            var node = event.target.closest ? event.target.closest('.dependency-graph-node') : null;
+            if (!node) {
+                if (event.target.closest && event.target.closest('svg')) select(-1);
+                return;
+            }
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            var index = parseInt(node.getAttribute('data-node'), 10);
+            if (index === selected) return;
+            event.preventDefault();
+            select(index);
+        });
+
+        // Escape clears the selection when the focus is in the graph or on nothing else
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape' || selected < 0) return;
+            var active = document.activeElement;
+            if (active && active !== document.body && !figure.contains(active)) return;
+            select(-1);
+        });
+
+        if (filter) {
+            filter.addEventListener('input', function () {
+                var text = filter.value.trim().toLowerCase();
+                figure.classList.toggle('has-filter', text.length > 0);
+                for (var i = 0; i < nodes.length; i++) {
+                    var name = (nodes[i].getAttribute('data-name') || '').toLowerCase();
+                    nodes[i].classList.toggle('is-match', text.length > 0 && name.indexOf(text) >= 0);
+                }
+            });
+        }
+
+        // Zoom changes the size of the drawing; the viewport scrolls, and dragging the background scrolls it too
+        function zoom(value, centerX, centerY) {
+            var previous = scale;
+            scale = Math.min(3, Math.max(0.2, value));
+            if (centerX === undefined) { centerX = viewport.clientWidth / 2; centerY = viewport.clientHeight / 2; }
+            var x = (viewport.scrollLeft + centerX) / previous, y = (viewport.scrollTop + centerY) / previous;
+            svg.setAttribute('width', String(naturalWidth * scale));
+            svg.setAttribute('height', String(naturalHeight * scale));
+            viewport.scrollLeft = x * scale - centerX;
+            viewport.scrollTop = y * scale - centerY;
+        }
+
+        function bind(selector, handler) {
+            var button = figure.querySelector(selector);
+            if (button) button.addEventListener('click', handler);
+        }
+
+        bind('.dependency-graph-zoom-in', function () { zoom(scale * 1.25); });
+        bind('.dependency-graph-zoom-out', function () { zoom(scale / 1.25); });
+        bind('.dependency-graph-reset', function () {
+            zoom(1);
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+            if (filter) { filter.value = ''; filter.dispatchEvent(new Event('input')); }
+            select(-1);
+        });
+
+        viewport.addEventListener('wheel', function (event) {
+            if (!event.ctrlKey && !event.metaKey) return;
+            event.preventDefault();
+            var rect = viewport.getBoundingClientRect();
+            zoom(scale * (event.deltaY < 0 ? 1.1 : 1 / 1.1), event.clientX - rect.left, event.clientY - rect.top);
+        }, { passive: false });
+
+        var drag = null;
+        viewport.addEventListener('pointerdown', function (event) {
+            if (event.button !== 0 || event.pointerType === 'touch' || (event.target.closest && event.target.closest('.dependency-graph-node'))) return;
+            drag = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false };
+        });
+        viewport.addEventListener('pointermove', function (event) {
+            if (!drag) return;
+            var dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+            if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+            if (!drag.moved) { drag.moved = true; viewport.setPointerCapture(event.pointerId); figure.classList.add('is-panning'); }
+            viewport.scrollLeft = drag.left - dx;
+            viewport.scrollTop = drag.top - dy;
+        });
+        function endDrag(event) {
+            if (drag && drag.moved) {
+                figure.classList.remove('is-panning');
+                // A drag is not a click on the background, which would clear the selection
+                viewport.addEventListener('click', function (e) { e.stopPropagation(); }, { capture: true, once: true });
+                if (viewport.hasPointerCapture && viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+            }
+            drag = null;
+        }
+        viewport.addEventListener('pointerup', endDrag);
+        viewport.addEventListener('pointercancel', endDrag);
+
+        // A graph wider than the page is shrunk a little, then scrolled to its top-left package rather than to empty space
+        function fit() {
+            var available = viewport.clientWidth - 24;
+            if (available <= 0 || naturalWidth <= available) return 1;
+            zoom(Math.max(0.6, available / naturalWidth), 0, 0);
+            var first = null, best = Infinity;
+            for (var i = 0; i < nodes.length; i++) {
+                var box = nodes[i].getBBox();
+                if (box.x + box.y < best) { best = box.x + box.y; first = box; }
+            }
+            if (first) {
+                viewport.scrollLeft = Math.max(0, first.x * scale - 12);
+                viewport.scrollTop = Math.max(0, first.y * scale - 12);
+            }
+            return scale;
+        }
+
+        var initialScale = fit();
+        var resetButton = figure.querySelector('.dependency-graph-reset');
+        if (resetButton) {
+            resetButton.addEventListener('click', function () {
+                if (initialScale !== 1) { viewport.scrollLeft = 0; viewport.scrollTop = 0; scale = 1; fit(); }
+            });
+        }
+
+        var toolbar = figure.querySelector('.dependency-graph-toolbar');
+        if (toolbar) toolbar.hidden = false;
+        var hint = figure.querySelector('.dependency-graph-hint');
+        if (hint) hint.hidden = false;
+        figure.classList.add('is-interactive');
+    }
+
     function init() {
         initScrollableRegions();
         initTheme();
@@ -231,6 +417,7 @@
         initPermalinks();
         initFrameworkFilter();
         initActiveHeading();
+        initDependencyGraphs();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

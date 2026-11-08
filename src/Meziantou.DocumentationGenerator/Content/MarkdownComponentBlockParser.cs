@@ -31,7 +31,7 @@ internal sealed class MarkdownComponentBlockParser : BlockParser
                 return BlockState.None;
         }
 
-        if (!MarkdownComponents.TryCreate(tag, out var component, out var error))
+        if (!MarkdownComponents.TryCreate(tag, inline: false, out var component, out var error))
             return BlockState.None;
 
         processor.NewBlocks.Push(new MarkdownComponentBlock(this, component, error)

@@ -26,6 +26,17 @@ internal static class MarkdownComponentRenderers
             if (obj.Component is not { } component)
                 return;
 
+            if (component.Kind is MarkdownComponentKind.DependencyGraph)
+            {
+                if (obj.Placeholder is { } placeholder)
+                {
+                    renderer.EnsureLine();
+                    renderer.Write("<p>").Write(placeholder).WriteLine("</p>");
+                }
+
+                return;
+            }
+
             if (component.Kind is MarkdownComponentKind.Command)
             {
                 // Rendered by the code block renderer of the pipeline, so the command is highlighted like any shell code block

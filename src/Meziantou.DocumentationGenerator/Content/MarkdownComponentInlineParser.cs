@@ -15,7 +15,7 @@ internal sealed class MarkdownComponentInlineParser : InlineParser
     public override bool Match(InlineProcessor processor, ref StringSlice slice)
     {
         var start = slice;
-        if (!HtmlHelper.TryParseHtmlTag(ref slice, out var tag) || !MarkdownComponents.TryCreate(tag, out var component, out var error))
+        if (!HtmlHelper.TryParseHtmlTag(ref slice, out var tag) || !MarkdownComponents.TryCreate(tag, inline: true, out var component, out var error))
         {
             slice = start;
             return false;

@@ -7,4 +7,7 @@ internal enum MarkdownComponentKind
 
     /// <summary>A link to <see cref="MarkdownComponent.Url"/> whose text is <see cref="MarkdownComponent.Text"/>.</summary>
     PackageLink,
+
+    /// <summary>A graph of package dependencies described by <see cref="MarkdownComponent.Graph"/>. Block-level only.</summary>
+    DependencyGraph,
 }

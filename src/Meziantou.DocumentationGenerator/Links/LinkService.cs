@@ -74,6 +74,13 @@ internal sealed partial class LinkService
 
     public string GetPackageUrl(string packageId) => Urls.GetUrl(RouteNames.GetPackagePath(packageId));
 
+    /// <summary>The URL of the page of a package, or <see langword="null"/> when the package has no page (no public API).</summary>
+    public string? TryGetPackageUrl(string packageId)
+    {
+        var path = RouteNames.GetPackagePath(packageId);
+        return _routesByPath.ContainsKey(path) ? Urls.GetUrl(path) : null;
+    }
+
     /// <summary>The nuget.org page of a package, or of one of its versions when <paramref name="version"/> is set.</summary>
     public static string GetNuGetOrgPackageUrl(string packageId, string? version = null)
         => "https://www.nuget.org/packages/" + Uri.EscapeDataString(packageId) + (version is null ? "" : "/" + Uri.EscapeDataString(version));

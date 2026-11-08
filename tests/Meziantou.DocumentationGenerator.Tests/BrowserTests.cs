@@ -12,6 +12,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
     [
         "",
         "guide.html",
+        "dependencies.html",
         "api/packages/contoso.library.html",
         "api/namespaces/Contoso.Library.html",
         "api/Contoso.Library.Client.html",
@@ -423,6 +424,33 @@ public sealed class BrowserTests(BrowserFixture fixture)
 
         Assert.All(requests, url => Assert.StartsWith(fixture.DocsServer.BaseUrl, url));
         Assert.DoesNotContain(requests, url => url.Contains("_framework", StringComparison.Ordinal) || url.EndsWith(".wasm", StringComparison.Ordinal) || url.EndsWith(".dll", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DependencyGraph_SelectionHighlightsDependenciesAndSecondClickOpensThePage()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "dependencies.html");
+        Assert.True(await page.IsVisibleAsync(".dependency-graph-toolbar"));
+
+        var library = page.Locator(".dependency-graph-node[data-name='Contoso.Library']");
+        await library.ClickAsync();
+        Assert.Equal(fixture.RootServer.BaseUrl + "dependencies.html", page.Url);
+        Assert.Contains("is-selected", await library.GetAttributeAsync("class"), StringComparison.Ordinal);
+        Assert.Contains("is-dependent", await page.GetAttributeAsync(".dependency-graph-node[data-name='Contoso.Tool']", "class"), StringComparison.Ordinal);
+        Assert.DoesNotContain("is-dependency", await page.GetAttributeAsync(".dependency-graph-node[data-name='Newtonsoft.Json']", "class"), StringComparison.Ordinal);
+        Assert.Contains("is-dependent", await page.GetAttributeAsync(".dependency-graph-edge[data-to='0']", "class"), StringComparison.Ordinal);
+
+        await page.Keyboard.PressAsync("Escape");
+        Assert.DoesNotContain("has-selection", await page.GetAttributeAsync(".dependency-graph", "class"), StringComparison.Ordinal);
+
+        await page.FillAsync(".dependency-graph-filter", "newtonsoft");
+        Assert.Equal(1, await page.Locator(".dependency-graph-node.is-match").CountAsync());
+
+        await library.ClickAsync();
+        await library.ClickAsync();
+        await page.WaitForURLAsync(fixture.RootServer.BaseUrl + "api/packages/contoso.library.html");
     }
 
     [Fact]

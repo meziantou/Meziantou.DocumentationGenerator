@@ -78,6 +78,7 @@ These elements are replaced when the site is generated. Names and attributes are
 | `<InstallNuGetPackage Id="Contoso.Client, Contoso.Extensions" />` | One `dotnet package add` command per package |
 | `<InstallDotnetTool Id="Contoso.Tool" />` | `dotnet tool install --global Contoso.Tool` |
 | `<NuGetReference Id="Contoso.Client" />` | A link to `https://www.nuget.org/packages/Contoso.Client`, with the NuGet icon |
+| `<DependencyGraph Packages="*" />` | A graph of the dependencies between the documented packages (see [Dependency graphs](#dependency-graphs)) |
 
 Attributes:
 
@@ -93,6 +94,35 @@ code block with a copy button. A collection renders as one block with a command 
 render as inline code, with collection commands separated by `; `. `NuGetReference` can be used anywhere in
 text. An invalid element (missing or invalid `Id` or `Version`, unknown attribute) is removed
 and reported as `DG5013`.
+
+#### Dependency graphs
+
+`<DependencyGraph />` draws how the packages of the site depend on each other, from the NuGet dependencies declared in
+their `.nuspec`:
+
+```markdown
+<DependencyGraph Packages="*" />
+
+<DependencyGraph Packages="Contoso.*, Fabrikam.Core" External="true" Direction="TopDown" />
+```
+
+- `Packages` (required): comma-separated package identifiers of the packages configured in `packages`. `*` matches any
+  characters, and the comparison is case-insensitive. The graph also contains the documented packages that they depend
+  on, directly or not. A pattern that matches no package is reported as `DG5014`.
+- `External="true"` (optional): also draws the dependencies that the site does not document, such as
+  `Microsoft.Extensions.Logging`, with a dashed border. They link to nuget.org.
+- `Direction` (optional): `LeftRight` (default) or `TopDown`. Arrows go from a package to its dependencies.
+
+The graph is generated as an SVG image when the site is built, so it is displayed without JavaScript. Each package
+links to its page, or to nuget.org when it has no public API. A dependency declared by every target framework is drawn
+once; the tooltip of an arrow lists the target frameworks when only some of them declare it. Packages without any
+dependency in the graph are displayed below it, and dependencies that form a cycle are drawn with a dashed red line.
+
+In the browser, selecting a package highlights what it depends on, directly or not, in green, and what depends on it in
+orange; selecting it again opens its page, and <kbd>Esc</kbd> clears the selection. The toolbar filters packages by
+name and zooms; <kbd>Ctrl</kbd> + wheel also zooms and dragging the background scrolls a large graph.
+
+The element must be on its own line, separated from other text by a blank line.
 
 ### Links
 
