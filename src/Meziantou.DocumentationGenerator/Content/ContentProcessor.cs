@@ -110,7 +110,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
 
         foreach (var (folder, items) in entries)
         {
-            folder.Entries = [.. items.OrderBy(e => e.Name, StringComparer.Ordinal)];
+            folder.Entries = [.. items.OrderBy(e => e.SortOrder).ThenBy(e => e.Name, StringComparer.Ordinal)];
         }
 
         return (result.ToImmutable(), root);
@@ -127,7 +127,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
         var metadataPath = path / ContentFolder.MetadataFileName;
         var displayPath = configuration.GetDisplayPath(metadataPath);
         var location = new DiagnosticLocation { FilePath = displayPath };
-        var (title, description, slug) = LoadFolderMetadata(metadataPath, displayPath, location);
+        var (title, description, slug, sortOrder) = LoadFolderMetadata(metadataPath, displayPath, location);
         title ??= RouteNames.RemoveOrderPrefix(path.Name);
 
         var folder = new ContentFolder
@@ -136,6 +136,7 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             RelativePath = relativePath,
             Title = title,
             Description = description,
+            SortOrder = sortOrder,
             RoutePath = CombineRoute(parent.RoutePath, GetSegment(slug, title, path.Name, location)),
         };
 
@@ -151,25 +152,25 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
         return folder;
     }
 
-    private (string? Title, string? Description, string? Slug) LoadFolderMetadata(FullPath path, string displayPath, DiagnosticLocation location)
+    private (string? Title, string? Description, string? Slug, int SortOrder) LoadFolderMetadata(FullPath path, string displayPath, DiagnosticLocation location)
     {
         if (!File.Exists(path))
         {
             diagnostics.Report(DiagnosticDescriptors.InvalidFolderMetadata, $"'{displayPath}' not found; the folder name is used as title", location);
-            return (null, null, null);
+            return (null, null, null, 0);
         }
 
         if (new FileInfo(path).Length > YamlDocumentLoader.MaxSize)
         {
             diagnostics.Report(DiagnosticDescriptors.InvalidFolderMetadata, $"'{displayPath}' is larger than {YamlDocumentLoader.MaxSize} bytes and is ignored", location);
-            return (null, null, null);
+            return (null, null, null, 0);
         }
 
         var element = YamlDocumentLoader.Load(File.ReadAllText(path, Encoding.UTF8), displayPath, diagnostics, DiagnosticDescriptors.InvalidFolderMetadata);
         if (element is not YamlMapping mapping)
         {
             diagnostics.Report(DiagnosticDescriptors.InvalidFolderMetadata, "The folder metadata must be a YAML mapping with a 'title'", location);
-            return (null, null, null);
+            return (null, null, null, 0);
         }
 
         var title = YamlDocumentLoader.GetString(mapping, "title");
@@ -179,7 +180,8 @@ internal sealed class ContentProcessor(SiteConfiguration configuration, LinkServ
             title = null;
         }
 
-        return (title, YamlDocumentLoader.GetString(mapping, "description"), YamlDocumentLoader.GetString(mapping, "slug"));
+        var sortOrder = YamlDocumentLoader.GetSortOrder(mapping, displayPath, diagnostics, DiagnosticDescriptors.InvalidFolderMetadata);
+        return (title, YamlDocumentLoader.GetString(mapping, "description"), YamlDocumentLoader.GetString(mapping, "slug"), sortOrder);
     }
 
     /// <summary>URL segment of a page or folder: the slug when valid, otherwise computed from the title, then from the file name.</summary>

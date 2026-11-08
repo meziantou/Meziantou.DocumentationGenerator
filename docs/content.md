@@ -29,6 +29,7 @@ unless `site.homeTitle` is set. A custom `index.md` can still show these lists w
 title: Getting started
 description: Install the package and send a first message.
 slug: start
+sortOrder: 1
 ---
 ```
 
@@ -37,6 +38,7 @@ slug: start
 | `title` | Page title. Default: the first level-1 heading, then the file name. A leading level-1 heading is not repeated in the page. |
 | `description` | Meta description and social preview text. Default: the first paragraph. |
 | `slug` | Last segment of the output path, instead of the slugified title (`start` produces `{folders}/start.html`). A single segment: no `/` and no `.html`. Use it to keep URLs stable when the title changes. An invalid slug is an error (`DG5012`). |
+| `sortOrder` | Position of the page among the pages and sub-folders of its folder: lower values come first, and entries with the same value are sorted by name. Default: `0`. Folders set theirs in [`_folder.yml`](#navigation). Negative values are allowed. A value that is not an integer is reported as `DG5002` and `0` is used. |
 
 Other keys are ignored. Front matter is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 
@@ -148,7 +150,7 @@ Contoso is a set of libraries to send messages.
 ```
 
 - `<SectionList />` lists the top-level folders (title and description of their `_folder.yml`, linking to their first
-  page) and the top-level pages (title and description), in name order. With the default layout, it is the list of the
+  page) and the top-level pages (title and description), in sort order. With the default layout, it is the list of the
   generated home page.
 - `<PackageList />` lists the packages that have a public API, ordered by identifier, with their version and
   description. Each package links to its page.
@@ -165,7 +167,7 @@ The elements must be on their own line, separated from other text by a blank lin
 | Link | Result |
 | --- | --- |
 | `[guide](guides/intro.md#install)` | Link to the generated page, fragment and query string kept. |
-| `[folder](03-Guides/)` | Link to the first page of the folder in name order. The content root links to the home page. |
+| `[folder](03-Guides/)` | Link to the first page of the folder in sort order. The content root links to the home page. |
 | `![logo](images/logo.png)` | The file is copied next to the pages of its folder (see [Assets](#assets)). |
 | `[API](cref:T:Contoso.Client)` | Link to the page of a type. |
 | `[](cref:Contoso.Client.Send)` | Link with the display name of the symbol (`Client.Send`) as text. |
@@ -236,13 +238,16 @@ docs/
 title: Guides
 description: Step-by-step guides.
 slug: guides
+sortOrder: 2
 ```
 
-- Files and folders of a folder are interleaved and sorted ordinally by name; number prefixes set the order.
+- Files and folders of a folder are interleaved and sorted by `sortOrder` (front matter of pages, `_folder.yml` of
+  folders; default `0`; lower values first), then ordinally by name; number prefixes set the order among equal values.
 - A folder is a group that links to its first page, in the sidebar and in breadcrumbs. Only folders containing at least
   one page appear.
-- `_folder.yml` keys: `title` (display name), `description` (shown on the generated home page), `slug` (URL segment).
-  Other keys are ignored. It is parsed as YAML with bounded nesting; anchors and aliases are rejected.
+- `_folder.yml` keys: `title` (display name), `description` (shown on the generated home page), `slug` (URL segment),
+  `sortOrder` (integer position among the entries of the parent folder; an invalid value is reported as `DG5011` and `0`
+  is used). Other keys are ignored. It is parsed as YAML with bounded nesting; anchors and aliases are rejected.
 - Without `_folder.yml` or without `title`, the title is the folder name without its number prefix (`03-Guides` →
   `Guides`) and `DG5011` is reported.
 - The last section is the generated API reference: an `API reference` entry, linking to `api/index.html`, with the

@@ -42,6 +42,54 @@ public sealed class NavigationTests
     }
 
     [Fact]
+    public async Task SortOrder_SortsEntriesBeforeTheName()
+    {
+        await using var build = await BuildAsync(extraFiles: new()
+        {
+            ["docs/01-Imaging/11-Limitations.md"] = "---\nsortOrder: -1\n---\nNo title.",
+            ["docs/01-Imaging/12-Last.md"] = "---\ntitle: Last\nsortOrder: 10\n---\nText.",
+            ["docs/01-Imaging/13-AlsoLast.md"] = "---\ntitle: Also last\nsortOrder: 10\n---\nText.",
+        });
+
+        var imaging = build.Context.Navigation.Root[0];
+        Assert.Equal(["Limitations", "Introduction", "Getting started", "Guides", "Supported formats", "Last", "Also last"], imaging.Children.Select(n => n.Title));
+        Assert.Equal("/docs/imaging/limitations.html", imaging.Url);
+    }
+
+    [Fact]
+    public async Task InvalidSortOrder_IsAWarning()
+    {
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/01-Imaging/11-Limitations.md"] = "---\nsortOrder: first\n---\nNo title." });
+
+        Assert.Equal("Limitations", build.Context.Navigation.Root[0].Children[^1].Title);
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG5002" && d.Severity == Diagnostics.DiagnosticSeverity.Warning && d.Location?.Line == 2 && d.Message.Contains("sortOrder", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task FolderSortOrder_SortsFoldersBeforeTheName()
+    {
+        await using var build = await BuildAsync(extraFiles: new()
+        {
+            ["docs/01-Imaging/_folder.yml"] = "title: Imaging\nsortOrder: 1",
+            ["docs/01-Imaging/10-Formats/_folder.yml"] = "title: Supported formats\nsortOrder: -1",
+        });
+
+        Assert.Equal(["Other", "Imaging"], build.Context.Navigation.Root.Select(n => n.Title));
+        var imaging = build.Context.Navigation.Root[1];
+        Assert.Equal(["Supported formats", "Introduction", "Getting started", "Guides", "Limitations"], imaging.Children.Select(n => n.Title));
+        Assert.Equal("/docs/imaging/supported-formats/formats.html", imaging.Url);
+    }
+
+    [Fact]
+    public async Task InvalidFolderSortOrder_IsAWarning()
+    {
+        await using var build = await BuildAsync(extraFiles: new() { ["docs/01-Imaging/_folder.yml"] = "title: Imaging\nsortOrder: 1.5" });
+
+        Assert.Equal(["Imaging", "Other"], build.Context.Navigation.Root.Select(n => n.Title));
+        Assert.Contains(build.Diagnostics, d => d.Code == "DG5011" && d.Location?.FilePath == "docs/01-Imaging/_folder.yml" && d.Location?.Line == 2 && d.Message.Contains("sortOrder", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Folders_LinkToTheirFirstPage()
     {
         await using var build = await BuildAsync();

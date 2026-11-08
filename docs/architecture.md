@@ -287,7 +287,7 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
 - The page title is, in order: front matter `title`, leading level-1 heading, file name without its number prefix.
 - `AGENTS.md`-style files are not skipped automatically; use `content.exclude`.
 - Links to missing or excluded Markdown pages and folders without pages (`DG5001`) and to missing files (`DG5008`)
-  are errors. A link to a folder targets its first page in name order; the content root targets the home page.
+  are errors. A link to a folder targets its first page in sort order; the content root targets the home page.
 - **Raw HTML policy:** raw HTML in Markdown is allowed but sanitized with an allow-list: no `<script>`,
   `<style>`, `<iframe>`, `<object>`, `<embed>`, `<form>`, event handler attributes, `style` attributes, or
   URLs with schemes other than `http`, `https`, `mailto` and relative URLs. XML documentation follows the same
@@ -309,7 +309,7 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
   (`03-Guides` → `Guides`) with warning `DG5011`.
 - A folder is a non-clickable group. Only folders containing at least one page appear.
 - The root `index.md`, when present, is the home page and the first navigation entry. Without it, the generated home
-  page lists the top-level folders (title and description, linking to their first page in name order) and the
+  page lists the top-level folders (title and description, linking to their first page in sort order) and the
   top-level pages; it is the first navigation entry only when `site.homeTitle` is set, which also names the entry.
 - Routes: each folder contributes its `_folder.yml` `slug`, otherwise its slugified title; the page contributes its
   front matter `slug`, otherwise its slugified title. `01-Imaging/05-LoadingAndSaving/02-LoadingImages.md` titled
