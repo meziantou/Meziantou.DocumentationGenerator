@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text;
 using Meziantou.DocumentationGenerator.Configuration;
+using Meziantou.DocumentationGenerator.DependencyGraphs;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
 using Meziantou.Framework;
@@ -12,11 +13,11 @@ namespace Meziantou.DocumentationGenerator.Content;
 /// Discovers the authored pages and their folders, registers their routes, and renders them. Pages are only the Markdown
 /// files of the content directory: nothing is generated from packages.
 /// </summary>
-internal sealed class ContentProcessor(SiteConfiguration configuration, LinkService links, SiteAssetRegistry assets, DiagnosticBag diagnostics)
+internal sealed class ContentProcessor(SiteConfiguration configuration, LinkService links, SiteAssetRegistry assets, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null)
 {
     public const long MaxMarkdownSize = 4 * 1024 * 1024;
 
-    private readonly MarkdownRenderer _renderer = new(links, new HighlightingService(diagnostics), diagnostics);
+    private readonly MarkdownRenderer _renderer = new(links, new HighlightingService(diagnostics), diagnostics, packageDependencies);
     private readonly Dictionary<FullPath, AuthoredPage> _pagesBySource = [];
     private readonly Dictionary<FullPath, ContentFolder> _foldersByPath = [];
     private readonly Dictionary<string, ContentFolder> _foldersByRoute = new(StringComparer.OrdinalIgnoreCase);

@@ -402,11 +402,57 @@ blockquote { margin-left: 0; padding: 0.25rem 1rem; color: var(--color-text-mute
 .hljs-meta, .hljs-meta .hljs-keyword { color: var(--hl-meta); }
 a.hljs-type { text-decoration: underline; text-decoration-color: var(--color-border); }
 
+/* Dependency graph: <DependencyGraph /> in Markdown pages */
+.dependency-graph { margin: 0 0 1rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-subtle); }
+.dependency-graph-empty { padding: 0.5rem 1rem; color: var(--color-text-muted); }
+.dependency-graph-empty p { margin: 0; }
+.dependency-graph-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--color-border); }
+.dependency-graph-toolbar[hidden] { display: none; }
+.dependency-graph-filter { flex: 1 1 12rem; min-width: 0; padding: 0.25rem 0.5rem; font: inherit; font-size: 0.875rem; color: var(--color-text); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; }
+.dependency-graph-toolbar button { min-width: 2rem; padding: 0.25rem 0.625rem; font: inherit; font-size: 0.875rem; color: var(--color-text); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
+.dependency-graph-toolbar button:hover { background: var(--color-bg-muted); }
+.dependency-graph-viewport { overflow: auto; max-height: 80vh; padding: 0.75rem; }
+.is-interactive .dependency-graph-viewport { cursor: grab; }
+.is-panning .dependency-graph-viewport { cursor: grabbing; user-select: none; }
+.dependency-graph-svg { display: block; max-width: none; height: auto; font-family: var(--font-sans); font-size: 13px; }
+.dependency-graph-node { cursor: pointer; }
+.dependency-graph-node rect { fill: var(--color-bg); stroke: var(--color-accent); stroke-width: 1.5; transition: opacity 0.15s, fill 0.15s; }
+.dependency-graph-node text { fill: var(--color-text); pointer-events: none; transition: opacity 0.15s; }
+.dependency-graph-node-external rect { fill: var(--color-bg-muted); stroke: var(--color-border); stroke-dasharray: 4 3; }
+.dependency-graph-node-external text { fill: var(--color-text-muted); }
+.dependency-graph-node:hover rect { fill: var(--color-badge-bg); }
+.dependency-graph-node:focus { outline: none; }
+.dependency-graph-node:focus-visible rect { stroke: var(--color-focus); stroke-width: 3; }
+.dependency-graph-line { fill: none; stroke: var(--color-text-muted); stroke-width: 1.25; opacity: 0.6; transition: opacity 0.15s; }
+.dependency-graph-arrow { fill: var(--color-text-muted); opacity: 0.6; transition: opacity 0.15s; }
+.dependency-graph-edge-cycle .dependency-graph-line { stroke-dasharray: 5 4; stroke: var(--color-danger-border); }
+.dependency-graph-edge-cycle .dependency-graph-arrow { fill: var(--color-danger-border); }
+.has-selection .dependency-graph-node:not(.is-selected, .is-dependency, .is-dependent) rect,
+.has-selection .dependency-graph-node:not(.is-selected, .is-dependency, .is-dependent) text,
+.has-filter .dependency-graph-node:not(.is-match) rect,
+.has-filter .dependency-graph-node:not(.is-match) text { opacity: 0.3; }
+.has-selection .dependency-graph-edge:not(.is-dependency, .is-dependent) > *,
+.has-filter:not(.has-selection) .dependency-graph-edge > * { opacity: 0.12; }
+.dependency-graph-node.is-selected rect { fill: var(--color-badge-bg); stroke: var(--color-focus); stroke-width: 3; }
+.dependency-graph-node.is-dependency rect { stroke: var(--color-tip-border); stroke-width: 2.5; }
+.dependency-graph-node.is-dependent rect { stroke: var(--color-warning-border); stroke-width: 2.5; }
+.dependency-graph-edge.is-dependency .dependency-graph-line { stroke: var(--color-tip-border); stroke-width: 2; opacity: 1; }
+.dependency-graph-edge.is-dependency .dependency-graph-arrow { fill: var(--color-tip-border); opacity: 1; }
+.dependency-graph-edge.is-dependent .dependency-graph-line { stroke: var(--color-warning-border); stroke-width: 2; opacity: 1; }
+.dependency-graph-edge.is-dependent .dependency-graph-arrow { fill: var(--color-warning-border); opacity: 1; }
+.dependency-graph-legend { padding: 0.5rem 0.75rem; border-top: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-text-muted); }
+.dependency-graph-legend [hidden] { display: none; }
+.dependency-graph-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; margin: 0 0.25rem 0 0.125rem; vertical-align: -0.0625rem; border: 2px solid var(--color-accent); border-radius: 3px; }
+.dependency-graph-swatch-external { border-color: var(--color-border); border-style: dashed; background: var(--color-bg-muted); }
+.dependency-graph-swatch-dependency { border-color: var(--color-tip-border); }
+.dependency-graph-swatch-dependent { border-color: var(--color-warning-border); }
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 @media print {
-    .site-header, .sidebar-panel, .page-toc, .pager, .copy-button, .heading-anchor, .edit-link { display: none !important; }
+    .site-header, .sidebar-panel, .page-toc, .pager, .copy-button, .heading-anchor, .edit-link, .dependency-graph-toolbar { display: none !important; }
+    .dependency-graph-viewport { max-height: none; overflow: visible; }
     .site-body { display: block; }
 }

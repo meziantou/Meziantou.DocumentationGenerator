@@ -6,7 +6,14 @@ internal static class UiSite
     public static async Task<SiteBuilder> BuildAsync(string[] arguments)
     {
         var site = await SiteBuilder.BuildAsync(
-            [ApiModelTests.CreateKitchenSinkPackage()],
+            [
+                ApiModelTests.CreateKitchenSinkPackage(),
+
+                // A package without API: it has no page, and it draws an arrow in the dependency graph
+                new TestPackageBuilder("Contoso.Tool", "1.0.0")
+                    .WithNuspecMetadata("""<dependencies><group targetFramework="net8.0"><dependency id="Contoso.Library" version="1.0.0" /><dependency id="Newtonsoft.Json" version="13.0.1" /></group></dependencies>""")
+                    .AddFile("tools/readme.txt", "Contoso.Tool"),
+            ],
             files: new()
             {
                 ["docs/index.md"] = """
@@ -39,6 +46,11 @@ internal static class UiSite
 
                     > [!NOTE]
                     > A note.
+                    """,
+                ["docs/dependencies.md"] = """
+                    # Dependencies
+
+                    <DependencyGraph Packages="*" External="true" />
                     """,
             },
             arguments: arguments);

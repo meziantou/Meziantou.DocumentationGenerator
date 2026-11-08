@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using Meziantou.DocumentationGenerator.DependencyGraphs;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
 using Meziantou.Framework.Markdown;
@@ -23,7 +24,7 @@ namespace Meziantou.DocumentationGenerator.Content;
 /// Supported extensions: CommonMark, pipe tables, task lists, heading identifiers (GitHub rules), YAML front matter,
 /// GitHub alerts, auto links, footnotes and emphasis extras.
 /// </summary>
-internal sealed partial class MarkdownRenderer(LinkService links, HighlightingService highlighting, DiagnosticBag diagnostics)
+internal sealed partial class MarkdownRenderer(LinkService links, HighlightingService highlighting, DiagnosticBag diagnostics, PackageDependencyIndex? packageDependencies = null)
 {
     private const string CrefScheme = "cref:";
 
@@ -102,6 +103,7 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         }
 
         RemoveInvalidComponents(document, source);
+        var trustedFragments = RenderDependencyGraphs(document, source);
 
         foreach (var link in document.Descendants<LinkInline>().ToList())
         {
@@ -138,7 +140,48 @@ internal sealed partial class MarkdownRenderer(LinkService links, HighlightingSe
         writer.Flush();
 
         var description = frontMatter.Description ?? GetDescription(document);
-        return new RenderedMarkdown(ContentSanitizer.Sanitize(writer.ToString()), title, description, headings);
+        var sanitized = ContentSanitizer.Sanitize(writer.ToString());
+        foreach (var (placeholder, fragment) in trustedFragments)
+        {
+            // The placeholder is a random token in its own paragraph, so authored content cannot produce it
+            sanitized = sanitized.Replace("<p>" + placeholder + "</p>", fragment, StringComparison.Ordinal);
+        }
+
+        return new RenderedMarkdown(sanitized, title, description, headings);
+    }
+
+    /// <summary>
+    /// Builds the SVG of each <c>&lt;DependencyGraph /&gt;</c>. The SVG is generated, not authored, and the sanitizer
+    /// would remove it: the component is rendered as a placeholder, replaced once the page is sanitized.
+    /// </summary>
+    private List<(string Placeholder, string Html)> RenderDependencyGraphs(MarkdownDocument document, MarkdownSource source)
+    {
+        var fragments = new List<(string Placeholder, string Html)>();
+        foreach (var block in document.Descendants<MarkdownComponentBlock>())
+        {
+            if (block.Component?.Graph is not { } request)
+                continue;
+
+            var index = packageDependencies ?? PackageDependencyIndex.Empty;
+            var graph = DependencyGraphBuilder.Build(request, index, links.TryGetPackageUrl);
+            var location = new DiagnosticLocation { FilePath = source.DisplayPath, Line = block.Line + 1 };
+            if (index.Packages.IsEmpty)
+            {
+                diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, "<DependencyGraph> has no package to draw: the site documents no package", location);
+            }
+            else
+            {
+                foreach (var pattern in graph.UnmatchedPatterns)
+                {
+                    diagnostics.Report(DiagnosticDescriptors.DependencyGraphNoMatch, $"<DependencyGraph> pattern '{pattern}' matches no documented package", location);
+                }
+            }
+
+            block.Placeholder = "dependency-graph-" + Guid.NewGuid().ToString("N");
+            fragments.Add((block.Placeholder, DependencyGraphSvgWriter.Write(graph, request.Direction)));
+        }
+
+        return fragments;
     }
 
     /// <summary>Reports and removes component elements that the parser recognized but could not create.</summary>

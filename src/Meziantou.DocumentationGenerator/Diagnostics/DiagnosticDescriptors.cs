@@ -64,6 +64,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor InvalidFolderMetadata = new("DG5011", "Invalid or missing folder metadata", DiagnosticSeverity.Warning);
     public static readonly DiagnosticDescriptor InvalidSlug = new("DG5012", "Invalid slug", DiagnosticSeverity.Error);
     public static readonly DiagnosticDescriptor InvalidMarkdownComponent = new("DG5013", "Invalid Markdown component", DiagnosticSeverity.Error);
+    public static readonly DiagnosticDescriptor DependencyGraphNoMatch = new("DG5014", "Dependency graph pattern matches no package", DiagnosticSeverity.Warning);
 
     // DG6xxx: XML documentation
     public static readonly DiagnosticDescriptor MalformedXmlDocumentation = new("DG6001", "Malformed XML documentation file", DiagnosticSeverity.Warning);
