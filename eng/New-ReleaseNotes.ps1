@@ -27,7 +27,7 @@ dotnet tool install --global Meziantou.DocumentationGenerator --version $Version
 
 ## Requirements and compatibility
 
-- Requires the .NET 11 runtime. While .NET 11 is in preview, the tool targets the preview runtime pinned in ``global.json``.
+- Requires the .NET 11 runtime.
 - Configuration format version 1. Unknown configuration properties are errors.
 - Generated URLs follow the rules documented in [docs/api-reference.md]($repositoryUrl/blob/$Commit/docs/api-reference.md#urls-and-anchors).
 
