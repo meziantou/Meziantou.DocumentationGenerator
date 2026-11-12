@@ -155,7 +155,22 @@ internal sealed class RenderStage : IBuildStage
             validator.AddFile(indexPath, [], Search.SearchIndexReader.GetUrls(index).Select(url => links.Urls.BasePath.Value + url));
         }
 
-        WriteMetadataFile(links, staging, validator, SiteMetadata.SitemapFileName, SiteMetadata.BuildSitemap(context.Configuration, links.Urls, staging.Files.Where(f => f.EndsWith(".html", StringComparison.Ordinal))));
+        // Folder URLs redirect to the first page of the folder. A path already used by another file is left to that file.
+        var redirects = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (folder, firstPage) in FolderRedirects.GetFolders(context.Content.Root))
+        {
+            var path = FolderRedirects.GetFilePath(folder);
+            if (links.TryGetRoute(path, out _) || !links.TryRegister(new SiteRoute(path, PageKind.Redirect, "folder " + folder.RelativePath)))
+                continue;
+
+            var target = links.Urls.GetRelativeUrl(path, firstPage.Url);
+            var canonical = UrlBuilder.GetAbsoluteUrl(context.Configuration.Site.SiteUrl, firstPage.Url);
+            staging.WriteText(path, FolderRedirects.Build(context.Configuration.Site, target, canonical, site.GetDocumentTitle(firstPage.Title)));
+            validator.AddFile(path, [], [target]);
+            redirects.Add(path);
+        }
+
+        WriteMetadataFile(links, staging, validator, SiteMetadata.SitemapFileName, SiteMetadata.BuildSitemap(context.Configuration, links.Urls, staging.Files.Where(f => f.EndsWith(".html", StringComparison.Ordinal) && !redirects.Contains(f))));
         WriteMetadataFile(links, staging, validator, SiteMetadata.RobotsFileName, SiteMetadata.BuildRobots(context.Configuration, links.Urls));
         context.GeneratedFileCount = staging.Files.Count;
     }

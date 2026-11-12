@@ -23,12 +23,15 @@ does. Opening the files with `file://` is not supported.
 
 ## 404 page
 
-`404.html` is generated at the root of the output directory. Its links and assets are relative too, so configure the host
-to **redirect** missing-page requests to its actual URL (for example `/Meziantou.Framework/404.html`), not rewrite
-the response while retaining the missing URL. The local preview server does this automatically.
+`404.html` is generated at the root of the output directory. Its links and assets are relative too, so they resolve
+when the host **redirects** missing-page requests to its actual URL (for example `/Meziantou.Framework/404.html`). The
+local preview server does this automatically.
 
-Hosts such as GitHub Pages that automatically serve `404.html` at the missing URL can show the error text, but
-its navigation and assets cannot reliably resolve for nested missing URLs without a host-level redirect.
+Hosts such as GitHub Pages serve `404.html` at the missing URL instead, where relative URLs resolve against the wrong
+directory. When the deployment path is known, that is when `site.basePath` is not `/` or `site.url` is set, `404.html`
+contains a small inline script: when the page is served at a URL other than its own and under the base path, it adds a
+`<base href>` pointing to the base path, so the stylesheet, scripts, navigation and search resolve from the site root.
+Set `site.basePath` to the deployment path for this to work; without JavaScript, the page shows the error text unstyled.
 
 ## Canonical URLs, sitemap and robots
 
@@ -64,7 +67,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
       - run: dotnet tool restore
       - run: dotnet Meziantou.DocumentationGenerator build --base-path "/${{ github.event.repository.name }}/" --site-url "https://${{ github.repository_owner }}.github.io"
       - uses: actions/upload-pages-artifact@v4
@@ -82,7 +84,7 @@ jobs:
         uses: actions/deploy-pages@v4
 ```
 
-See the [404 page limitation](#404-page) above for GitHub Pages' automatic error responses. Add `.nojekyll` to the content assets if a path starts with `_` and
+Setting `--base-path` also lets the [404 page](#404-page) load its assets at nested missing URLs. Add `.nojekyll` to the content assets if a path starts with `_` and
 Jekyll processing is enabled for the branch (artifact deployments are not processed by Jekyll).
 
 ## Output ownership

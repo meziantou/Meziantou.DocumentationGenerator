@@ -43,6 +43,11 @@
     {
         <link rel="icon" href="@Site.FaviconUrl">
     }
+    @if (GetNotFoundBaseScript() is { } notFoundBaseScript)
+    {
+        @* Must run before the first relative URL is resolved, so it precedes the stylesheet *@
+        @((MarkupString)notFoundBaseScript)
+    }
     <link rel="stylesheet" href="@Site.Links.GetAssetUrl("site.css")">
     @HeadContent
 </head>
@@ -212,6 +217,23 @@
             IsNotFound ? null : UrlBuilder.GetAbsoluteUrl(siteUrl, Site.Links.Urls.GetUrl(PagePath)),
             Site.SocialImageUrl is null ? null : UrlBuilder.GetAbsoluteUrl(siteUrl, Site.SocialImageUrl),
             IsNotFound || Site.Configuration.Site.Robots is RobotsPolicy.Disallow);
+    }
+
+    /// <summary>
+    /// Hosts such as GitHub Pages serve 404.html at the missing URL instead of redirecting to it, so its file-relative
+    /// URLs resolve against the wrong directory. When the page is not at its own URL but under the configured base path,
+    /// this script adds a base element pointing to the site root, and keeps in-page fragment links on the current URL.
+    /// When the base path is the default root and no site URL is set, the deployment path is unknown, so nothing is emitted.
+    /// </summary>
+    private string? GetNotFoundBaseScript()
+    {
+        var settings = Site.Configuration.Site;
+        if (!IsNotFound || (settings.BasePath == UrlBasePath.Root && settings.SiteUrl is null))
+            return null;
+
+        // The JSON encoder escapes '<' and '>', so the value cannot close the script element
+        var basePath = System.Text.Json.JsonSerializer.Serialize(settings.BasePath.Value);
+        return "<script>(function(){var b=" + basePath + ",p=location.pathname;if(p.slice(-9)==='/404.html'||p.indexOf(b)!==0)return;var e=document.createElement('base');e.href=b;document.head.appendChild(e);document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('a[href^=\"#\"]').forEach(function(a){a.setAttribute('href',p+location.search+a.getAttribute('href'))})})})()</script>";
     }
 
     private RenderFragment RenderTree(System.Collections.Immutable.ImmutableArray<NavigationNode> nodes) => @<ul>

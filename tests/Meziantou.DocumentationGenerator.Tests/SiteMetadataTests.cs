@@ -23,6 +23,10 @@ public sealed class SiteMetadataTests
         var notFound = HtmlDocumentLoader.Parse(site.ReadFile("404.html"));
         Assert.Equal("noindex", notFound.QuerySelector("meta[name=robots]")!.GetAttribute("content"));
         Assert.Equal("./", notFound.QuerySelector("main a")!.GetAttribute("href"));
+        Assert.Equal("_assets/site.css", notFound.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
+
+        // The deployment path is unknown, so 404.html does not set a base URL when served at a missing URL
+        Assert.DoesNotContain(notFound.QuerySelectorAll("head script"), s => s.TextContent!.Contains("createElement('base')", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -32,7 +36,9 @@ public sealed class SiteMetadataTests
 
         Assert.Equal("https://example.com/guide.html", HtmlDocumentLoader.Parse(site.ReadFile("guide.html")).QuerySelector("link[rel=canonical]")!.GetAttribute("href"));
         Assert.Equal("https://example.com/", HtmlDocumentLoader.Parse(site.ReadFile("index.html")).QuerySelector("link[rel=canonical]")!.GetAttribute("href"));
-        Assert.Null(HtmlDocumentLoader.Parse(site.ReadFile("404.html")).QuerySelector("link[rel=canonical]"));
+        var notFound = HtmlDocumentLoader.Parse(site.ReadFile("404.html"));
+        Assert.Null(notFound.QuerySelector("link[rel=canonical]"));
+        Assert.Contains(notFound.QuerySelectorAll("head script"), s => s.TextContent!.Contains("var b=\"/\"", StringComparison.Ordinal));
 
         var sitemap = site.ReadFile("sitemap.xml");
         var locations = System.Xml.Linq.XDocument.Parse(sitemap).Descendants().Where(e => e.Name.LocalName == "loc").Select(e => e.Value).ToList();
@@ -62,6 +68,12 @@ public sealed class SiteMetadataTests
         Assert.Contains("<loc>https://example.com/docs/</loc>", site.ReadFile("sitemap.xml"));
         Assert.False(File.Exists(site.Output / "robots.txt"));
         Assert.Contains("DG1010", site.Result.AllOutput);
+
+        // Links stay file-relative; a script sets the base URL when 404.html is served at a missing URL
+        var notFound = HtmlDocumentLoader.Parse(site.ReadFile("404.html"));
+        Assert.Equal("_assets/site.css", notFound.QuerySelector("link[rel=stylesheet]")!.GetAttribute("href"));
+        Assert.Contains(notFound.QuerySelectorAll("head script"), s => s.TextContent!.Contains("var b=\"/docs/\"", StringComparison.Ordinal));
+        Assert.DoesNotContain(HtmlDocumentLoader.Parse(site.ReadFile("guide.html")).QuerySelectorAll("head script"), s => s.TextContent!.Contains("createElement('base')", StringComparison.Ordinal));
     }
 
     [Fact]

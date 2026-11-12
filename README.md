@@ -19,7 +19,7 @@ pages whose folder structure defines the navigation.
 
 ## Requirements
 
-- The .NET 11 SDK (or runtime) to run the tool. While .NET 11 is in preview, install a preview SDK.
+- The .NET 11 SDK (or runtime) to run the tool.
 - No requirement to browse the generated site.
 
 ## Quick start

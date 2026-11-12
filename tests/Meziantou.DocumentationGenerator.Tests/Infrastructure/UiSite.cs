@@ -52,6 +52,8 @@ internal static class UiSite
 
                     <DependencyGraph Packages="*" External="true" />
                     """,
+                ["docs/zz-Assertions/_folder.yml"] = "title: Assertions",
+                ["docs/zz-Assertions/01-Introduction.md"] = "# Introduction\n\n## Usage\n\nText.",
             },
             arguments: arguments);
         if (site.Result.ExitCode != 0)

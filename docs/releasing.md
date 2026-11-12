@@ -62,6 +62,5 @@ deprecate it), then publish a new patch version. Delete or edit the GitHub relea
 
 ## .NET 11 SDK policy
 
-The SDK is pinned in `global.json`. While .NET 11 is in preview, update the pinned preview SDK deliberately (CI uses
-exactly that SDK), keep the tool targeting `net11.0`, and mention the required runtime in the release notes. When .NET 11
-is released, pin the stable SDK and release a new version built with it.
+The SDK is pinned in `global.json` to a stable .NET 11 SDK; CI uses exactly that SDK. Update it deliberately, together
+with the .NET 11 package versions in `Directory.Packages.props`, and keep the tool targeting `net11.0`.
