@@ -245,6 +245,10 @@ sortOrder: 2
   folders; default `0`; lower values first), then ordinally by name; number prefixes set the order among equal values.
 - A folder is a group that links to its first page, in the sidebar and in breadcrumbs. Only folders containing at least
   one page appear.
+- The folder URL (`/imaging/`) redirects to the same first page: `{folder}/index.html` is generated as a small redirect
+  page (refresh meta tag and script, keeping the query and fragment), with a canonical URL to the first page when
+  `site.url` is set. It is not listed in the sitemap. No redirect is generated when another file already uses that path,
+  such as a page with `slug: index` or the API reference (`api/`).
 - `_folder.yml` keys: `title` (display name), `description` (shown on the generated home page), `slug` (URL segment),
   `sortOrder` (integer position among the entries of the parent folder; an invalid value is reported as `DG5011` and `0`
   is used). Other keys are ignored. It is parsed as YAML with bounded nesting; anchors and aliases are rejected.

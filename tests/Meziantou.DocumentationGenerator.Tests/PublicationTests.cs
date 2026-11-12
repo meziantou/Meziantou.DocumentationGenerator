@@ -122,10 +122,14 @@ public sealed class PublicationTests
         var docsFiles = GetFiles(docs.FullPath / "_site");
         Assert.Equal(rootFiles.Keys, docsFiles.Keys);
         Assert.NotNull(HtmlDocumentLoader.Parse(docsFiles["index.html"]).QuerySelector("a[href='guide.html']"));
-        foreach (var file in rootFiles.Keys.Where(f => f.EndsWith(".html", StringComparison.Ordinal)))
+        // Except 404.html, which embeds a known base path to fix its URLs when a host serves it at a missing URL
+        foreach (var file in rootFiles.Keys.Where(f => f.EndsWith(".html", StringComparison.Ordinal) && f != "404.html"))
         {
             Assert.Equal(rootFiles[file], docsFiles[file]);
         }
+
+        Assert.DoesNotContain("createElement('base')", rootFiles["404.html"], StringComparison.Ordinal);
+        Assert.Contains("var b=\"/docs/\"", docsFiles["404.html"], StringComparison.Ordinal);
     }
 
     [Theory]

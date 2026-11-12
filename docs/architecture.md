@@ -163,10 +163,14 @@ Authored page URLs are computed from folder and page titles unless a `slug` is s
 - Every page is an `.html` file. The site never requires an SPA fallback or URL rewriting.
 - A page named `index.html` is linked by its directory URL (`/docs/foo/`); every other page is linked by its
   file URL (`/docs/foo/api/Foo.Bar.html`). Static hosts serve `index.html` for directory URLs.
+- Authored folders without an `index.html` of their own get a generated `{folder}/index.html` that redirects to the
+  folder's first page with a file-relative URL, so folder URLs never return 404.
 - Shared models use site URLs with the configured base path. When writing HTML, every internal URL is made
   relative to that output file, including navigation, content, assets and search. Absolute external and metadata
   URLs are unchanged, so relocating a site does not require rebuilding unless its absolute metadata must change.
-- The 404 page is file-relative too: hosts must redirect to its actual URL rather than serving it at a nested missing URL.
+- The 404 page is file-relative too. When the deployment path is known (`basePath` is not `/` or `url` is set), an
+  inline script adds `<base href="{basePath}">` when the page is served at a missing URL under the base path, as GitHub
+  Pages does; it is the only HTML file whose content depends on the base path.
 - Opening the site from `file://` is **Unsupported**.
 
 The following table shows deployment URLs, not the relative attribute values emitted in HTML:

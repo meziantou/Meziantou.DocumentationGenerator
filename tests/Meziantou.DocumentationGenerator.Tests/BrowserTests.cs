@@ -467,5 +467,38 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Equal(fixture.DocsServer.BaseUrl, page.Url);
     }
 
+    [Fact]
+    public async Task NotFound_ServedInPlaceAtANestedUrl_LoadsAssetsAndLinks()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        var url = fixture.PagesServer.BaseUrl + "a/b/c/";
+        var response = await page.GotoAsync(url);
+
+        Assert.Equal(404, response!.Status);
+        Assert.Equal(url, page.Url);
+        Assert.Equal("Page not found", await page.TextContentAsync("h1"));
+        Assert.True(await page.EvaluateAsync<bool>("document.querySelector('link[rel=stylesheet]').sheet.cssRules.length > 0"));
+        Assert.Equal(url + "#main", await page.EvaluateAsync<string>("document.querySelector('.skip-link').href"));
+
+        await page.ClickAsync("main >> text=Go to the home page");
+        Assert.Equal(fixture.PagesServer.BaseUrl, page.Url);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FolderUrl_RedirectsToTheFirstPage(bool relocated)
+    {
+        var server = relocated ? fixture.DocsServer : fixture.PagesServer;
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(server.BaseUrl + "assertions/#usage");
+
+        Assert.Equal(200, response!.Status);
+        await page.WaitForURLAsync(server.BaseUrl + "assertions/introduction.html#usage");
+        Assert.Equal("Introduction", await page.TextContentAsync("h1"));
+    }
+
     private static Task<string> GetBackgroundAsync(IPage page) => page.EvaluateAsync<string>("getComputedStyle(document.body).backgroundColor");
 }

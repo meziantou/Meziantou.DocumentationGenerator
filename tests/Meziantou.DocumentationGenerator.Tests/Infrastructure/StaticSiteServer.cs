@@ -10,7 +10,8 @@ namespace Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
 /// <summary>
 /// An ordinary static file server: files are served from a directory under a base path, directory URLs serve index.html,
-/// and missing files redirect to the site's 404.html. There is no SPA fallback.
+/// and missing files redirect to the site's 404.html. There is no SPA fallback. With <c>serveNotFoundInPlace</c>, missing
+/// files return the content of 404.html at the requested URL instead, like GitHub Pages.
 /// </summary>
 internal sealed class StaticSiteServer : IAsyncDisposable
 {
@@ -28,7 +29,7 @@ internal sealed class StaticSiteServer : IAsyncDisposable
     public string BaseUrl => Origin + BasePath;
     public ConcurrentQueue<(string Path, int StatusCode)> Requests { get; } = new();
 
-    public static async Task<StaticSiteServer> StartAsync(FullPath root, string basePath = "/")
+    public static async Task<StaticSiteServer> StartAsync(FullPath root, string basePath = "/", bool serveNotFoundInPlace = false)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
@@ -55,7 +56,15 @@ internal sealed class StaticSiteServer : IAsyncDisposable
                 var notFound = root / "404.html";
                 if (File.Exists(notFound))
                 {
-                    context.Response.Redirect(basePath + "404.html");
+                    if (serveNotFoundInPlace)
+                    {
+                        context.Response.ContentType = "text/html; charset=utf-8";
+                        await context.Response.SendFileAsync(notFound);
+                    }
+                    else
+                    {
+                        context.Response.Redirect(basePath + "404.html");
+                    }
                 }
             }
 

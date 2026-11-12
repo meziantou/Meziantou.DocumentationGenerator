@@ -13,6 +13,9 @@ public sealed class BrowserFixture : IAsyncLifetime
     internal StaticSiteServer RootServer { get; private set; } = null!;
     internal StaticSiteServer DocsServer { get; private set; } = null!;
 
+    /// <summary>Serves the site at its configured base path and returns 404.html at missing URLs, like GitHub Pages.</summary>
+    internal StaticSiteServer PagesServer { get; private set; } = null!;
+
     public async ValueTask InitializeAsync()
     {
         // Downloads Chromium when it is not installed yet; CI installs it before running the tests
@@ -28,6 +31,7 @@ public sealed class BrowserFixture : IAsyncLifetime
         RootServer = await StaticSiteServer.StartAsync(_rootSite.Output, "/");
         // Serve the same files at a different path from the one configured at build time.
         DocsServer = await StaticSiteServer.StartAsync(_docsSite.Output, "/Meziantou.Framework/");
+        PagesServer = await StaticSiteServer.StartAsync(_docsSite.Output, "/docs/", serveNotFoundInPlace: true);
     }
 
     public async ValueTask DisposeAsync()
@@ -40,6 +44,11 @@ public sealed class BrowserFixture : IAsyncLifetime
         if (DocsServer is not null)
         {
             await DocsServer.DisposeAsync();
+        }
+
+        if (PagesServer is not null)
+        {
+            await PagesServer.DisposeAsync();
         }
 
         if (Browser is not null)

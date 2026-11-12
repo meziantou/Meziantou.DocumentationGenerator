@@ -9,5 +9,8 @@ internal enum PageKind
     Type,
     Article,
     NotFound,
+
+    /// <summary>A page redirecting a folder URL to the first page of the folder.</summary>
+    Redirect,
     Asset,
 }
