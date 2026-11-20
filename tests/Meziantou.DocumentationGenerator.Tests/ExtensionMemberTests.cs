@@ -64,6 +64,28 @@ public sealed class ExtensionMemberTests
                 public static int get_Zero(int value, int other) => value + other;
             }
 
+            /// <summary>Extensions for sequences.</summary>
+            public static class EnumerableExtensions
+            {
+                /// <typeparam name="T">The item type.</typeparam>
+                /// <param name="source">The sequence.</param>
+                extension<T>(System.Collections.Generic.IEnumerable<T?> source)
+                    where T : class
+                {
+                    /// <summary>Removes the null references.</summary>
+                    public System.Collections.Generic.IEnumerable<T> WhereNotNull() => [];
+                }
+
+                /// <typeparam name="T">The item type.</typeparam>
+                /// <param name="source">The sequence.</param>
+                extension<T>(System.Collections.Generic.IEnumerable<T?> source)
+                    where T : struct
+                {
+                    /// <summary>Removes the values that are null.</summary>
+                    public System.Collections.Generic.IEnumerable<T> WhereNotNull() => [];
+                }
+            }
+
             /// <summary>See <see cref="StringExtensions.extension(string).Repeat(int)"/>.</summary>
             public static class Consumer
             {
@@ -193,6 +215,53 @@ public sealed class ExtensionMemberTests
         {
             return [.. document.GetElementById(sectionId)!.ParentElement!.QuerySelectorAll<Element>("table.api-table tbody td:first-child").Select(td => td.TextContent ?? "")];
         }
+    }
+
+    [Fact]
+    public async Task TypePage_DisambiguatesMembersOfBlocksWithTheSameReceiverName()
+    {
+        await using var site = await SiteBuilder.BuildAsync([CreatePackage()]);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+        var document = HtmlDocumentLoader.Parse(site.ReadFile("api/Contoso.Ext.EnumerableExtensions.html"));
+
+        // The blocks differ by a constraint only: both receivers are IEnumerable<T?>, so each anchor ends with a hash
+        var forClasses = document.GetElementById("WhereNotNull``1(System.Collections.Generic.IEnumerable{``0})")!.ParentElement!;
+        var forStructs = document.GetElementById("WhereNotNull``1(System.Collections.Generic.IEnumerable{System.Nullable{``0}})")!.ParentElement!;
+        Assert.NotSame(forClasses, forStructs);
+        Assert.Contains("Removes the null references.", forClasses.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Removes the values that are null.", forStructs.TextContent, StringComparison.Ordinal);
+
+        var anchors = new[] { forClasses.GetAttribute("id")!, forStructs.GetAttribute("id")! };
+        Assert.All(anchors, anchor => Assert.Matches(@"^IEnumerable<T\?>\.WhereNotNull--[0-9a-f]{8}$", anchor));
+        Assert.NotEqual(anchors[0], anchors[1]);
+        Assert.Null(document.GetElementById("IEnumerable<T?>.WhereNotNull"));
+
+        // The members are still overloads of each other, and the table links each of them
+        Assert.Same(forClasses.ParentElement, forStructs.ParentElement);
+        Assert.Equal("IEnumerable<T?>.WhereNotNull-overloads", forClasses.ParentElement!.GetAttribute("id"));
+        var links = document.QuerySelectorAll<Element>("table.api-table tbody td:first-child a").Select(a => Uri.UnescapeDataString(a.GetAttribute("href")![1..]));
+        Assert.Equal(anchors.Order(StringComparer.Ordinal), links.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Links_DisambiguateMembersOfBlocksWithTheSameReceiverName()
+    {
+        await using var build = await BuildAsync();
+        var links = build.Context.Links!;
+        var forClasses = GetMember("M:Contoso.Ext.EnumerableExtensions.WhereNotNull``1(System.Collections.Generic.IEnumerable{``0})");
+        var forStructs = GetMember("M:Contoso.Ext.EnumerableExtensions.WhereNotNull``1(System.Collections.Generic.IEnumerable{System.Nullable{``0}})");
+
+        // Both members have the same preferred anchor; each gets a hash of its documentation ID
+        Assert.Equal("IEnumerable<T?>.WhereNotNull", RouteNames.GetPreferredMemberAnchor(forClasses));
+        Assert.Equal("IEnumerable<T?>.WhereNotNull", RouteNames.GetPreferredMemberAnchor(forStructs));
+        Assert.Equal("IEnumerable<T?>.WhereNotNull--" + RouteNames.GetStableHash(forClasses.DocumentationId), links.GetMemberAnchor(forClasses));
+        Assert.Equal("IEnumerable<T?>.WhereNotNull--" + RouteNames.GetStableHash(forStructs.DocumentationId), links.GetMemberAnchor(forStructs));
+        Assert.Equal("/api/Contoso.Ext.EnumerableExtensions.html#" + UrlBuilder.EncodeFragment(links.GetMemberAnchor(forStructs)), links.GetUrl(forStructs));
+
+        // The other members keep their preferred anchor
+        Assert.Equal("string.Repeat(System.Int32)", links.GetMemberAnchor(GetMember("M:Contoso.Ext.StringExtensions.Repeat(System.String,System.Int32)")));
+
+        ApiMemberModel GetMember(string implementationId) => Assert.IsType<ApiMemberModel>(Assert.Single(build.Context.ApiCatalog.FindByDocumentationId(implementationId)));
     }
 
     [Fact]

@@ -36,10 +36,12 @@ internal static partial class RouteNames
 
     /// <summary>The member part of the documentation ID: <c>M:Contoso.Client.Send(System.Int32)</c> becomes <c>Send(System.Int32)</c>.</summary>
     /// <remarks>
-    /// Members of C# 14 extension blocks are prefixed by their receiver type instead of the compiler-generated grouping type:
-    /// <c>P:Contoso.Extensions.&lt;G&gt;$9F2C.Length</c> becomes <c>string.Length</c>.
+    /// <para>Members of C# 14 extension blocks are prefixed by their receiver type instead of the compiler-generated grouping type:
+    /// <c>P:Contoso.Extensions.&lt;G&gt;$9F2C.Length</c> becomes <c>string.Length</c>.</para>
+    /// <para>Two members of extension blocks can get the same anchor from this method. <see cref="LinkService.GetMemberAnchor"/>
+    /// disambiguates them, and is the method to call for the anchor of a member in a page.</para>
     /// </remarks>
-    public static string GetMemberAnchor(ApiMemberModel member)
+    public static string GetPreferredMemberAnchor(ApiMemberModel member)
     {
         var anchor = GetMemberAnchor(member.DeclaringType, member.DocumentationId);
         if (member.ExtensionBlock is { } block && member.ExtensionReceiverKey is { } receiver)
@@ -57,7 +59,7 @@ internal static partial class RouteNames
     /// </summary>
     public static IEnumerable<string> GetAdditionalMemberAnchors(ApiMemberModel member)
     {
-        var anchor = GetMemberAnchor(member);
+        var anchor = GetPreferredMemberAnchor(member);
         return member.GetExtensionImplementationIds()
             .Select(id => GetMemberAnchor(member.DeclaringType, id))
             .Where(id => !string.Equals(id, anchor, StringComparison.Ordinal))

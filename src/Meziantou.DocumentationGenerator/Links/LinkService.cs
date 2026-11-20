@@ -27,6 +27,7 @@ internal sealed partial class LinkService
     private readonly DiagnosticBag _diagnostics;
     private readonly Dictionary<string, SiteRoute> _routesByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ApiTypeModel, SiteRoute> _typeRoutes = [];
+    private readonly Dictionary<ApiMemberModel, string> _disambiguatedMemberAnchors = [];
 
     public LinkService(SiteConfiguration configuration, ApiCatalog catalog, DiagnosticBag diagnostics)
     {
@@ -53,7 +54,9 @@ internal sealed partial class LinkService
                 Register(new SiteRoute(RouteNames.GetNamespacePath(ns.Name), PageKind.Namespace, "namespace " + ns.Name));
             }
 
-            RegisterTypeRoutes(catalog.Packages.SelectMany(p => p.GetAllTypes()));
+            var types = catalog.Packages.SelectMany(p => p.GetAllTypes()).ToList();
+            RegisterTypeRoutes(types);
+            DisambiguateMemberAnchors(types);
         }
     }
 
@@ -89,12 +92,22 @@ internal sealed partial class LinkService
 
     public SiteRoute? GetTypeRoute(ApiTypeModel type) => _typeRoutes.GetValueOrDefault(type);
 
+    /// <summary>The anchor of a member in the page of its type.</summary>
+    /// <remarks>
+    /// Blocks whose receiver types differ and get the same short name, such as two types named <c>Timer</c> in two namespaces,
+    /// <c>int</c> and <c>int?</c>, or <c>IEnumerable&lt;T?&gt; where T : class</c> and <c>IEnumerable&lt;T?&gt; where T : struct</c>,
+    /// can declare the same member, e.g., <c>public IEnumerable&lt;T&gt; WhereNotNull()</c>: the anchors of those members
+    /// are disambiguated by appending a stable hash of the member's documentation ID to each, as in
+    /// <c>IEnumerable&lt;T?&gt;.WhereNotNull--1a2b3c4d</c>.
+    /// </remarks>
+    public string GetMemberAnchor(ApiMemberModel member) => _disambiguatedMemberAnchors.GetValueOrDefault(member) ?? RouteNames.GetPreferredMemberAnchor(member);
+
     public string? GetUrl(ApiSymbolModel symbol)
     {
         return symbol switch
         {
             ApiTypeModel type => GetTypeRoute(type) is { } route ? Urls.GetUrl(route.FilePath) : null,
-            ApiMemberModel member => GetTypeRoute(member.DeclaringType) is { } route ? Urls.GetUrl(route.FilePath, RouteNames.GetMemberAnchor(member)) : null,
+            ApiMemberModel member => GetTypeRoute(member.DeclaringType) is { } route ? Urls.GetUrl(route.FilePath, GetMemberAnchor(member)) : null,
             _ => null,
         };
     }
@@ -429,6 +442,26 @@ internal sealed partial class LinkService
             foreach (var (type, fileName) in resolved)
             {
                 AddTypeRoute(type, fileName);
+            }
+        }
+    }
+
+    private void DisambiguateMemberAnchors(IEnumerable<ApiTypeModel> types)
+    {
+        foreach (var type in types)
+        {
+            // Only members of extension blocks can share an anchor: the other members of a type have distinct documentation IDs
+            var sharedAnchors = type.Members
+                .Where(m => m.ExtensionBlock is not null)
+                .GroupBy(RouteNames.GetPreferredMemberAnchor, StringComparer.Ordinal)
+                .Where(g => g.Count() > 1);
+
+            foreach (var group in sharedAnchors)
+            {
+                foreach (var member in group)
+                {
+                    _disambiguatedMemberAnchors.Add(member, group.Key + "--" + RouteNames.GetStableHash(member.DocumentationId));
+                }
             }
         }
     }
