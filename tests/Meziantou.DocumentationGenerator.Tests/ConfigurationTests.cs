@@ -100,45 +100,33 @@ public sealed class ConfigurationTests
     }
 
     [Fact]
-    public async Task SiteFooter_ParsesLinks()
+    public async Task SiteFooter_IsInlineMarkdown()
     {
         await using var temp = TemporaryDirectory.Create();
         var (configuration, diagnostics) = Load(temp, """
             {
               "version": 1,
               "packages": [ { "id": "A", "version": "1.0.0" } ],
-              "site": { "footer": "© Contoso [x] - [contoso.com](https://contoso.com) and [GitHub](https://github.com/contoso)" }
+              "site": { "footer": "© *Contoso* - [contoso.com][site] <https://github.com/contoso>\n\n[site]: https://contoso.com" }
             }
             """);
 
         Assert.Empty(diagnostics);
-        Assert.NotNull(configuration);
-        Assert.Equal(
-            [
-                new SiteFooterPart("© Contoso [x] - ", Url: null),
-                new SiteFooterPart("contoso.com", "https://contoso.com/"),
-                new SiteFooterPart(" and ", Url: null),
-                new SiteFooterPart("GitHub", "https://github.com/contoso"),
-            ],
-            configuration.Site.Footer);
-    }
+        Assert.Equal("© *Contoso* - [contoso.com][site] <https://github.com/contoso>\n\n[site]: https://contoso.com", configuration!.Site.Footer);
 
-    [Fact]
-    public async Task SiteFooter_WithoutLinks_IsText()
-    {
-        await using var temp = TemporaryDirectory.Create();
-        var (configuration, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "site": { "footer": "© Contoso" } }""");
-        Assert.Equal([new SiteFooterPart("© Contoso", Url: null)], configuration!.Site.Footer);
-
-        var (empty, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ] }""");
-        Assert.Empty(empty!.Site.Footer);
+        var (empty, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "site": { "footer": " " } }""");
+        Assert.Null(empty!.Site.Footer);
     }
 
     [Theory]
     [InlineData("[Unsafe](javascript:alert)", "DG1013")]
     [InlineData("[Relative](/about)", "DG1013")]
+    [InlineData("![Image](logo.png)", "DG1013")]
+    [InlineData("<contact@example.com>", "DG1013")]
     [InlineData("[Credentials](https://user:pass@example.com)", "DG1011")]
-    public async Task SiteFooter_RejectsUnsafeUrls(string footer, string code)
+    [InlineData("# Heading", "DG1013")]
+    [InlineData("First\\n\\nSecond", "DG1013")]
+    public async Task SiteFooter_RejectsInvalidMarkdown(string footer, string code)
     {
         await using var temp = TemporaryDirectory.Create();
         var (configuration, diagnostics) = Load(temp, $$"""

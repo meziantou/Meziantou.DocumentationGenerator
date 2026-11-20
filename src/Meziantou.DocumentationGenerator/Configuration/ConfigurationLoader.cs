@@ -142,9 +142,6 @@ internal static partial class ConfigurationLoader
         return index >= 0 ? message[..index] : message;
     }
 
-    [GeneratedRegex(@"\[[^\[\]]+\]\([^()\s]+\)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex FooterLinkRegex();
-
     [GeneratedRegex(@"^DG\d{4}$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex DiagnosticCodeRegex();
 
@@ -300,44 +297,31 @@ internal static partial class ConfigurationLoader
                 Favicon = ResolveExistingFile(section.Favicon, "$.site.favicon"),
                 SocialImage = socialImage,
                 Robots = robots,
-                Footer = ParseFooter(section.Footer),
+                Footer = ValidateFooter(section.Footer),
                 HeaderLinks = ValidateHeaderLinks(section.HeaderLinks),
                 MinifyHtml = section.MinifyHtml ?? Default("$.site.minifyHtml", value: false),
             };
         }
 
-        private ImmutableArray<SiteFooterPart> ParseFooter(string? footer)
+        private string? ValidateFooter(string? footer)
         {
-            if (string.IsNullOrEmpty(footer))
-                return [];
+            if (string.IsNullOrWhiteSpace(footer))
+                return null;
 
-            var result = ImmutableArray.CreateBuilder<SiteFooterPart>();
-            var index = 0;
-            foreach (var match in FooterLinkRegex().EnumerateMatches(footer))
+            var document = FooterMarkdown.Parse(footer);
+            if (!FooterMarkdown.IsInline(document))
             {
-                if (match.Index > index)
-                {
-                    result.Add(new SiteFooterPart(footer[index..match.Index], Url: null));
-                }
-
-                var link = footer.AsSpan(match.Index, match.Length);
-                var separator = link.IndexOf("](", StringComparison.Ordinal);
-                var text = link[1..separator].ToString();
-                var url = link[(separator + 2)..^1].ToString();
-                if (TryValidateExternalUrl(url, "A footer link", "$.site.footer", out var absoluteUrl))
-                {
-                    result.Add(new SiteFooterPart(text, absoluteUrl));
-                }
-
-                index = match.Index + match.Length;
+                Error(DiagnosticDescriptors.InvalidConfigurationValue, "The footer must be inline Markdown: no headings, lists, code blocks or several paragraphs", "$.site.footer");
+                return null;
             }
 
-            if (index < footer.Length)
+            var valid = true;
+            foreach (var url in FooterMarkdown.GetUrls(document))
             {
-                result.Add(new SiteFooterPart(footer[index..], Url: null));
+                valid &= TryValidateExternalUrl(url, "A footer link", "$.site.footer", out _);
             }
 
-            return result.ToImmutable();
+            return valid ? footer : null;
         }
 
         private bool TryValidateExternalUrl(string? url, string name, string path, [NotNullWhen(true)] out string? absoluteUrl)

@@ -30,6 +30,9 @@ internal sealed class SiteRenderContext
     public string? LogoUrl { get; init; }
     public string? SocialImageUrl { get; init; }
 
+    /// <summary>Rendered footer, or <see langword="null"/> when not configured.</summary>
+    public string? FooterHtml { get; init; }
+
     public string SiteTitle => Configuration.Site.Title;
 
     public ApiTypeModel GetTypeByPagePath(string pagePath)

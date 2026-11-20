@@ -135,19 +135,19 @@ public sealed class SiteMetadataTests
     }
 
     [Fact]
-    public async Task Footer_RendersLinks()
+    public async Task Footer_RendersInlineMarkdown()
     {
         await using var site = await BuildAsync("""
-            "site": { "footer": "© <b>Contoso</b> - [contoso.com](https://contoso.com)" },
+            "site": { "footer": "© <b>Contoso</b> - **[contoso.com](https://contoso.com)**" },
             """);
 
         var document = HtmlDocumentLoader.Parse(site.ReadFile("guide.html"));
-        var footer = document.QuerySelector(".site-footer p")!;
+        var footer = document.QuerySelector(".site-footer > p")!;
         Assert.Equal("© <b>Contoso</b> - contoso.com", footer.TextContent);
         Assert.Null(footer.QuerySelector("b"));
-        Assert.Single(footer.QuerySelectorAll("a"));
-        var link = footer.QuerySelector("a")!;
-        Assert.Equal("https://contoso.com/", link.GetAttribute("href"));
+        Assert.Null(footer.QuerySelector("p"));
+        var link = footer.QuerySelector("strong > a")!;
+        Assert.Equal("https://contoso.com", link.GetAttribute("href"));
         Assert.Equal("contoso.com", link.TextContent);
     }
 

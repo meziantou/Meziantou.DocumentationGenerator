@@ -21,8 +21,8 @@ internal sealed class SiteSettings
     public FullPath? SocialImage { get; init; }
     public required RobotsPolicy Robots { get; init; }
 
-    /// <summary>Footer text split into text and links. Empty when there is no footer.</summary>
-    public required ImmutableArray<SiteFooterPart> Footer { get; init; }
+    /// <summary>Footer of every page, as inline Markdown (see <see cref="FooterMarkdown"/>).</summary>
+    public string? Footer { get; init; }
     public required ImmutableArray<SiteHeaderLink> HeaderLinks { get; init; }
 
     /// <summary>Minify the generated pages. Minification is the slowest step of the rendering.</summary>

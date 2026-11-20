@@ -165,19 +165,9 @@
         }
     </div>
     <footer class="site-footer">
-        @if (!Site.Configuration.Site.Footer.IsEmpty)
+        @if (Site.FooterHtml is not null)
         {
-            <p>@foreach (var part in Site.Configuration.Site.Footer)
-            {
-                if (part.Url is null)
-                {
-                    @part.Text
-                }
-                else
-                {
-                    <a href="@part.Url" rel="noopener">@part.Text</a>
-                }
-            }</p>
+            <p>@((MarkupString)Site.FooterHtml)</p>
         }
     </footer>
     <div id="live-status" class="visually-hidden" role="status" aria-live="polite"></div>
