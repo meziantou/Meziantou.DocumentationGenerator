@@ -283,7 +283,7 @@ public sealed class PublicationTests
         Assert.Equal(ExitCodes.Success, (await BuildAsync(temp)).ExitCode);
 
         var manifest = OutputManifest.TryRead(temp.FullPath / "_site" / OutputManifest.FileName)!;
-        Assert.Equal(["_assets/site.css", "_assets/site.js", "guide.html", "index.html"], manifest.Files.Where(f => !f.StartsWith("_assets/search", StringComparison.Ordinal) && f != "404.html" && f != "sitemap.xml"));
+        Assert.Equal(["_assets/navigation.json", "_assets/site.css", "_assets/site.js", "guide.html", "index.html"], manifest.Files.Where(f => !f.StartsWith("_assets/search", StringComparison.Ordinal) && f != "404.html" && f != "sitemap.xml"));
         var text = await File.ReadAllTextAsync(temp.FullPath / "_site" / OutputManifest.FileName, TestContext.Current.CancellationToken);
         Assert.DoesNotContain(temp.FullPath.Value, text);
         Assert.DoesNotContain(DateTime.UtcNow.Year.ToString(System.Globalization.CultureInfo.InvariantCulture) + "-", text);

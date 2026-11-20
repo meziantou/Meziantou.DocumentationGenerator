@@ -202,14 +202,20 @@ public sealed class ApiPageTests
         Assert.Equal(["Contoso.Library", "Contoso.Library.Collections"], reference.QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
         Assert.Equal(["Contoso.Second"], Load(site, "api/packages/contoso.second.html").QuerySelectorAll<Element>(".api-table a").Select(a => a.TextContent));
 
-        // The sidebar lists namespaces directly under the API reference
+        // The API reference is closed on a package page, which is not in the navigation: its namespaces are not rendered
         var items = reference.QuerySelectorAll<Element>(".sidebar > ul > li");
         var api = items[items.Count - 1];
         var apiLink = api.QuerySelector(":scope > a")!;
         Assert.Equal("API reference", apiLink.TextContent);
         Assert.Equal("../", apiLink.GetAttribute("href"));
         Assert.Contains("nav-api-reference", api.GetAttribute("class")!.Split(' '));
-        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], api.QuerySelectorAll<Element>(":scope > details > ul > li > a").Select(a => a.TextContent));
+        Assert.NotNull(api.QuerySelector(":scope > details[data-nav-id]:not([open])"));
+        Assert.Empty(api.QuerySelectorAll<Element>(":scope > details li"));
+
+        // On the API reference page, the sidebar lists namespaces directly under the API reference
+        items = Load(site, "api/index.html").QuerySelectorAll<Element>(".sidebar > ul > li");
+        api = items[items.Count - 1];
+        Assert.Equal(["Contoso.Library", "Contoso.Library.Collections", "Contoso.Second"], api.QuerySelectorAll<Element>(":scope > details[open] > ul > li > a").Select(a => a.TextContent));
 
         // A type page links to its package; a namespace of a single package has no package column
         var other = Load(site, "api/Contoso.Second.Other.html");

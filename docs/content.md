@@ -259,6 +259,9 @@ sortOrder: 2
 - The home page is the first entry: the root `index.md`, under its title, or the generated home page when
   [`site.homeTitle`](configuration.md#site) is set. `site.homeTitle` also renames the entry of a root `index.md`.
 - Previous and next links only go through authored pages, and the home page when it is in the navigation.
+- The sidebar of a page only contains the sections leading to that page, with their entries. The entries of the other
+  sections are listed in `_assets/navigation.json` and loaded by the script when a section is expanded. Without
+  JavaScript, closed sections have no toggle: their link opens their first page, where they are expanded.
 
 ```json
 "site": { "title": "Contoso", "homeTitle": "Introduction" }

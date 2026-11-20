@@ -8,7 +8,7 @@ namespace Meziantou.DocumentationGenerator.Rendering;
 /// <summary>Rewrites the URLs of the rendered pages and optionally minifies them before they are written to the output.</summary>
 internal sealed class HtmlMinifier(string styleSheet)
 {
-    private static readonly string[] UrlAttributes = ["href", "src", "data-index", "data-base-path"];
+    private static readonly string[] UrlAttributes = ["href", "src", "data-index", "data-nav-index", "data-base-path"];
 
     private static readonly HtmlMinifyFormatter Formatter = new()
     {
@@ -45,7 +45,7 @@ internal sealed class HtmlMinifier(string styleSheet)
 
     private static void RewriteUrls(Document document, Func<string, string> rewriteUrl)
     {
-        foreach (var element in document.QuerySelectorAll<Element>("[href], [src], [data-index], [data-base-path]"))
+        foreach (var element in document.QuerySelectorAll<Element>("[href], [src], [data-index], [data-nav-index], [data-base-path]"))
         {
             foreach (var attribute in UrlAttributes)
             {

@@ -155,6 +155,14 @@ internal sealed class RenderStage : IBuildStage
             validator.AddFile(indexPath, [], Search.SearchIndexReader.GetUrls(index).Select(url => links.Urls.BasePath.Value + url));
         }
 
+        // The navigation index lists the children of the sections that pages do not render; its URLs are validated like links
+        var navigationIndexPath = LinkService.AssetsDirectory + "/" + Navigation.NavigationIndexBuilder.FileName;
+        if (!site.Navigation.Root.IsEmpty && links.TryRegister(new SiteRoute(navigationIndexPath, PageKind.Asset, "navigation index")))
+        {
+            staging.WriteText(navigationIndexPath, Navigation.NavigationIndexBuilder.Build(site.Navigation, links.Urls));
+            validator.AddFile(navigationIndexPath, [], Navigation.NavigationIndexBuilder.GetSiteUrls(site.Navigation));
+        }
+
         // Folder URLs redirect to the first page of the folder. A path already used by another file is left to that file.
         var redirects = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (folder, firstPage) in FolderRedirects.GetFolders(context.Content.Root))

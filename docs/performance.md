@@ -13,8 +13,10 @@ The search index is loaded on the first interaction with the search box. Queries
 and a 20,000-entry index size budget (160 bytes per entry) are tested with the JavaScript engine of the tests, and
 search is checked interactively in a browser.
 
-API navigation only lists the types of the current namespace, so the size of a page does not grow with the number of
-namespaces of a package.
+The sidebar only renders the sections leading to the current page. The other sections are loaded from a shared
+navigation index (`_assets/navigation.json`) when they are expanded, so the size of a page does not grow with the
+number of pages of the site; the browser downloads the index once. API navigation only lists the types of the current
+namespace, so the size of a page does not grow with the number of namespaces of a package.
 
 ## Page rendering
 
