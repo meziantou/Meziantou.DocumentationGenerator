@@ -135,6 +135,23 @@ public sealed class SiteMetadataTests
     }
 
     [Fact]
+    public async Task Footer_RendersLinks()
+    {
+        await using var site = await BuildAsync("""
+            "site": { "footer": "© <b>Contoso</b> - [contoso.com](https://contoso.com)" },
+            """);
+
+        var document = HtmlDocumentLoader.Parse(site.ReadFile("guide.html"));
+        var footer = document.QuerySelector(".site-footer p")!;
+        Assert.Equal("© <b>Contoso</b> - contoso.com", footer.TextContent);
+        Assert.Null(footer.QuerySelector("b"));
+        Assert.Single(footer.QuerySelectorAll("a"));
+        var link = footer.QuerySelector("a")!;
+        Assert.Equal("https://contoso.com/", link.GetAttribute("href"));
+        Assert.Equal("contoso.com", link.TextContent);
+    }
+
+    [Fact]
     public async Task MetadataArtifacts_AreByteIdentical()
     {
         const string Configuration = """ "site": { "title": "Test site", "url": "https://example.com", "robots": "allow" }, """;

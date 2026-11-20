@@ -64,7 +64,7 @@
           ]
         },
         "footer": {
-          "description": "Footer text displayed on every page.",
+          "description": "Footer text displayed on every page. [text](url) is a link to an absolute http or https URL.",
           "type": "string"
         },
         "headerLinks": {

@@ -142,6 +142,9 @@ internal static partial class ConfigurationLoader
         return index >= 0 ? message[..index] : message;
     }
 
+    [GeneratedRegex(@"\[[^\[\]]+\]\([^()\s]+\)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex FooterLinkRegex();
+
     [GeneratedRegex(@"^DG\d{4}$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex DiagnosticCodeRegex();
 
@@ -297,10 +300,63 @@ internal static partial class ConfigurationLoader
                 Favicon = ResolveExistingFile(section.Favicon, "$.site.favicon"),
                 SocialImage = socialImage,
                 Robots = robots,
-                Footer = section.Footer,
+                Footer = ParseFooter(section.Footer),
                 HeaderLinks = ValidateHeaderLinks(section.HeaderLinks),
                 MinifyHtml = section.MinifyHtml ?? Default("$.site.minifyHtml", value: false),
             };
+        }
+
+        private ImmutableArray<SiteFooterPart> ParseFooter(string? footer)
+        {
+            if (string.IsNullOrEmpty(footer))
+                return [];
+
+            var result = ImmutableArray.CreateBuilder<SiteFooterPart>();
+            var index = 0;
+            foreach (var match in FooterLinkRegex().EnumerateMatches(footer))
+            {
+                if (match.Index > index)
+                {
+                    result.Add(new SiteFooterPart(footer[index..match.Index], Url: null));
+                }
+
+                var link = footer.AsSpan(match.Index, match.Length);
+                var separator = link.IndexOf("](", StringComparison.Ordinal);
+                var text = link[1..separator].ToString();
+                var url = link[(separator + 2)..^1].ToString();
+                if (TryValidateExternalUrl(url, "A footer link", "$.site.footer", out var absoluteUrl))
+                {
+                    result.Add(new SiteFooterPart(text, absoluteUrl));
+                }
+
+                index = match.Index + match.Length;
+            }
+
+            if (index < footer.Length)
+            {
+                result.Add(new SiteFooterPart(footer[index..], Url: null));
+            }
+
+            return result.ToImmutable();
+        }
+
+        private bool TryValidateExternalUrl(string? url, string name, string path, [NotNullWhen(true)] out string? absoluteUrl)
+        {
+            absoluteUrl = null;
+            if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
+            {
+                Error(DiagnosticDescriptors.InvalidConfigurationValue, name + " URL must be an absolute http or https URL", path);
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(uri.UserInfo))
+            {
+                Error(DiagnosticDescriptors.CredentialsInConfiguration, name + " URL must not contain credentials", path);
+                return false;
+            }
+
+            absoluteUrl = uri.AbsoluteUri;
+            return true;
         }
 
         private ImmutableArray<SiteHeaderLink> ValidateHeaderLinks(List<ConfigurationFile.HeaderLinkSection>? sections)
@@ -319,19 +375,10 @@ internal static partial class ConfigurationLoader
                     continue;
                 }
 
-                if (section.Url is null || !Uri.TryCreate(section.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
-                {
-                    Error(DiagnosticDescriptors.InvalidConfigurationValue, "A header link URL must be an absolute http or https URL", path + ".url");
+                if (!TryValidateExternalUrl(section.Url, "A header link", path + ".url", out var url))
                     continue;
-                }
 
-                if (!string.IsNullOrEmpty(uri.UserInfo))
-                {
-                    Error(DiagnosticDescriptors.CredentialsInConfiguration, "A header link URL must not contain credentials", path + ".url");
-                    continue;
-                }
-
-                result.Add(new SiteHeaderLink(section.Text.Trim(), uri.AbsoluteUri, string.IsNullOrWhiteSpace(section.Icon) ? null : section.Icon.Trim()));
+                result.Add(new SiteHeaderLink(section.Text.Trim(), url, string.IsNullOrWhiteSpace(section.Icon) ? null : section.Icon.Trim()));
             }
 
             return result.ToImmutable();
