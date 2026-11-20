@@ -20,6 +20,8 @@ internal sealed class SiteSettings
     public FullPath? Favicon { get; init; }
     public FullPath? SocialImage { get; init; }
     public required RobotsPolicy Robots { get; init; }
+
+    /// <summary>Footer of every page, as inline Markdown (see <see cref="FooterMarkdown"/>).</summary>
     public string? Footer { get; init; }
     public required ImmutableArray<SiteHeaderLink> HeaderLinks { get; init; }
 

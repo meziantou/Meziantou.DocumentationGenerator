@@ -64,7 +64,7 @@
           ]
         },
         "footer": {
-          "description": "Footer text displayed on every page.",
+          "description": "Footer displayed on every page, as inline Markdown: emphasis, code and links to absolute http or https URLs. Raw HTML is displayed as text.",
           "type": "string"
         },
         "headerLinks": {

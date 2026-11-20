@@ -165,9 +165,9 @@
         }
     </div>
     <footer class="site-footer">
-        @if (!string.IsNullOrEmpty(Site.Configuration.Site.Footer))
+        @if (Site.FooterHtml is not null)
         {
-            <p>@Site.Configuration.Site.Footer</p>
+            <p>@((MarkupString)Site.FooterHtml)</p>
         }
     </footer>
     <div id="live-status" class="visually-hidden" role="status" aria-live="polite"></div>

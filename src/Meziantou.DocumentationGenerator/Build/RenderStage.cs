@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
+using Meziantou.DocumentationGenerator.Configuration;
 using Meziantou.DocumentationGenerator.Content;
 using Meziantou.DocumentationGenerator.Diagnostics;
 using Meziantou.DocumentationGenerator.Links;
 using Meziantou.DocumentationGenerator.Rendering;
+using Meziantou.Framework.Markdown.Renderers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Meziantou.DocumentationGenerator.Build;
@@ -60,6 +62,7 @@ internal sealed class RenderStage : IBuildStage
             FaviconUrl = favicon,
             LogoUrl = logo,
             SocialImageUrl = socialImage,
+            FooterHtml = RenderFooter(context.Configuration.Site.Footer),
         };
 
         // Components use shared site services, so they are rendered sequentially to keep diagnostics deterministic. The
@@ -195,6 +198,19 @@ internal sealed class RenderStage : IBuildStage
         staging.CopyFile(outputPath, path);
         validator.AddFile(outputPath, [], []);
         return links.Urls.GetUrl(outputPath);
+    }
+
+    private static string? RenderFooter(string? footer)
+    {
+        if (footer is null)
+            return null;
+
+        using var writer = new StringWriter();
+        var renderer = new HtmlRenderer(writer) { ImplicitParagraph = true };
+        FooterMarkdown.Pipeline.Setup(renderer);
+        renderer.Render(FooterMarkdown.Parse(footer));
+        writer.Flush();
+        return ContentSanitizer.Sanitize(writer.ToString().Trim());
     }
 
     private static void WriteMetadataFile(LinkService links, OutputStaging staging, SiteLinkValidator validator, string fileName, string? content)

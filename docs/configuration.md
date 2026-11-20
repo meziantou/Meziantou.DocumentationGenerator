@@ -101,12 +101,13 @@ Meziantou.DocumentationGenerator build --packages '[]' --references '[]' --allow
 | `favicon` | | Favicon file. |
 | `socialImage` | | Image used by social previews. Requires `url`. |
 | `robots` | `none` | `none`: no `robots.txt` and no robots meta tag. `allow`: `robots.txt` allowing crawlers and referencing the sitemap. `disallow`: `robots.txt` disallowing crawlers and a `noindex` meta tag on every page. `robots.txt` is only generated when `basePath` is `/` because crawlers only read it at the origin root (`DG1010`). |
-| `footer` | | Text displayed in the footer. |
+| `footer` | | Footer displayed on every page, as inline Markdown: emphasis, code and links (`[text](url)`). Link URLs must be absolute `http` or `https` URLs because the footer is shared by every page. Raw HTML is displayed as text, and block syntax (headings, lists, several paragraphs) is rejected. |
 | `headerLinks` | `[]` | Links displayed on the right side of the header. Each entry has required `text` and absolute `url` properties, and an optional `icon` emoji or text glyph. |
 | `minifyHtml` | `false` | Minify the generated HTML pages. Pages are about 10% smaller, but minification is the slowest step of the build (it computes the styles of every element to know which whitespace can be removed). Also `--site-minify-html`. |
 
 ```json
 "site": {
+  "footer": "© Contoso - [contoso.com](https://contoso.com)",
   "headerLinks": [
     { "text": "Reference", "url": "https://example.com/reference", "icon": "📖" },
     { "text": "Sponsors", "url": "https://github.com/sponsors/contoso", "icon": "💖" },

@@ -100,6 +100,50 @@ public sealed class ConfigurationTests
     }
 
     [Fact]
+    public async Task SiteFooter_IsInlineMarkdown()
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, """
+            {
+              "version": 1,
+              "packages": [ { "id": "A", "version": "1.0.0" } ],
+              "site": { "footer": "© *Contoso* - [contoso.com][site] <https://github.com/contoso>\n\n[site]: https://contoso.com" }
+            }
+            """);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("© *Contoso* - [contoso.com][site] <https://github.com/contoso>\n\n[site]: https://contoso.com", configuration!.Site.Footer);
+
+        var (empty, _) = Load(temp, """{ "version": 1, "packages": [ { "id": "A", "version": "1.0.0" } ], "site": { "footer": " " } }""");
+        Assert.Null(empty!.Site.Footer);
+    }
+
+    [Theory]
+    [InlineData("[Unsafe](javascript:alert)", "DG1013")]
+    [InlineData("[Relative](/about)", "DG1013")]
+    [InlineData("![Image](logo.png)", "DG1013")]
+    [InlineData("<contact@example.com>", "DG1013")]
+    [InlineData("[Credentials](https://user:pass@example.com)", "DG1011")]
+    [InlineData("# Heading", "DG1013")]
+    [InlineData("First\\n\\nSecond", "DG1013")]
+    public async Task SiteFooter_RejectsInvalidMarkdown(string footer, string code)
+    {
+        await using var temp = TemporaryDirectory.Create();
+        var (configuration, diagnostics) = Load(temp, $$"""
+            {
+              "version": 1,
+              "packages": [ { "id": "A", "version": "1.0.0" } ],
+              "site": { "footer": "{{footer}}" }
+            }
+            """);
+
+        Assert.Null(configuration);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(code, diagnostic.Code);
+        Assert.Equal("$.site.footer", diagnostic.Location?.JsonPath);
+    }
+
+    [Fact]
     public async Task MultiplePackages()
     {
         await using var temp = TemporaryDirectory.Create();

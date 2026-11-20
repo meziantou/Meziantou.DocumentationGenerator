@@ -78,7 +78,7 @@ internal sealed class ConfigurationFile
         [Description("robots policy: none (no robots.txt), allow, or disallow. Default: none.")]
         public string? Robots { get; set; }
 
-        [Description("Footer text displayed on every page.")]
+        [Description("Footer displayed on every page, as inline Markdown: emphasis, code and links to absolute http or https URLs. Raw HTML is displayed as text.")]
         public string? Footer { get; set; }
 
         [Description("Links displayed on the right side of the header.")]
