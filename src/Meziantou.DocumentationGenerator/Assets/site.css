@@ -274,6 +274,8 @@ button { cursor: pointer; }
 .nav-toggle::before { content: ""; width: 0.55rem; height: 0.55rem; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); }
 details[open] > .nav-toggle::before { transform: translateY(-0.15rem) rotate(135deg); }
 .sidebar .nav-external::after { content: " ↗"; }
+/* The children of closed sections are loaded by the script; without it, their toggles would expand to nothing */
+html:not(.js) .sidebar details[data-nav-id] { display: none; }
 
 .content { grid-area: content; min-width: 0; padding: 1.5rem 2rem 3rem; }
 .page-toc { grid-area: toc; position: sticky; top: var(--header-height); max-height: calc(100vh - var(--header-height)); overflow-y: auto; min-width: 0; padding: 1.5rem 1rem; font-size: 0.875rem; overflow-wrap: anywhere; }

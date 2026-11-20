@@ -98,6 +98,93 @@
         sidebar.scrollTop += rect.top - top - (bottom - top - rect.height) / 2;
     }
 
+    // Pages only render the open sections of the sidebar. The children of a closed section are loaded from the navigation
+    // index when it is expanded, using the same markup as the rendered sections. Without JavaScript, the toggles of closed
+    // sections are hidden and their links lead to the first page of the section, where it is open.
+    function initNavigation() {
+        var sidebar = document.getElementById('sidebar');
+        var indexUrl = sidebar && sidebar.getAttribute('data-nav-index');
+        if (!indexUrl) return;
+        var basePath = sidebar.getAttribute('data-base-path') || './';
+        var loading = null;
+
+        function load() {
+            if (!loading) {
+                loading = fetch(indexUrl, { credentials: 'same-origin' })
+                    .then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
+                    .catch(function (error) { loading = null; throw error; });
+            }
+
+            return loading;
+        }
+
+        function createLink(title, url, flags) {
+            if (url === null) {
+                var span = document.createElement('span');
+                span.className = 'nav-group';
+                span.textContent = title;
+                return span;
+            }
+
+            var link = document.createElement('a');
+            link.textContent = title;
+            if (flags & 2) {
+                link.href = url;
+                link.className = 'nav-external';
+                link.rel = 'noopener';
+            } else {
+                link.href = basePath + url;
+                if (flags & 1) link.className = 'nav-group';
+            }
+
+            return link;
+        }
+
+        function createList(index, id) {
+            var list = document.createElement('ul');
+            var children = index.nodes[id] || [];
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                var item = document.createElement('li');
+                item.appendChild(createLink(child[0], child[1], child[2]));
+                if (child.length > 3) {
+                    item.className = child[2] & 4 ? 'nav-node nav-api-reference' : 'nav-node';
+                    var details = document.createElement('details');
+                    details.setAttribute('data-nav-id', child[3]);
+                    var summary = document.createElement('summary');
+                    summary.className = 'nav-toggle';
+                    summary.setAttribute('aria-label', child[0] + ' section');
+                    details.appendChild(summary);
+                    item.appendChild(details);
+                }
+
+                list.appendChild(item);
+            }
+
+            return list;
+        }
+
+        // The toggle event does not bubble; it is handled during the capture phase for every section
+        sidebar.addEventListener('toggle', function (e) {
+            var details = e.target;
+            if (!details.open || !details.hasAttribute('data-nav-id') || details.querySelector(':scope > ul')) return;
+            details.setAttribute('aria-busy', 'true');
+            load().then(function (index) {
+                if (!details.querySelector(':scope > ul')) details.appendChild(createList(index, Number(details.getAttribute('data-nav-id'))));
+            }, function () {
+                details.open = false;
+                announce('The table of contents cannot be loaded.');
+            }).then(function () {
+                details.removeAttribute('aria-busy');
+            });
+        }, true);
+
+        // Start loading the index when the sidebar is about to be used, so sections usually expand without delay
+        function preload() { load().catch(function () { }); }
+        sidebar.addEventListener('pointerenter', preload, { once: true });
+        sidebar.addEventListener('focusin', preload, { once: true });
+    }
+
     function initCopyButtons() {
         var blocks = document.querySelectorAll('main pre > code');
         for (var i = 0; i < blocks.length; i++) {
@@ -412,6 +499,7 @@
         initScrollableRegions();
         initTheme();
         initMenu();
+        initNavigation();
         revealCurrentPage();
         initCopyButtons();
         initPermalinks();

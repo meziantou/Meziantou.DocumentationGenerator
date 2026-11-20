@@ -216,6 +216,40 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Equal(wasOpen, await details.EvaluateAsync<bool>("e => e.open"));
     }
 
+    [Fact]
+    public async Task Sidebar_LoadsClosedSectionsWhenTheyAreExpanded()
+    {
+        // The site is built for /docs/ and served from another path: links of loaded sections stay relative to the page
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.DocsServer.BaseUrl + "guide.html");
+
+        var section = page.Locator("#sidebar li.nav-node", new PageLocatorOptions { Has = page.Locator(":scope > a", new PageLocatorOptions { HasText = "Assertions" }) });
+        Assert.Equal(0, await section.Locator("details li").CountAsync());
+        await section.Locator(":scope > details > .nav-toggle").ClickAsync();
+        var link = section.Locator("details > ul > li > a", new LocatorLocatorOptions { HasText = "Introduction" });
+        await link.WaitForAsync();
+        await link.ClickAsync();
+        await page.WaitForURLAsync(fixture.DocsServer.BaseUrl + "assertions/introduction.html");
+
+        // The API reference section loads nested sections with their own toggle
+        var api = page.Locator("#sidebar .nav-api-reference");
+        await api.Locator(":scope > details > .nav-toggle").ClickAsync();
+        await api.Locator("details > ul > li > a").First.WaitForAsync();
+        Assert.True(await api.Locator("details > ul > li > a").CountAsync() > 0);
+    }
+
+    [Fact]
+    public async Task Sidebar_HidesTogglesOfClosedSectionsWithoutJavaScript()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { JavaScriptEnabled = false });
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(fixture.RootServer.BaseUrl + "guide.html");
+
+        Assert.False(await page.IsVisibleAsync(".nav-api-reference > details > .nav-toggle"));
+        Assert.True(await page.IsVisibleAsync(".nav-api-reference > a"));
+    }
+
     [Theory]
     [InlineData(1100)]
     [InlineData(1600)]

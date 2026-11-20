@@ -112,7 +112,8 @@
                         </svg>
                     </button>
                 </div>
-                <nav class="sidebar" id="sidebar" aria-label="Table of contents">
+                @* Closed sections are loaded from the navigation index when they are expanded *@
+                <nav class="sidebar" id="sidebar" aria-label="Table of contents" data-nav-index="@Site.Links.GetAssetUrl(Meziantou.DocumentationGenerator.Navigation.NavigationIndexBuilder.FileName)" data-base-path="@Site.Links.Urls.BasePath.Value">
                     @RenderTree(Navigation.Sidebar)
                 </nav>
             </div>
@@ -249,10 +250,20 @@
                 @* The disclosure toggle is separate from the link, so that interactive elements are not nested *@
                 <li class="@(node.Kind == NavigationNode.ApiReferenceKind ? "nav-node nav-api-reference" : "nav-node")">
                     @RenderLink(node)
-                    <details open="@(node.IsExpanded || Navigation.IsInTrail(node))">
-                        <summary class="nav-toggle" aria-label="@($"{node.Title} section")"></summary>
-                        @RenderTree(node.Children)
-                    </details>
+                    @if (node.IsExpanded || Navigation.IsInTrail(node))
+                    {
+                        <details open>
+                            <summary class="nav-toggle" aria-label="@($"{node.Title} section")"></summary>
+                            @RenderTree(node.Children)
+                        </details>
+                    }
+                    else
+                    {
+                        @* The children of closed sections are not rendered: they would be repeated on every page of the site *@
+                        <details data-nav-id="@Site.Navigation.GetCollapsibleNodeId(node)">
+                            <summary class="nav-toggle" aria-label="@($"{node.Title} section")"></summary>
+                        </details>
+                    }
                 </li>
             }
         }

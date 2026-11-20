@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Meziantou.DocumentationGenerator.Build;
+using Meziantou.DocumentationGenerator.Cli;
 using Meziantou.DocumentationGenerator.Navigation;
 using Meziantou.DocumentationGenerator.Tests.Infrastructure;
 
@@ -272,6 +273,42 @@ public sealed class NavigationTests
 
         var last = build.Context.Navigation.GetPageNavigation("other/other-page.html");
         Assert.Null(last.Next);
+    }
+
+    [Fact]
+    public async Task Sidebar_RendersOnlyOpenSectionsAndIndexesTheOthers()
+    {
+        var files = Pages.Where(p => !p.Key.EndsWith("AGENTS.md", StringComparison.Ordinal)).ToDictionary();
+        await using var site = await SiteBuilder.BuildAsync([], files, extraConfiguration: """ "site": { "title": "Test site", "basePath": "/docs/" }, """);
+        Assert.Equal(ExitCodes.Success, site.Result.ExitCode, site.Result.AllOutput);
+
+        // The trail is open and rendered; closed sections only have a toggle, which references the navigation index
+        var page = HtmlDocumentLoader.Parse(site.ReadFile("imaging/guides/guides.html"));
+        var sidebar = page.QuerySelector("#sidebar")!;
+        Assert.Equal("../../_assets/navigation.json", sidebar.GetAttribute("data-nav-index"));
+        Assert.Equal("../../", sidebar.GetAttribute("data-base-path"));
+        Assert.Equal(["Introduction", "Getting started", "Guides", "Supported formats", "Limitations"], sidebar.QuerySelectorAll<Meziantou.Framework.WebPlatform.Dom.Element>(":scope > ul > li:first-child > details[open] > ul > li > a").Select(a => a.TextContent));
+        Assert.Equal("Guides", sidebar.QuerySelector("a[aria-current=page]")!.TextContent);
+        var formats = sidebar.QuerySelector("a[href='../supported-formats/formats.html']")!.ParentElement!.QuerySelector(":scope > details")!;
+        Assert.False(formats.HasAttribute("open"));
+        Assert.Null(formats.QuerySelector("ul"));
+        Assert.NotNull(formats.QuerySelector(":scope > summary.nav-toggle"));
+        var other = sidebar.QuerySelector(":scope > ul > li:nth-child(2) > details")!;
+        Assert.Null(other.QuerySelector("ul"));
+
+        // The index lists the children of each closed section, with URLs relative to the base path
+        using var index = JsonDocument.Parse(site.ReadFile("_assets/navigation.json"));
+        var nodes = index.RootElement.GetProperty("nodes");
+        var formatsChildren = nodes[int.Parse(formats.GetAttribute("data-nav-id")!, System.Globalization.CultureInfo.InvariantCulture)];
+        Assert.Equal("""[["Formats","imaging/supported-formats/formats.html",0],["PNG","imaging/supported-formats/png.html",0]]""", formatsChildren.GetRawText());
+        var otherChildren = nodes[int.Parse(other.GetAttribute("data-nav-id")!, System.Globalization.CultureInfo.InvariantCulture)];
+        Assert.Equal("""[["Other page","other/other-page.html",0]]""", otherChildren.GetRawText());
+
+        // Nested sections are indexed with their own identifier, so they are loaded level by level
+        var imaging = nodes.EnumerateArray().Single(n => n.EnumerateArray().Any(c => c[0].GetString() == "Introduction"));
+        var supportedFormats = imaging.EnumerateArray().Single(c => c[0].GetString() == "Supported formats");
+        Assert.Equal(NavigationIndexBuilder.GroupFlag, supportedFormats[2].GetInt32());
+        Assert.Equal(formatsChildren.GetRawText(), nodes[supportedFormats[3].GetInt32()].GetRawText());
     }
 
     private static async Task<TestBuild> BuildAsync(IReadOnlyList<TestPackageBuilder>? packages = null, bool expectSuccess = true, Dictionary<string, string>? extraFiles = null, string? homeTitle = null)

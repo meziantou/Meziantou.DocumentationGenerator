@@ -187,6 +187,7 @@ The following table shows deployment URLs, not the relative attribute values emi
 | Root `index.md` | `index.html` (site home) | `/` | `/docs/` |
 | Asset | `_assets/...`, or content-relative path | `/_assets/site.css` | `/docs/_assets/site.css` |
 | Search index | `_assets/search-index.json` | `/_assets/search-index.json` | `/docs/_assets/search-index.json` |
+| Navigation index | `_assets/navigation.json` | `/_assets/navigation.json` | `/docs/_assets/navigation.json` |
 | 404 page | `404.html` | `/404.html` | `/docs/404.html` |
 
 ### Type page names
@@ -325,6 +326,10 @@ link in an authored page is ambiguous (`DG4002`) and must be qualified with the 
   namespaces of every package and their types, sorted ordinally. Packages are not part of the navigation; the API
   reference page and type pages link to them.
 - Previous and next links only go through authored pages.
+- A page renders the sections of the active trail (and the top-level entries); the children of every other section are
+  written once to `_assets/navigation.json` (`nodes[id]` lists the children of the section with `data-nav-id="id"`, as
+  `[title, url, flags, id?]` with URLs relative to the base path) and inserted by `site.js` when the section is expanded.
+  Its URLs are validated like the links of a page.
 
 ## Optional metadata and strictness
 
