@@ -474,7 +474,7 @@ public sealed class BrowserTests(BrowserFixture fixture)
         Assert.Contains("is-selected", await library.GetAttributeAsync("class"), StringComparison.Ordinal);
         Assert.Contains("is-dependent", await page.GetAttributeAsync(".dependency-graph-node[data-name='Contoso.Tool']", "class"), StringComparison.Ordinal);
         Assert.DoesNotContain("is-dependency", await page.GetAttributeAsync(".dependency-graph-node[data-name='Newtonsoft.Json']", "class"), StringComparison.Ordinal);
-        Assert.Contains("is-dependent", await page.GetAttributeAsync(".dependency-graph-edge[data-to='0']", "class"), StringComparison.Ordinal);
+        Assert.Contains("is-dependent", await page.GetAttributeAsync(".dependency-graph-edge-1-0", "class"), StringComparison.Ordinal);
 
         await page.Keyboard.PressAsync("Escape");
         Assert.DoesNotContain("has-selection", await page.GetAttributeAsync(".dependency-graph", "class"), StringComparison.Ordinal);
