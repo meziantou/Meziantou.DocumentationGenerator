@@ -68,7 +68,7 @@
                         <tbody>
                             @foreach (var member in category)
                             {
-                                <tr data-tfms="@Tfms(member)"><td><a href="#@UrlBuilder.EncodeFragment(RouteNames.GetMemberAnchor(member))">@ApiRenderHelper.GetMemberDisplayName(member)</a></td><td>@Helper.Summary(member)</td></tr>
+                                <tr data-tfms="@Tfms(member)"><td><a href="#@UrlBuilder.EncodeFragment(Site.Links.GetMemberAnchor(member))">@ApiRenderHelper.GetMemberDisplayName(member)</a></td><td>@Helper.Summary(member)</td></tr>
                             }
                         </tbody>
                     </table>
@@ -172,7 +172,7 @@
         }
     </text>;
 
-    private RenderFragment RenderMember(ApiMemberModel member, int level) => @<section class="api-member" id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
+    private RenderFragment RenderMember(ApiMemberModel member, int level) => @<section class="api-member" id="@Site.Links.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
         @foreach (var anchor in RouteNames.GetAdditionalMemberAnchors(member))
         {
             <span id="@anchor"></span>
@@ -401,7 +401,7 @@
                 @foreach (var member in Type.Members.Where(m => m.Category is ApiMemberCategory.EnumValue).OrderBy(GetEnumValue).ThenBy(m => m.Name, StringComparer.Ordinal))
                 {
                     var field = (PublicApiField)member.PrimarySymbol;
-                    <tr id="@RouteNames.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
+                    <tr id="@Site.Links.GetMemberAnchor(member)" data-tfms="@Tfms(member)">
                         <td><code>@member.Name</code></td>
                         <td><code>@(Convert.ToString(field.ConstantValue, System.Globalization.CultureInfo.InvariantCulture))</code></td>
                         <td>@Helper.Summary(member)</td>

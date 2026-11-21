@@ -73,7 +73,7 @@ public sealed class LinkServiceTests
         await using var build = await BuildAsync([ApiModelTests.CreateKitchenSinkPackage()]);
         var send = (ApiMemberModel)Assert.Single(build.Context.ApiCatalog.FindByDocumentationId("M:Contoso.Library.Client.Send(Contoso.Library.Message,System.Int32)"));
 
-        Assert.Equal("Send(Contoso.Library.Message,System.Int32)", RouteNames.GetMemberAnchor(send));
+        Assert.Equal("Send(Contoso.Library.Message,System.Int32)", build.Context.Links!.GetMemberAnchor(send));
         Assert.Equal("Send-overloads", RouteNames.GetOverloadAnchor(send.OverloadName));
         Assert.Equal("/api/Contoso.Library.Client.html#Send-overloads", build.Context.Links!.GetOverloadGroupUrl(send));
     }

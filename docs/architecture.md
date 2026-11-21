@@ -226,6 +226,12 @@ The following table shows deployment URLs, not the relative attribute values emi
   grouping type, and the anchors of their implementation methods stay on the page, so older links keep working:
   - `P:Contoso.Json.JsonExtensions.<G>$9F2C.Depth` → `JsonReader.Depth` (also `get_Depth(Contoso.Json.JsonReader)`)
   - `M:Contoso.Json.JsonExtensions.<G>$4B1A.Create(System.Int32)` → `JsonReader.Create(System.Int32)` (also `Create(System.Int32)`)
+- Two extension blocks whose receiver types differ and get the same short name can declare the same member, for
+  instance two types named `Timer` in two namespaces, `int` and `int?`, or
+  `extension<T>(IEnumerable<T?> source) where T : class` and `extension<T>(IEnumerable<T?> source) where T : struct`.
+  The anchor of each of these members is suffixed with `--` and a stable 8-character hash of its documentation ID:
+  `IEnumerable<T?>.WhereNotNull--1a2b3c4d`. A member gets the suffix when a second block declares the same member,
+  and loses it when it is the only one left. The anchors of the implementation methods never change.
 - Overload groups get the anchor `{Name}-overloads` (`#ctor-overloads` for constructors, `{Receiver}.{Name}-overloads`
   for extension members).
 - Fragments are percent-encoded in `href` attributes, the `id` attribute keeps the raw value.

@@ -53,7 +53,7 @@ internal static class SearchIndexBuilder
                 {
                     var members = group.ToList();
                     var member = members[0];
-                    var anchor = members.Count > 1 ? RouteNames.GetOverloadAnchor(group.Key) : RouteNames.GetMemberAnchor(member);
+                    var anchor = members.Count > 1 ? RouteNames.GetOverloadAnchor(group.Key) : site.Links.GetMemberAnchor(member);
                     var name = member.Category switch
                     {
                         ApiMemberCategory.Constructor => type.PrimaryType.Name,
