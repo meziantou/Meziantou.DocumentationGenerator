@@ -425,32 +425,37 @@ a.hljs-type { text-decoration: underline; text-decoration-color: var(--color-bor
 .dependency-graph-viewport { overflow: auto; max-height: 80vh; padding: 0.75rem; }
 .is-interactive .dependency-graph-viewport { cursor: grab; }
 .is-panning .dependency-graph-viewport { cursor: grabbing; user-select: none; }
-.dependency-graph-svg { display: block; max-width: none; height: auto; font-family: var(--font-sans); font-size: 13px; }
-.dependency-graph-node { cursor: pointer; }
-.dependency-graph-node rect { fill: var(--color-bg); stroke: var(--color-accent); stroke-width: 1.5; transition: opacity 0.15s, fill 0.15s; }
+/* The SVG is drawn by Meziantou.Framework.Diagrams; these rules replace its colors so they follow the theme. The font
+   size stays the one used to measure the labels. */
+.dependency-graph-svg { display: block; max-width: none; height: auto; font-family: var(--font-sans); }
+.dependency-graph-svg a { cursor: pointer; }
+.dependency-graph-svg a:focus { outline: none; }
+.dependency-graph-node path { fill: var(--color-bg); stroke: var(--color-accent); stroke-width: 1.5; transition: opacity 0.15s, fill 0.15s; }
 .dependency-graph-node text { fill: var(--color-text); pointer-events: none; transition: opacity 0.15s; }
-.dependency-graph-node-external rect { fill: var(--color-bg-muted); stroke: var(--color-border); stroke-dasharray: 4 3; }
+.dependency-graph-node-external path { fill: var(--color-bg-muted); stroke: var(--color-border); stroke-dasharray: 4 3; }
 .dependency-graph-node-external text { fill: var(--color-text-muted); }
-.dependency-graph-node:hover rect { fill: var(--color-badge-bg); }
-.dependency-graph-node:focus { outline: none; }
-.dependency-graph-node:focus-visible rect { stroke: var(--color-focus); stroke-width: 3; }
-.dependency-graph-line { fill: none; stroke: var(--color-text-muted); stroke-width: 1.25; opacity: 0.6; transition: opacity 0.15s; }
-.dependency-graph-arrow { fill: var(--color-text-muted); opacity: 0.6; transition: opacity 0.15s; }
-.dependency-graph-edge-cycle .dependency-graph-line { stroke-dasharray: 5 4; stroke: var(--color-danger-border); }
-.dependency-graph-edge-cycle .dependency-graph-arrow { fill: var(--color-danger-border); }
-.has-selection .dependency-graph-node:not(.is-selected, .is-dependency, .is-dependent) rect,
+.dependency-graph-svg a:hover .dependency-graph-node path { fill: var(--color-badge-bg); }
+.dependency-graph-svg a:focus-visible .dependency-graph-node path { stroke: var(--color-focus); stroke-width: 3; }
+.dependency-graph-edge .edge-path { stroke: var(--color-text-muted); stroke-width: 1.25; opacity: 0.6; transition: opacity 0.15s; }
+.dependency-graph-edge .marker { fill: var(--color-text-muted); stroke: none; opacity: 0.6; transition: opacity 0.15s; }
+.dependency-graph-edge-partial .edge-path { stroke-dasharray: 3 3; }
+.dependency-graph-svg .edge-labels rect { fill: var(--color-bg-subtle); stroke: none; }
+.dependency-graph-svg .edge-labels text { fill: var(--color-text-muted); }
+.has-selection .dependency-graph-node:not(.is-selected, .is-dependency, .is-dependent) path,
 .has-selection .dependency-graph-node:not(.is-selected, .is-dependency, .is-dependent) text,
-.has-filter .dependency-graph-node:not(.is-match) rect,
+.has-filter .dependency-graph-node:not(.is-match) path,
 .has-filter .dependency-graph-node:not(.is-match) text { opacity: 0.3; }
 .has-selection .dependency-graph-edge:not(.is-dependency, .is-dependent) > *,
-.has-filter:not(.has-selection) .dependency-graph-edge > * { opacity: 0.12; }
-.dependency-graph-node.is-selected rect { fill: var(--color-badge-bg); stroke: var(--color-focus); stroke-width: 3; }
-.dependency-graph-node.is-dependency rect { stroke: var(--color-tip-border); stroke-width: 2.5; }
-.dependency-graph-node.is-dependent rect { stroke: var(--color-warning-border); stroke-width: 2.5; }
-.dependency-graph-edge.is-dependency .dependency-graph-line { stroke: var(--color-tip-border); stroke-width: 2; opacity: 1; }
-.dependency-graph-edge.is-dependency .dependency-graph-arrow { fill: var(--color-tip-border); opacity: 1; }
-.dependency-graph-edge.is-dependent .dependency-graph-line { stroke: var(--color-warning-border); stroke-width: 2; opacity: 1; }
-.dependency-graph-edge.is-dependent .dependency-graph-arrow { fill: var(--color-warning-border); opacity: 1; }
+.has-filter:not(.has-selection) .dependency-graph-edge > *,
+.has-selection .dependency-graph-svg .edge-labels,
+.has-filter .dependency-graph-svg .edge-labels { opacity: 0.12; }
+.dependency-graph-node.is-selected path { fill: var(--color-badge-bg); stroke: var(--color-focus); stroke-width: 3; }
+.dependency-graph-node.is-dependency path { stroke: var(--color-tip-border); stroke-width: 2.5; }
+.dependency-graph-node.is-dependent path { stroke: var(--color-warning-border); stroke-width: 2.5; }
+.dependency-graph-edge.is-dependency .edge-path { stroke: var(--color-tip-border); stroke-width: 2; opacity: 1; }
+.dependency-graph-edge.is-dependency .marker { fill: var(--color-tip-border); opacity: 1; }
+.dependency-graph-edge.is-dependent .edge-path { stroke: var(--color-warning-border); stroke-width: 2; opacity: 1; }
+.dependency-graph-edge.is-dependent .marker { fill: var(--color-warning-border); opacity: 1; }
 .dependency-graph-legend { padding: 0.5rem 0.75rem; border-top: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-text-muted); }
 .dependency-graph-legend [hidden] { display: none; }
 .dependency-graph-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; margin: 0 0.25rem 0 0.125rem; vertical-align: -0.0625rem; border: 2px solid var(--color-accent); border-radius: 3px; }

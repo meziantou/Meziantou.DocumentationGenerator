@@ -26,12 +26,13 @@ public sealed partial class DependencyGraphTests
         Assert.Equal(["Contoso.App", "Contoso.Core", "Contoso.Hashing", "Fabrikam.Tool"], GetNodeNames(html));
         Assert.Contains("href=\"/docs/api/packages/contoso.core.html\"", html, StringComparison.Ordinal);
         Assert.Contains("href=\"https://www.nuget.org/packages/Fabrikam.Tool/1.0.0\"", html, StringComparison.Ordinal);
-        Assert.Contains("<title>Contoso.Core 1.0.0\nDescription of Contoso.Core</title>", html, StringComparison.Ordinal);
-        Assert.Equal(2, Regex.Count(html, "class=\"dependency-graph-edge\""));
-        Assert.Contains("<title>Contoso.App → Contoso.Core (&gt;= 1.0.0)</title>", html, StringComparison.Ordinal);
+        Assert.Contains("<title>Contoso.Core 1.0.0\nDescription of Contoso.Core\nDepends on Contoso.Hashing\nUsed by Contoso.App</title>", html, StringComparison.Ordinal);
+        Assert.Equal(["0-1", "1-2"], [.. EdgeRegex().Matches(html).Select(m => m.Groups["edge"].Value)]);
         Assert.DoesNotContain("Newtonsoft.Json", html, StringComparison.Ordinal);
-        Assert.Contains("Packages below the graph have no dependencies in it.", html, StringComparison.Ordinal);
-        Assert.Contains("<svg class=\"dependency-graph-svg\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("dependency-graph-edge-partial", html, StringComparison.Ordinal);
+        Assert.Contains("<svg class=\"dependency-graph-svg\" role=\"group\" width=", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("role=\"img\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("xmlns=", html, StringComparison.Ordinal);
         Assert.DoesNotContain("dependency-graph-0", html, StringComparison.Ordinal);
         Assert.DoesNotContain(build.Diagnostics, d => d.Code is "DG5013" or "DG5014");
     }
@@ -51,9 +52,11 @@ public sealed partial class DependencyGraphTests
 
         var html = GetHtml(build);
         Assert.Equal(["Contoso.App", "Contoso.Core", "Contoso.Hashing", "Newtonsoft.Json", "System.Memory"], GetNodeNames(html));
-        Assert.Contains("class=\"dependency-graph-node dependency-graph-node-external\" href=\"https://www.nuget.org/packages/Newtonsoft.Json\"", html, StringComparison.Ordinal);
+        Assert.Matches("<a href=\"https://www.nuget.org/packages/Newtonsoft.Json\">\\s*<g class=\"node dependency-graph-node dependency-graph-node-external\" data-id=\"n3\">", html);
         Assert.Contains("data-direction=\"top-down\"", html, StringComparison.Ordinal);
-        Assert.Contains("<title>Contoso.Core → System.Memory (&gt;= 4.5.5) (netstandard2.0)</title>", html, StringComparison.Ordinal);
+        Assert.Contains("dependency-graph-edge dependency-graph-edge-1-4 dependency-graph-edge-partial", html, StringComparison.Ordinal);
+        Assert.Contains(">netstandard2.0</text>", html, StringComparison.Ordinal);
+        Assert.Contains("A dotted arrow is a dependency of some target frameworks only", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -144,67 +147,35 @@ public sealed partial class DependencyGraphTests
     public void IsMatch(string pattern, string text, bool expected) => Assert.Equal(expected, DependencyGraphBuilder.IsMatch(pattern, text));
 
     [Fact]
-    public void Layout_ArrowsGoForwardAndNodesDoNotOverlap()
+    public void Svg_CyclesAndIsolatedPackagesAreDrawn()
     {
-        // 0 -> 1 -> 2 -> 3, 0 -> 3, 4 -> 2, 5 isolated
-        var sizes = Enumerable.Range(0, 6).Select(_ => new LayoutSize(100, 32)).ToList();
-        (int, int)[] edges = [(0, 1), (1, 2), (2, 3), (0, 3), (4, 2)];
-        foreach (var topDown in new[] { false, true })
-        {
-            var layout = LayeredGraphLayout.Compute(sizes, edges, topDown);
+        var graph = CreateGraph(4, [(0, 1), (1, 2), (2, 0)]);
 
-            foreach (var (from, to) in edges)
-            {
-                if (topDown)
-                {
-                    Assert.True(layout.Nodes[from].Y + layout.Nodes[from].Height <= layout.Nodes[to].Y);
-                }
-                else
-                {
-                    Assert.True(layout.Nodes[from].X + layout.Nodes[from].Width <= layout.Nodes[to].X);
-                }
-            }
+        var svg = DependencyGraphSvgWriter.WriteSvg(graph, DependencyGraphDirection.LeftRight, "summary");
 
-            for (var i = 0; i < sizes.Count; i++)
-            {
-                Assert.True(layout.Nodes[i].X >= 0 && layout.Nodes[i].Y >= 0 && layout.Nodes[i].X + layout.Nodes[i].Width <= layout.Width && layout.Nodes[i].Y + layout.Nodes[i].Height <= layout.Height);
-                for (var j = i + 1; j < sizes.Count; j++)
-                {
-                    var a = layout.Nodes[i];
-                    var b = layout.Nodes[j];
-                    Assert.False(a.X < b.X + b.Width && b.X < a.X + a.Width && a.Y < b.Y + b.Height && b.Y < a.Y + a.Height, $"Nodes {i} and {j} overlap");
-                }
-            }
-
-            Assert.NotNull(layout.IsolatedTop);
-            Assert.True(layout.Nodes[5].Y >= layout.IsolatedTop);
-            Assert.Equal(layout, LayeredGraphLayout.Compute(sizes, edges, topDown), LayoutComparer.Instance);
-        }
+        Assert.Equal(["0-1", "1-2", "2-0"], [.. EdgeRegex().Matches(svg).Select(m => m.Groups["edge"].Value)]);
+        Assert.Equal(["Package0", "Package1", "Package2", "Package3"], GetNodeNames(svg));
+        Assert.Equal(svg, DependencyGraphSvgWriter.WriteSvg(graph, DependencyGraphDirection.LeftRight, "summary"));
     }
 
     [Fact]
-    public void Layout_Cycles_AreReversedEdges()
-    {
-        var sizes = Enumerable.Range(0, 3).Select(_ => new LayoutSize(80, 32)).ToList();
-        var layout = LayeredGraphLayout.Compute(sizes, [(0, 1), (1, 2), (2, 0)], topDown: false);
-
-        Assert.Equal(1, layout.Edges.Count(e => e.Reversed));
-        Assert.All(layout.Edges, e => Assert.StartsWith("M", e.Path, StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Layout_LargeGraph_IsFast()
+    public void Svg_LargeGraph_IsFast()
     {
         // Pseudo-random edges, from a fixed formula so the test is deterministic
-        var sizes = Enumerable.Range(0, 200).Select(_ => new LayoutSize(120, 32)).ToList();
         var edges = Enumerable.Range(0, 600).Select(i => (i * 37 % 200, ((i * 91) + (i / 200 * 13)) % 200)).Where(e => e.Item1 != e.Item2).Distinct().ToList();
+        var graph = CreateGraph(200, edges);
 
         var start = System.Diagnostics.Stopwatch.StartNew();
-        var layout = LayeredGraphLayout.Compute(sizes, edges, topDown: false);
+        var svg = DependencyGraphSvgWriter.WriteSvg(graph, DependencyGraphDirection.TopDown, "summary");
 
-        Assert.HasCount(edges.Count, layout.Edges);
+        Assert.Equal(edges.Count, EdgeRegex().Count(svg));
         Assert.InRange(start.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(10));
     }
+
+    private static DependencyGraphModel CreateGraph(int count, IEnumerable<(int From, int To)> edges) => new(
+        [.. Enumerable.Range(0, count).Select(i => new DependencyGraphNode("Package" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), "1.0.0", Description: null, "https://example.com/" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsExternal: false))],
+        [.. edges.Select(e => new DependencyGraphEdge(e.From, e.To, "(>= 1.0.0)", []))],
+        []);
 
     private static readonly Dictionary<string, Lazy<CompiledAssembly>> Assemblies = new(StringComparer.Ordinal)
     {
@@ -242,16 +213,9 @@ public sealed partial class DependencyGraphTests
         return build;
     }
 
-    [GeneratedRegex("data-name=\"(?<name>[^\"]+)\"", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex("<g class=\"node dependency-graph-node[^\"]*\" data-id=\"n[0-9]+\">.*?<text[^>]*>(?<name>[^<]+)</text>", RegexOptions.ExplicitCapture | RegexOptions.Singleline, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NodeNameRegex();
 
-    private sealed class LayoutComparer : IEqualityComparer<LayoutResult>
-    {
-        public static LayoutComparer Instance { get; } = new();
-
-        public bool Equals(LayoutResult? x, LayoutResult? y) => x is not null && y is not null
-            && x.Width == y.Width && x.Height == y.Height && x.Nodes.SequenceEqual(y.Nodes) && x.Edges.SequenceEqual(y.Edges);
-
-        public int GetHashCode(LayoutResult obj) => obj.Nodes.Length;
-    }
+    [GeneratedRegex("class=\"edge [a-z]+ dependency-graph-edge dependency-graph-edge-(?<edge>[0-9]+-[0-9]+)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EdgeRegex();
 }

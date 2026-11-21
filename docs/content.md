@@ -119,14 +119,17 @@ their `.nuspec`:
   `Microsoft.Extensions.Logging`, with a dashed border. They link to nuget.org.
 - `Direction` (optional): `LeftRight` (default) or `TopDown`. Arrows go from a package to its dependencies.
 
-The graph is generated as an SVG image when the site is built, so it is displayed without JavaScript. Each package
-links to its page, or to nuget.org when it has no public API. A dependency declared by every target framework is drawn
-once; the tooltip of an arrow lists the target frameworks when only some of them declare it. Packages without any
-dependency in the graph are displayed below it, and dependencies that form a cycle are drawn with a dashed red line.
+The graph is laid out and drawn as an inline SVG by
+[Meziantou.Framework.Diagrams](https://www.nuget.org/packages/Meziantou.Framework.Diagrams) when the site is built, so it
+is displayed without JavaScript, and its colors follow the light and dark themes. Each package links to its page, or to
+nuget.org when it has no public API; its tooltip shows its version, description, dependencies and dependents. A
+dependency declared by every target framework is drawn once as a solid arrow; when only some target frameworks declare
+it, the arrow is dotted and labeled with them.
 
 In the browser, selecting a package highlights what it depends on, directly or not, in green, and what depends on it in
 orange; selecting it again opens its page, and <kbd>Esc</kbd> clears the selection. The toolbar filters packages by
-name and zooms; <kbd>Ctrl</kbd> + wheel also zooms and dragging the background scrolls a large graph.
+name, zooms, and fits the whole graph in the view; <kbd>Ctrl</kbd> + wheel also zooms, <kbd>+</kbd>, <kbd>-</kbd> and
+<kbd>0</kbd> zoom when the graph has the focus, and dragging the background scrolls a large graph.
 
 The element must be on its own line, separated from other text by a blank line.
 

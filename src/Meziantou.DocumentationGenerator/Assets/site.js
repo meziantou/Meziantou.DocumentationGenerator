@@ -320,31 +320,47 @@
         var viewport = figure.querySelector('.dependency-graph-viewport');
         if (!svg || !viewport) return;
 
-        var nodes = figure.querySelectorAll('.dependency-graph-node');
-        var edges = figure.querySelectorAll('.dependency-graph-edge');
+        // The SVG comes from Meziantou.Framework.Diagrams: each package is a g.dependency-graph-node (data-id="n<index>")
+        // in a link, and each arrow is a g.dependency-graph-edge with a class dependency-graph-edge-<from>-<to>
+        var nodes = [], names = [];
+        var nodeElements = figure.querySelectorAll('.dependency-graph-node');
+        for (var n = 0; n < nodeElements.length; n++) {
+            var nodeIndex = parseInt((nodeElements[n].getAttribute('data-id') || '').slice(1), 10);
+            if (isNaN(nodeIndex)) continue;
+            nodes[nodeIndex] = nodeElements[n];
+            var label = nodeElements[n].querySelector('text');
+            names[nodeIndex] = label ? label.textContent : '';
+            nodeElements[n].setAttribute('data-name', names[nodeIndex]);
+        }
+
+        var dependencies = [], dependents = [];
+        for (var i = 0; i < nodes.length; i++) { dependencies.push([]); dependents.push([]); }
+
+        var edges = [];
+        var edgeElements = figure.querySelectorAll('.dependency-graph-edge');
+        for (var e = 0; e < edgeElements.length; e++) {
+            var match = /(?:^|\s)dependency-graph-edge-(\d+)-(\d+)(?:\s|$)/.exec(edgeElements[e].getAttribute('class') || '');
+            if (!match) continue;
+            var from = parseInt(match[1], 10), to = parseInt(match[2], 10);
+            if (!nodes[from] || !nodes[to]) continue;
+            edges.push({ element: edgeElements[e], from: from, to: to });
+            dependencies[from].push(to);
+            dependents[to].push(from);
+        }
+
         var filter = figure.querySelector('.dependency-graph-filter');
         var naturalWidth = parseFloat(svg.getAttribute('width'));
         var naturalHeight = parseFloat(svg.getAttribute('height'));
         var scale = 1;
         var selected = -1;
 
-        function parseList(value) {
-            return value ? value.split(' ').map(function (v) { return parseInt(v, 10); }) : [];
-        }
-
-        var dependencies = [], dependents = [];
-        for (var i = 0; i < nodes.length; i++) {
-            dependencies.push(parseList(nodes[i].getAttribute('data-dependencies')));
-            dependents.push(parseList(nodes[i].getAttribute('data-dependents')));
-        }
-
         function closure(start, adjacency) {
             var seen = {}, queue = adjacency[start].slice();
             while (queue.length) {
-                var n = queue.shift();
-                if (seen[n] || n === start) continue;
-                seen[n] = true;
-                queue.push.apply(queue, adjacency[n]);
+                var next = queue.shift();
+                if (seen[next] || next === start) continue;
+                seen[next] = true;
+                queue.push.apply(queue, adjacency[next]);
             }
             return seen;
         }
@@ -355,31 +371,43 @@
             var down = index >= 0 ? closure(index, dependencies) : {};
             var up = index >= 0 ? closure(index, dependents) : {};
             for (var i = 0; i < nodes.length; i++) {
+                if (!nodes[i]) continue;
                 nodes[i].classList.toggle('is-selected', i === index);
                 nodes[i].classList.toggle('is-dependency', !!down[i]);
                 nodes[i].classList.toggle('is-dependent', !!up[i]);
             }
             for (var j = 0; j < edges.length; j++) {
-                var from = parseInt(edges[j].getAttribute('data-from'), 10);
-                var to = parseInt(edges[j].getAttribute('data-to'), 10);
-                edges[j].classList.toggle('is-dependency', index >= 0 && (from === index || !!down[from]) && !!down[to]);
-                edges[j].classList.toggle('is-dependent', index >= 0 && (to === index || !!up[to]) && !!up[from]);
+                var edge = edges[j];
+                edge.element.classList.toggle('is-dependency', index >= 0 && (edge.from === index || !!down[edge.from]) && !!down[edge.to]);
+                edge.element.classList.toggle('is-dependent', index >= 0 && (edge.to === index || !!up[edge.to]) && !!up[edge.from]);
             }
             if (index >= 0) {
-                var name = nodes[index].getAttribute('data-name');
-                announce(name + ': ' + Object.keys(down).length + ' dependencies, ' + Object.keys(up).length + ' dependents. Select it again to open its page.');
+                announce(names[index] + ': ' + Object.keys(down).length + ' dependencies, ' + Object.keys(up).length + ' dependents. Select it again to open its page.');
             }
+        }
+
+        // The node of a click target: the drawing of a package, or its link (keyboard activation targets the link)
+        function getNode(target) {
+            if (!target || !target.closest || !svg.contains(target)) return null;
+            var node = target.closest('.dependency-graph-node');
+            if (node) return node;
+            var link = target.closest('a');
+            return link ? link.querySelector('.dependency-graph-node') : null;
+        }
+
+        function getIndex(node) {
+            return parseInt((node.getAttribute('data-id') || '').slice(1), 10);
         }
 
         // The first click selects a package, a second click opens its page; a modified click always opens it
         figure.addEventListener('click', function (event) {
-            var node = event.target.closest ? event.target.closest('.dependency-graph-node') : null;
+            var node = getNode(event.target);
             if (!node) {
                 if (event.target.closest && event.target.closest('svg')) select(-1);
                 return;
             }
             if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
-            var index = parseInt(node.getAttribute('data-node'), 10);
+            var index = getIndex(node);
             if (index === selected) return;
             event.preventDefault();
             select(index);
@@ -398,8 +426,7 @@
                 var text = filter.value.trim().toLowerCase();
                 figure.classList.toggle('has-filter', text.length > 0);
                 for (var i = 0; i < nodes.length; i++) {
-                    var name = (nodes[i].getAttribute('data-name') || '').toLowerCase();
-                    nodes[i].classList.toggle('is-match', text.length > 0 && name.indexOf(text) >= 0);
+                    if (nodes[i]) nodes[i].classList.toggle('is-match', text.length > 0 && names[i].toLowerCase().indexOf(text) >= 0);
                 }
             });
         }
@@ -423,6 +450,13 @@
 
         bind('.dependency-graph-zoom-in', function () { zoom(scale * 1.25); });
         bind('.dependency-graph-zoom-out', function () { zoom(scale / 1.25); });
+        bind('.dependency-graph-fit', function () {
+            var width = viewport.clientWidth - 24, height = viewport.clientHeight - 24;
+            if (width <= 0 || height <= 0) return;
+            zoom(Math.min(width / naturalWidth, height / naturalHeight), 0, 0);
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+        });
         bind('.dependency-graph-reset', function () {
             zoom(1);
             viewport.scrollLeft = 0;
@@ -438,9 +472,19 @@
             zoom(scale * (event.deltaY < 0 ? 1.1 : 1 / 1.1), event.clientX - rect.left, event.clientY - rect.top);
         }, { passive: false });
 
+        // + and - zoom, 0 restores the actual size, when the focus is on the graph
+        viewport.addEventListener('keydown', function (event) {
+            if (event.ctrlKey || event.metaKey || event.altKey) return;
+            if (event.key === '+' || event.key === '=') zoom(scale * 1.25);
+            else if (event.key === '-' || event.key === '_') zoom(scale / 1.25);
+            else if (event.key === '0') zoom(1);
+            else return;
+            event.preventDefault();
+        });
+
         var drag = null;
         viewport.addEventListener('pointerdown', function (event) {
-            if (event.button !== 0 || event.pointerType === 'touch' || (event.target.closest && event.target.closest('.dependency-graph-node'))) return;
+            if (event.button !== 0 || event.pointerType === 'touch' || getNode(event.target)) return;
             drag = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false };
         });
         viewport.addEventListener('pointermove', function (event) {
@@ -470,6 +514,7 @@
             zoom(Math.max(0.6, available / naturalWidth), 0, 0);
             var first = null, best = Infinity;
             for (var i = 0; i < nodes.length; i++) {
+                if (!nodes[i]) continue;
                 var box = nodes[i].getBBox();
                 if (box.x + box.y < best) { best = box.x + box.y; first = box; }
             }
